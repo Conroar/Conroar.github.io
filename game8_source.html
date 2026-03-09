@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Loot-Drop Dungeon: Ultimate Edition</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #202028; --panel-bg: #353540; --text: #fff;
+            --accent: #f0c040; --danger: #ff4d4d; --success: #4dff88; --xp: #4d88ff;
+            --border-light: #fff; --border-dark: #000;
+        }
+        body { margin:0; padding:0; background:var(--bg-color); color:var(--text); font-family:'Press Start 2P', cursive; overflow-x:hidden; touch-action:manipulation; user-select:none; }
+        
+        /* 3D Town Viewport */
+        .town-viewport {
+            perspective: 600px;
+            height: 450px;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            background: linear-gradient(to bottom, #87CEEB 0%, #a2d9ff 60%, #e0f0ff 100%);
+            border: 4px solid #fff;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        /* The Ground Plane */
+        .town-plane {
+            position: absolute;
+            width: 110%;
+            left: -5%;
+            height: 140%;
+            bottom: -50px;
+            background-color: #567d46;
+            background-image: radial-gradient(#6a9e52 15%, transparent 16%), radial-gradient(#6a9e52 15%, transparent 16%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            transform-style: preserve-3d;
+            transform: rotateX(20deg) translateY(20px) translateZ(-50px);
+            transform-origin: 50% 100%;
+            box-shadow: 0 -10px 20px rgba(0,0,0,0.1);
+            transition: transform 0.1s ease-out; /* Smooth parallax */
+        }
+        
+        /* The Road */
+        .town-road {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 100px;
+            height: 100%;
+            background-color: #d2b48c;
+            background-image: 
+                linear-gradient(335deg, rgba(0,0,0,0.1) 23px, transparent 23px),
+                linear-gradient(155deg, rgba(0,0,0,0.1) 23px, transparent 23px),
+                linear-gradient(335deg, rgba(0,0,0,0.1) 23px, transparent 23px),
+                linear-gradient(155deg, rgba(0,0,0,0.1) 23px, transparent 23px);
+            background-size: 58px 58px;
+            background-position: 0px 2px, 4px 35px, 29px 31px, 34px 6px;
+            transform: translateX(-50%);
+            border-left: 4px solid #8b4513;
+            border-right: 4px solid #8b4513;
+            opacity: 0.9;
+        }
+
+        /* Background Wall */
+        .town-wall {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 50px;
+            background: repeating-linear-gradient(90deg, #555 0, #555 20px, #444 20px, #444 40px);
+            border-bottom: 6px solid #333;
+            z-index: 5;
+        }
+
+        .town-building {
+            position: absolute;
+            transform-style: preserve-3d;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.1s, background 0.1s;
+            background: rgba(0,0,0,0.4);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            width: 80px;
+            height: 80px;
+        }
+        .town-building:hover { 
+            transform: scale(1.2) translateY(-10px); 
+            background: rgba(255,255,255,0.4);
+            border-color: gold;
+            z-index: 500 !important; 
+        }
+        .town-building:active { transform: scale(0.95); border-color: #aaa; }
+        
+        .building-sprite { font-size: 30px; text-shadow: 0 5px 0 rgba(0,0,0,0.5); display: block; pointer-events: none; }
+        .building-label { 
+            background: #000; color: #fff; padding: 2px 4px; 
+            border-radius: 4px; font-size: 8px; font-family: 'Press Start 2P'; 
+            white-space: nowrap; margin-top: 5px; border: 1px solid #fff; pointer-events: none;
+        }
+
+        /* Explicit Button Styles to override general town-building defaults if needed */
+        .b-dungeon { top: 12%; left: 50%; margin-left: -50px; z-index: 200 !important; width: 100px; height: 100px; background: rgba(50,0,0,0.6); border-color: #ff4d4d; }
+        .b-statue { top: 70%; left: 50%; margin-left: -50px; z-index: 200 !important; width: 100px; height: 100px; background: rgba(0,0,50,0.6); border-color: #4d88ff; }
+
+        /* Scenery & NPCs */
+        .scenery { position: absolute; pointer-events: none; transform-origin: bottom center; }
+        
+        .town-npc-walker {
+            position: absolute;
+            font-size: 24px;
+            will-change: left, top;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+            pointer-events: auto; /* Allow clicking for interaction */
+            transition: transform 0.2s;
+        }
+        .town-npc-walker:active { transform: scale(1.5) !important; }
+        
+        /* Special Objects */
+        .torch { position: absolute; font-size: 20px; z-index: 100; cursor: pointer; }
+        .torch::after {
+            content: ''; position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+            width: 10px; height: 10px; background: orange; border-radius: 50%;
+            box-shadow: 0 0 10px orange, 0 0 20px red;
+            animation: fire 0.2s infinite alternate;
+            opacity: var(--torch-opacity, 1);
+        }
+        @keyframes fire { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.2); } }
+
+        .flyer { position: absolute; left: -10%; font-size: 50px; z-index: 5; opacity: 0.8; pointer-events: none; }
+        @keyframes fly { 
+            0% { transform: translateX(0) translateY(0); } 
+            100% { transform: translateX(120vw) translateY(-20px); } 
+        }
+        
+        /* --- DUNGEON THEMES --- */
+        .bg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; transition: opacity 0.5s; }
+
+        .theme-forest { 
+            background-color: #1a3316;
+            background-image: 
+                linear-gradient(90deg, rgba(20, 10, 5, 0.4) 10px, transparent 10px, transparent 50px, rgba(20, 10, 5, 0.4) 50px, rgba(20, 10, 5, 0.4) 70px, transparent 70px),
+                radial-gradient(circle at 50% 20%, rgba(50, 200, 50, 0.1) 0%, transparent 40%),
+                linear-gradient(to bottom, #2d5a27 0%, #0f1f0f 100%);
+            background-size: 150px 100%, 100% 100%, 100% 100%;
+        }
+        
+        .theme-cave { 
+            background-color: #1a1a1a;
+            background-image: 
+                radial-gradient(circle at 0% 50%, rgba(80, 80, 80, 0.3) 9px, transparent 10px),
+                radial-gradient(at 100% 100%, rgba(80, 80, 80, 0.3) 9px, transparent 10px),
+                radial-gradient(circle at 50% 50%, transparent 40%, #000 100%); /* Vignette */
+            background-size: 40px 40px, 40px 40px, 100% 100%;
+        }
+        
+        .theme-lava { 
+            background-color: #330000;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255, 69, 0, 0.1) 20px),
+                linear-gradient(to top, #ff4500 0%, #5a1a1a 60%, #220000 100%);
+            background-size: 100% 40px, 100% 100%;
+            animation: heat 2s infinite alternate;
+        }
+
+        .theme-meadow {
+            background-color: #87CEEB;
+            background-image: 
+                radial-gradient(circle at 90% 10%, #FFD700 5%, transparent 6%),
+                linear-gradient(to bottom, transparent 60%, #7CFC00 60%, #228B22 100%);
+            background-size: 100% 100%;
+        }
+
+        .theme-desert {
+            background-color: #F4A460;
+            background-image:
+                linear-gradient(135deg, transparent 50%, rgba(200,100,50,0.1) 50%),
+                linear-gradient(to bottom, #87CEEB 0%, #FFD700 20%, #DAA520 100%);
+            background-size: 20px 20px, 100% 100%;
+            animation: heat 3s infinite alternate;
+        }
+
+        .theme-ice {
+            background-color: #E0FFFF;
+            background-image:
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.3) 0, rgba(255,255,255,0.3) 20px, transparent 20px, transparent 40px),
+                linear-gradient(to bottom, #87CEEB 0%, #E0FFFF 80%, #F0FFFF 100%);
+            background-size: 100px 100px, 100% 100%;
+        }
+
+        @keyframes heat { from { opacity: 0.9; } to { opacity: 1; } }
+
+        /* Clouds */
+        .clouds { 
+            position: absolute; top: 0; left: 0; width: 200%; height: 100%; 
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="10" cy="20" r="8" fill="rgba(255,255,255,0.4)"/><circle cx="30" cy="15" r="10" fill="rgba(255,255,255,0.3)"/><circle cx="70" cy="25" r="6" fill="rgba(255,255,255,0.2)"/></svg>'); 
+            background-size: auto 100%;
+            animation: drift 60s linear infinite; pointer-events: none;
+        }
+        @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+        #weather-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; opacity: 0.6; }
+
+        /* UI Components */
+        .retro-box { background:var(--panel-bg); border:4px solid var(--border-light); box-shadow:6px 6px 0 #000; padding:15px; margin-bottom:15px; position:relative; overflow:hidden; }
+        button { background:var(--border-light); color:#000; border:4px solid #000; padding:12px; font-family:inherit; font-size:12px; cursor:pointer; width:100%; margin:4px 0; text-transform:uppercase; font-weight:bold; position:relative; touch-action:manipulation; transition: transform 0.1s; }
+        button:active { transform:translate(2px,2px); box-shadow:none; }
+        button:hover { transform:translateY(-2px); box-shadow:0 4px 0 #000; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        .btn-green { background:#4dff88; } .btn-red { background:#ff4d4d; color:#fff; } .btn-blue { background:#4d88ff; color:#fff; }
+        .btn-gold { background:var(--accent); } .btn-shop { background:#a060f0; color:#fff; }
+
+        /* HUD & Stats */
+        .hud { display:grid; grid-template-columns:1fr 1fr; gap:5px; font-size:10px; background:rgba(0,0,0,0.9); padding:5px; border:2px solid #fff; z-index: 20; position: relative; }
+        .stat-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+
+        /* Combat Area */
+        .monster-area { height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; z-index: 15; }
+        .monster-sprite { font-size:80px; filter:drop-shadow(0 5px 0 rgba(0,0,0,0.5)); transition:transform 0.1s; position: relative; }
+        .monster-sprite.boss { font-size:120px; filter:drop-shadow(0 0 10px red); }
+        .monster-sprite.shiny { filter:hue-rotate(90deg) drop-shadow(0 0 10px gold); animation:shine 1s infinite; }
+        .monster-sprite.hit { animation: flashWhite 0.1s; }
+        .monster-sprite.squish { transform: scaleY(0.6) translateY(20px); } /* Squish Animation */
+        .monster-sprite.fleeing { opacity: 0.5; animation: shake 0.2s infinite; }
+        
+        /* Combo Meter */
+        .combo-container { width: 100%; height: 8px; background: #222; margin-top: 5px; border: 1px solid #fff; position: relative; }
+        .combo-fill { height: 100%; background: linear-gradient(to right, orange, red); transition: width 0.2s; }
+        .combo-text { position: absolute; right: 0; top: -12px; font-size: 8px; color: orange; font-weight: bold; }
+        .combo-max { box-shadow: 0 0 10px orange; animation: pulse 0.5s infinite; }
+
+        /* Low Health Vignette */
+        .vignette { position: absolute; top:0; left:0; width:100%; height:100%; box-shadow: inset 0 0 50px red; pointer-events: none; z-index: 90; animation: pulse-red 1s infinite; }
+        @keyframes pulse-red { 0%{opacity:0.5;} 50%{opacity:0.8;} 100%{opacity:0.5;} }
+
+        /* Overlays (Boss, ReadyGo) */
+        .overlay-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: red; font-size: 30px; text-align: center; text-shadow: 2px 2px 0 #000; z-index: 100; animation: flash 0.5s infinite; width: 100%; background: rgba(0,0,0,0.7); padding: 20px 0; }
+        .ready-go { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 50px; text-shadow: 4px 4px 0 #000; }
+        
+        /* Floating Text (Physics) */
+        .float-text { position:absolute; font-weight:bold; pointer-events:none; text-shadow:2px 2px 0 #000; z-index:50; font-size: 20px; }
+        
+        /* Scratchpad */
+        #scratch-canvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:50; touch-action:none; background:rgba(0,0,0,0.5); cursor:crosshair; }
+        .scratch-tools { position:absolute; top:10px; right:10px; z-index:51; display:flex; gap:5px; }
+        
+        /* Accessibility & Utils */
+        .a11y-btn { width:36px; height:36px; padding:0; font-size:16px; border-radius:50%; box-shadow: 2px 2px 0 #000; border: 2px solid #fff; background: #333; color: #fff; }
+        .bar-wrap { width:100%; height:14px; background:#000; border:2px solid #fff; margin:2px 0; position:relative; }
+        .bar-fill { height:100%; transition:width 0.3s; }
+        .shake { animation:shake 0.4s; } .pop { animation:pop 0.3s; }
+        
+        /* Badges & Bestiary */
+        .grid-badges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+        .badge { font-size: 24px; opacity: 0.3; filter: grayscale(1); border: 2px solid #555; border-radius: 5px; padding: 5px; text-align: center; }
+        .badge.unlocked { opacity: 1; filter: grayscale(0); border-color: gold; background: rgba(255,215,0,0.1); cursor: pointer; }
+        .badge.unlocked:hover { transform: scale(1.1); background: rgba(255,215,0,0.3); }
+
+        /* IMPROVED POTION BUTTONS */
+        .potion-row { display: flex; gap: 5px; margin-bottom: 5px; }
+        .potion-btn { 
+            position: relative; 
+            display: flex; 
+            flex-direction: row; 
+            align-items: center; 
+            justify-content: flex-start; 
+            padding: 5px 10px; 
+            height: auto; 
+            width: 100%;
+            text-align: left;
+        }
+        .potion-btn .icon { font-size: 24px; margin-right: 10px; }
+        .potion-btn .info { display: flex; flex-direction: column; }
+        .potion-btn .name { font-size: 10px; font-weight: bold; color: #000; }
+        .potion-btn .desc { font-size: 9px; color: #333; }
+        .potion-glow { animation: pulse 1s infinite; box-shadow: 0 0 10px gold; border-color: gold; }
+
+        /* Animations */
+        @keyframes floatUp { 0% { transform:translateY(0) scale(1); opacity:1; } 100% { transform:translateY(-60px) scale(1.5); opacity:0; } }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+        @keyframes pop { 50%{transform:scale(1.4)} }
+        @keyframes shine { 50%{filter:hue-rotate(90deg) brightness(1.5) drop-shadow(0 0 15px gold);} }
+        @keyframes flashWhite { 0% { filter: brightness(10); } 100% { filter: brightness(1); } }
+        @keyframes chestShake { 0%,100% {transform: rotate(0deg);} 25% {transform: rotate(-5deg);} 75% {transform: rotate(5deg);} }
+        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.05);} 100% {transform: scale(1);} }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+
+        /* Layout */
+        #root { max-width:600px; margin:0 auto; padding:10px; padding-bottom: 60px; }
+        .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        input { width:100%; padding:15px; background:#000; color:#fff; border:4px solid #fff; text-align:center; font-size:20px; font-family:inherit; }
+        
+        /* Settings Slider */
+        input[type=range] { width: 100%; margin: 10px 0; }
+        
+        /* Pet */
+        .pet-sprite { position: absolute; bottom: 10px; left: 10px; font-size: 30px; animation: bounce 2s infinite; z-index: 16; }
+        
+        /* Modal Overlay */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; display: flex; flex-direction: column; justify-content: center; padding: 20px; box-sizing: border-box; }
+        
+        /* Bank Gold */
+        .gold-pile { position: absolute; font-size: 40px; pointer-events: none; transition: transform 0.3s; }
+        
+        /* Table for Library */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10px; }
+        td, th { border: 1px solid #fff; padding: 4px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- AUDIO ENGINE ---
+        const AudioEngine = {
+            ctx: new (window.AudioContext || window.webkitAudioContext)(),
+            musicGain: null, sfxGain: null, isPlaying: false,
+            nextNoteTime: 0, current16thNote: 0, tempo: 120.0, lookahead: 25.0, scheduleAheadTime: 0.1, timerID: null, noiseBuffer: null,
+            
+            mode: 'TITLE', gradeTheme: 0, barCount: 0, songSection: 0, musicVol: 0.3, sfxVol: 0.8,
+            
+            init: function() {
+                if (this.musicGain) return;
+                this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = this.musicVol; this.musicGain.connect(this.ctx.destination);
+                this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = this.sfxVol; this.sfxGain.connect(this.ctx.destination);
+                const bufferSize = this.ctx.sampleRate * 2; const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                this.noiseBuffer = buffer;
+            },
+            setVolumes: function(m, s) { this.musicVol = m; this.sfxVol = s; if (this.musicGain) this.musicGain.gain.value = m; if (this.sfxGain) this.sfxGain.gain.value = s; },
+            playSfx: function(freq, type, dur, vol = 0.5, rate = 1.0) { 
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                if (!this.sfxGain) this.init(); // Auto-init if needed
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain(); osc.type = type; 
+                osc.frequency.setValueAtTime(freq * rate, this.ctx.currentTime); 
+                if (type === 'square' || type === 'sawtooth') osc.frequency.exponentialRampToValueAtTime(freq * rate * 0.5, this.ctx.currentTime + dur);
+                gain.gain.setValueAtTime(vol * this.sfxVol, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
+                osc.connect(gain); gain.connect(this.sfxGain); osc.start(); osc.stop(this.ctx.currentTime + dur);
+            },
+            playNote: function(freq, type, dur, vol = 0.1, time = this.ctx.currentTime, isNoise=false, filterFreq=1000) {
+                if (!this.musicGain) this.init(); // Auto-init if needed
+                const gain = this.ctx.createGain(); gain.connect(this.musicGain);
+                if (isNoise) {
+                    const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuffer; const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass'; filter.frequency.value = filterFreq; src.connect(filter); filter.connect(gain);
+                    gain.gain.setValueAtTime(vol, time); gain.gain.exponentialRampToValueAtTime(0.001, time + dur); src.start(time); src.stop(time + dur);
+                } else {
+                    const osc = this.ctx.createOscillator(); osc.type = type; osc.frequency.setValueAtTime(freq, time);
+                    gain.gain.setValueAtTime(vol, time); gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+                    osc.connect(gain); osc.start(time); osc.stop(time + dur);
+                }
+            },
+            kick: function(time, force=false) {
+                if (!force && this.songSection === 0 && Math.random() > 0.9) return;
+                if (!this.musicGain) this.init(); // Auto-init
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.frequency.setValueAtTime(150, time); osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+                gain.gain.setValueAtTime(1.0, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+                osc.connect(gain); gain.connect(this.musicGain); osc.start(time); osc.stop(time + 0.5);
+            },
+            nextNote: function() {
+                const secondsPerBeat = 60.0 / this.tempo; this.nextNoteTime += 0.25 * secondsPerBeat;
+                this.current16thNote++; if (this.current16thNote === 16) { this.current16thNote = 0; this.barCount++; if (this.barCount % 8 === 0) this.songSection = this.songSection === 0 ? 1 : 0; }
+            },
+            scheduleNote: function(beat, time) {
+                if (this.mode === 'TITLE') {
+                    if (beat % 16 === 0) { this.playNote(261.63, 'sawtooth', 0.4, 0.2, time); this.playNote(523.25, 'sawtooth', 0.4, 0.1, time); }
+                    if (beat % 16 === 3) this.playNote(392.00, 'sawtooth', 0.2, 0.2, time); if (beat % 16 === 4) this.playNote(523.25, 'sawtooth', 0.8, 0.25, time);
+                    if (beat % 4 === 0) this.playNote(0, 'noise', 0.1, 0.1, time, true, 2000); return;
+                }
+                if (this.mode === 'SHOP') {
+                    if (beat % 4 === 0) this.playNote(196, 'sine', 0.5, 0.2, time); if (beat % 4 === 2) this.playNote(392, 'triangle', 0.1, 0.1, time);
+                    if (beat % 8 === 0) this.playNote([523.25, 493.88, 440.00, 392.00][this.barCount % 4], 'sine', 0.4, 0.2, time); return;
+                }
+                const theme = this.gradeTheme; const isChorus = this.songSection === 1;
+                const scale = theme === 0 ? [261, 329, 392, 523] : theme === 1 ? [146, 174, 220, 261, 293] : [82, 123, 130, 146, 164];
+                if (theme === 0) { if (beat % 4 === 0) this.kick(time, isChorus); if (beat % 4 === 2) this.playNote(0, 'noise', 0.1, isChorus ? 0.3 : 0.15, time, true, 2000); }
+                else if (theme === 1) { if (beat === 0 || beat === 6 || (isChorus && beat === 10)) this.kick(time, true); if (beat % 8 === 4) this.playNote(0, 'noise', 0.2, 0.25, time, true, 1500); }
+                else { if (beat % 2 === 0) this.kick(time, true); if (beat % 4 === 2) this.playNote(0, 'noise', 0.1, 0.4, time, true, 3000); }
+                if (isChorus || theme === 2) { if (beat % 2 === 0) this.playNote(0, 'noise', 0.05, 0.1, time, true, 8000); }
+                if (beat % 2 === 0) {
+                    let root = theme === 0 ? 130 : theme === 1 ? 73 : 41; if (isChorus) { if (this.barCount % 4 === 2) root *= 1.33; if (this.barCount % 4 === 3) root *= 1.5; }
+                    let wave = theme === 2 ? 'sawtooth' : 'sine'; if (theme === 2) root *= 2; if (isChorus || beat % 4 === 0) this.playNote(root, wave, 0.2, 0.3, time);
+                }
+                const melodyBeats = isChorus ? [0, 2, 3, 6, 8, 10, 12, 14] : [0, 6, 12];
+                if (melodyBeats.includes(beat) && Math.random() > (isChorus ? 0.2 : 0.6)) {
+                    let idx = Math.floor(Math.random() * scale.length); let freq = scale[idx] * (isChorus ? 2 : 1);
+                    if (Math.random() > 0.8) freq *= 1.5; let wave = theme === 0 ? 'square' : theme === 1 ? 'triangle' : 'sawtooth';
+                    let len = isChorus ? 0.2 : 0.1; this.playNote(freq, wave, len, 0.15, time);
+                }
+            },
+            scheduler: function() { while (this.nextNoteTime < this.ctx.currentTime + this.scheduleAheadTime) { this.scheduleNote(this.current16thNote, this.nextNoteTime); this.nextNote(); } this.timerID = window.setTimeout(() => this.scheduler(), this.lookahead); },
+            start: function(mode, grade = 0) {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                if (this.mode !== mode) { this.current16thNote = 0; this.barCount = 0; this.songSection = 0; this.nextNoteTime = this.ctx.currentTime; }
+                this.mode = mode; this.gradeTheme = grade <= 1 ? 0 : grade <= 3 ? 1 : 2;
+                if (mode === 'SHOP') this.tempo = 100; else if (mode === 'TITLE') this.tempo = 110; else this.tempo = this.gradeTheme === 0 ? 130 : this.gradeTheme === 1 ? 135 : 150;
+                if (!this.isPlaying) { this.isPlaying = true; this.scheduler(); }
+            },
+            stop: function() { this.isPlaying = false; window.clearTimeout(this.timerID); },
+            changeTrack: function() { 
+                const tracks = ['TITLE', 'SHOP', 'DUNGEON'];
+                const currentIdx = tracks.indexOf(this.mode);
+                const nextMode = tracks[(currentIdx + 1) % tracks.length];
+                this.start(nextMode, this.gradeTheme);
+            }
+        };
+
+        // --- GAME DATA ---
+        const ITEMS = [
+            { id: 'p_health', name: 'Health', icon: '🍷', type: 'consumable', price: 20, val: 3, desc: "+3 Hearts" },
+            { id: 'p_power', name: 'Power', icon: '💪', type: 'consumable', price: 30, val: 2, desc: "2x Damage" },
+            { id: 'p_insight', name: 'Insight', icon: '👁️', type: 'consumable', price: 25, val: 1, desc: "Removes 1 Wrong" },
+            { id: 'w_ruler', name: 'Ruler Sword', icon: '📏', type: 'weapon', bonus: 1, price: 50 },
+            { id: 'w_calc', name: 'Calculator', icon: '🧮', type: 'weapon', bonus: 3, price: 150 },
+            { id: 'w_legend', name: 'Legend Blade', icon: '⚔️', type: 'weapon', bonus: 7, price: 500 },
+            { id: 'a_hat', name: 'Paper Hat', icon: '🧢', type: 'armor', bonus: 2, price: 40 },
+            { id: 'clue_scroll', name: 'Clue Scroll', icon: '📜', type: 'consumable', price: 15, desc: "Hint in battle" },
+            { id: 'pet_wolf', name: 'Wolf Pup', icon: '🐺', type: 'pet', price: 200, desc: "+1 Damage" },
+            { id: 'pet_book', name: 'Magic Book', icon: '📖', type: 'pet', price: 200, desc: "+20% XP" },
+            { id: 'pet_drag', name: 'Tiny Dragon', icon: '🐲', type: 'pet', price: 300, desc: "Crit Chance" }
+        ];
+
+        const RELICS = [
+            { id: 'r_vamp', name: 'Vampire Fangs', icon: '🧛', desc: 'Heal 1 HP on kill' },
+            { id: 'r_midas', name: 'Midas Touch', icon: '🪙', desc: '+50% Gold' },
+            { id: 'r_sight', name: 'True Sight', icon: '🧿', desc: 'No Mystery Traps' }
+        ];
+
+        const MONSTERS = [
+            { id: 'slime', name: "Slime", icon: "🟢", mathFact: "Divides to multiply!" },
+            { id: 'bat', name: "Bat", icon: "🦇", mathFact: "Uses sonar geometry." },
+            { id: 'ghost', name: "Ghost", icon: "👻", mathFact: "Zero mass, 100% spooky." },
+            { id: 'spider', name: "Spider", icon: "🕷️", mathFact: "8 legs, many angles." },
+            { id: 'robot', name: "Robot", icon: "🤖", mathFact: "Runs on binary code." },
+            { id: 'goblin', name: "Goblin", icon: "👺", mathFact: "Hoards prime numbers." },
+            { id: 'skel', name: "Skeleton", icon: "💀", mathFact: "A structural frame." },
+            { id: 'orc', name: "Orc", icon: "👹", mathFact: "Strong but bad at calculus." }
+        ];
+        
+        const BOSSES = [
+            { id: 'king', name: "King Slime", icon: "🤢", mathFact: "The sum of all parts." },
+            { id: 'dragon', name: "Math Dragon", icon: "🐲", mathFact: "Breaths fractal fire." },
+            { id: 'void', name: "The Void", icon: "⚫", mathFact: "Dividing by zero..." }
+        ];
+        const SPECIALS = [
+            { id: 'goose', name: "Golden Goblin", icon: "👺", mathFact: "Net worth > Infinity." }
+        ];
+
+        const BADGES = [
+            { id: 'novice', name: 'Novice', desc: 'Reach Level 5', check: (p) => p.lvl >= 5 },
+            { id: 'whiz', name: 'Math Whiz', desc: 'Reach Level 10', check: (p) => p.lvl >= 10 },
+            { id: 'rich', name: 'Moneybags', desc: 'Hold 500 Gold', check: (p) => p.gold >= 500 },
+            { id: 'hero', name: 'Hero', desc: 'Beat Floor 20', check: (p) => p.maxFloor >= 20 },
+        ];
+        
+        const TOWN_MSGS = [
+            "Good luck in the dungeons!",
+            "I heard the Math Dragon loves geometry.",
+            "Save your gold for better gear!",
+            "Watch out for traps!",
+            "Have you seen the Golden Goblin?",
+            "Did you know 48 is an important number?",
+            "I like how many edges stop signs have!"
+        ];
+
+        // --- MATH ENGINE ---
+        const generateQ = (grade, isBoss) => {
+            let q = "", a = 0, type = "choice", choices = [], visual = null;
+            if (grade === 0) {
+                const mode = Math.random();
+                if (mode < 0.5) {
+                    const count = Math.floor(Math.random() * 9) + 1; const emojis = ['🍎','🍌','⭐','🍄','💎'];
+                    q = `Count the items:`; visual = Array(count).fill(emojis[Math.floor(Math.random()*emojis.length)]); a = count; type = "choice";
+                } else if (mode < 0.8) {
+                    const n1 = Math.floor(Math.random()*5)+1; const n2 = Math.floor(Math.random()*4)+1; q = `${n1} + ${n2} = ?`; a = n1+n2; type="choice";
+                } else {
+                    const n1 = Math.floor(Math.random()*9)+1; const n2 = Math.floor(Math.random()*9)+1; q = `Which is bigger? ${n1} or ${n2}?`; a = Math.max(n1,n2); type="choice";
+                }
+            } else if (grade === 1) {
+                const isAdd = Math.random() > 0.5;
+                if (isAdd) { const n1 = Math.floor(Math.random()*10)+1; const n2 = Math.floor(Math.random()*10)+1; q = `${n1} + ${n2} = ?`; a = n1+n2; }
+                else { const n1 = Math.floor(Math.random()*15)+5; const n2 = Math.floor(Math.random()*5)+1; q = `${n1} - ${n2} = ?`; a = n1-n2; }
+                type="choice";
+            } else if (grade === 2) {
+                const isAdd = Math.random() > 0.5;
+                if (isAdd) { const n1 = Math.floor(Math.random()*40)+10; const n2 = Math.floor(Math.random()*40)+10; q = `${n1} + ${n2} = ?`; a = n1+n2; }
+                else { const n1 = Math.floor(Math.random()*50)+20; const n2 = Math.floor(Math.random()*20)+10; q = `${n1} - ${n2} = ?`; a = n1-n2; }
+                type="choice";
+            } else if (grade === 3) {
+                if (Math.random() > 0.4) { const n1 = Math.floor(Math.random()*9)+2; const n2 = Math.floor(Math.random()*9)+2; q = `${n1} × ${n2} = ?`; a = n1*n2; }
+                else { const ans = Math.floor(Math.random()*9)+2; const n2 = Math.floor(Math.random()*5)+2; q = `${ans*n2} ÷ ${n2} = ?`; a = ans; }
+                type="choice";
+            } else if (grade === 4) {
+                if (Math.random() > 0.6) { const l = Math.floor(Math.random()*8)+3; const w = Math.floor(Math.random()*5)+2; q = `Area of ${l} by ${w} rectangle?`; a = l*w; }
+                else { const n1 = Math.floor(Math.random()*10)+10; const n2 = Math.floor(Math.random()*5)+2; q = `${n1} × ${n2} = ?`; a = n1*n2; }
+                type="input";
+            } else {
+                if (Math.random() > 0.5) { const n1 = Math.floor(Math.random()*5)+2; const n2 = Math.floor(Math.random()*5)+2; const n3 = Math.floor(Math.random()*5)+2; q = `${n1} + ${n2} × ${n3} = ?`; a = n1 + (n2*n3); }
+                else { const n = Math.floor(Math.random()*12)+2; q = `${n}² = ?`; a = n*n; }
+                type="input";
+            }
+            if (isBoss) {
+                const bossQs = [{t:"How many sides on a stop sign?", a:8}, {t:"20 + 20 - 10 = ?", a:30}, {t:"Half of 100?", a:50}];
+                if (grade >= 4) bossQs.push({t: "8 x 2(2+1)", a: 48})
+                if (grade <= 1) bossQs.push({t: "10 minus 3 is?", a: 7});
+                const s = bossQs[Math.floor(Math.random()*bossQs.length)]; q = s.t; a = s.a; type="choice";
+            }
+            if (type === "choice") {
+                choices = [a];
+                while(choices.length<3) { let fake = a + Math.floor(Math.random()*5) - 2; if(fake!==a && fake>=0 && !choices.includes(fake)) choices.push(fake); }
+                choices.sort(()=>Math.random()-0.5);
+            }
+            return { q, a, type, choices, visual };
+        };
+
+        // --- COMPONENTS ---
+        const Scratchpad = ({ onClose }) => {
+            const canvasRef = useRef(null);
+            useEffect(() => {
+                const cvs = canvasRef.current; const ctx = cvs.getContext('2d');
+                cvs.width = cvs.offsetWidth; cvs.height = cvs.offsetHeight;
+                ctx.strokeStyle = "white"; ctx.lineWidth = 4; ctx.lineCap = "round";
+                let drawing = false;
+                const getPos = (e) => { const r=cvs.getBoundingClientRect(); const t=e.touches?e.touches[0]:e; return {x:t.clientX-r.left, y:t.clientY-r.top}; };
+                const start = (e) => { drawing=true; const p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+                const move = (e) => { if(!drawing)return; const p=getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+                const end = () => drawing=false;
+                cvs.addEventListener('mousedown', start); cvs.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
+                cvs.addEventListener('touchstart', start, {passive:false}); cvs.addEventListener('touchmove', move, {passive:false}); window.addEventListener('touchend', end);
+            }, []);
+            return (
+                <div style={{position:'absolute', top:0, left:0, width:'100%', height:'100%', zIndex:60}}>
+                    <canvas ref={canvasRef} id="scratch-canvas" />
+                    <div className="scratch-tools"><button className="btn-red" style={{width:'auto'}} onClick={onClose}>X</button><button className="btn-blue" style={{width:'auto'}} onClick={()=>{const c=canvasRef.current;c.getContext('2d').clearRect(0,0,c.width,c.height)}}>Clear</button></div>
+                </div>
+            );
+        };
+
+        const DamageText = ({ items }) => (
+            <>
+                {items.map(i => (
+                    <div key={i.id} className="float-text" style={{
+                        left: i.x, top: i.y, color: i.color, 
+                        transform: `translate(${i.dx}px, ${i.dy}px) scale(${i.scale})`,
+                        transition: 'transform 0.05s linear', opacity: i.life
+                    }}>{i.txt}</div>
+                ))}
+            </>
+        );
+
+        const Weather = ({ type }) => {
+            const canvasRef = useRef(null);
+            useEffect(() => {
+                const cvs = canvasRef.current;
+                const ctx = cvs.getContext('2d');
+                cvs.width = window.innerWidth; cvs.height = window.innerHeight;
+                let particles = [];
+                const addParticle = () => {
+                    particles.push({
+                        x: Math.random() * cvs.width,
+                        y: -10,
+                        speed: Math.random() * 5 + 2,
+                        size: Math.random() * 3 + 1
+                    });
+                };
+                const loop = () => {
+                    ctx.clearRect(0, 0, cvs.width, cvs.height);
+                    if (particles.length < 100) addParticle();
+                    particles.forEach((p, i) => {
+                        p.y += p.speed;
+                        if (type === 'rain') {
+                            ctx.fillStyle = '#aaaaff'; ctx.fillRect(p.x, p.y, 1, p.size * 3);
+                        } else if (type === 'snow') {
+                            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+                        } else if (type === 'ash') {
+                            ctx.fillStyle = '#ffaaaa'; ctx.fillRect(p.x, p.y, p.size, p.size);
+                        }
+                        if (p.y > cvs.height) particles.splice(i, 1);
+                    });
+                    requestAnimationFrame(loop);
+                };
+                const anim = requestAnimationFrame(loop);
+                return () => cancelAnimationFrame(anim);
+            }, [type]);
+            return <canvas id="weather-canvas" ref={canvasRef} />;
+        };
+
+        // --- NEW COMPONENT: WANDERING NPC (FIXED) ---
+        const TownNPC = ({ skin, onClick }) => {
+            const [style, setStyle] = useState({ 
+                left: `${Math.random()*80+10}%`, 
+                top: `${Math.random()*40+50}%`, 
+                transform: 'scaleX(1)',
+                transition: 'none' 
+            });
+
+            useEffect(() => {
+                let timeout;
+                
+                const move = () => {
+                    const pause = Math.random() * 2000 + 500;
+                    timeout = setTimeout(() => {
+                        const newX = Math.random() * 80 + 10;
+                        const newY = Math.random() * 40 + 50;
+                        const duration = Math.random() * 2000 + 2000;
+                        
+                        setStyle(prev => ({
+                            left: `${newX}%`,
+                            top: `${newY}%`,
+                            transform: `scaleX(${newX > parseFloat(prev.left) ? 1 : -1})`,
+                            transition: `left ${duration}ms linear, top ${duration}ms linear`
+                        }));
+                        
+                        timeout = setTimeout(move, duration);
+                    }, pause);
+                };
+                
+                move();
+                return () => clearTimeout(timeout);
+            }, []);
+
+            return <div className="town-npc-walker" onClick={onClick} style={{...style, zIndex: Math.floor(parseFloat(style.top)) + 50}}>{skin}</div>;
+        };
+        
+        // --- NEW COMPONENT: TOWN OBJECT ---
+        const TownObject = ({ type, x, y, label, onClick, children }) => (
+             <div className="town-building" style={{left: x, top: y, zIndex: Math.floor(parseFloat(y)) + 50}} onClick={onClick}>
+                <span className="building-sprite">{children}</span>
+                <span className="building-label">{label}</span>
+             </div>
+        );
+
+
+        // --- MAIN APP ---
+        function App() {
+            // Global State
+            const [slot, setSlot] = useState(0);
+            const [screen, setScreen] = useState('SLOT');
+            const [player, setPlayer] = useState({
+                lvl: 1, xp: 0, gold: 0, hp: 3, maxHp: 3, dmg: 1, ngPlus: 0, maxFloor: 0,
+                inv: [], eq: {}, potions: { p_health: 0, p_power: 0, p_insight: 0, clue_scroll: 0 },
+                pets: [], activePet: null, relics: [], garden: { planted: false, progress: 0 },
+                quests: [], bestiary: [], badges: [], tutorialSeen: false, lastLogin: Date.now()
+            });
+
+            // Run State
+            const [grade, setGrade] = useState(1);
+            const [floor, setFloor] = useState(1);
+            const [enemy, setEnemy] = useState(null);
+            const [q, setQ] = useState(null);
+            const [activeEffects, setActiveEffects] = useState({});
+            const [combo, setCombo] = useState(0);
+            const [isRunActive, setIsRunActive] = useState(false);
+            
+            // Visuals
+            const [floatItems, setFloatItems] = useState([]);
+            const [shake, setShake] = useState(false);
+            const [squish, setSquish] = useState(false);
+            const [showScratch, setShowScratch] = useState(false);
+            const [showSettings, setShowSettings] = useState(false);
+            const [showPasswords, setShowPasswords] = useState(false);
+            const [showDungeonSelect, setShowDungeonSelect] = useState(false);
+            const [showHeroMenu, setShowHeroMenu] = useState(false);
+            const [viewMonster, setViewMonster] = useState(null);
+            const [showBoard, setShowBoard] = useState(false);
+            const [showLibrary, setShowLibrary] = useState(false);
+            const [libTab, setLibTab] = useState('TABLES');
+            const [showMail, setShowMail] = useState(false);
+            const [mailMsg, setMailMsg] = useState("");
+            
+            // New Visual States
+            const [bossWarning, setBossWarning] = useState(false);
+            const [readyGo, setReadyGo] = useState(null); // null, 'READY', 'GO'
+            const [mousePos, setMousePos] = useState({x: 0, y: 0});
+            
+            // Audio
+            const [musicOn, setMusicOn] = useState(true);
+            const [vol, setVol] = useState({m: 0.3, s: 0.8});
+
+            // Modes
+            const [speedRun, setSpeedRun] = useState(false);
+            const [speedTime, setSpeedTime] = useState(0);
+            const [tryAgain, setTryAgain] = useState(false);
+            const [chestTaps, setChestTaps] = useState(0);
+            const [mysteryDoors, setMysteryDoors] = useState(false);
+            const [gooseTurns, setGooseTurns] = useState(0);
+            const [flyer, setFlyer] = useState(null); // Flying Event
+
+            // Helper for TTS - MOVED HERE
+            const speak = (txt) => {
+                const u = new SpeechSynthesisUtterance(txt);
+                u.rate = 0.9;
+                window.speechSynthesis.speak(u);
+            };
+            
+            const playHover = () => {
+                 // Very quiet tick
+                 AudioEngine.playSfx(800, 'square', 0.05, 0.05);
+            };
+
+            // Init Audio
+            useEffect(() => { if (musicOn) AudioEngine.setVolumes(vol.m, vol.s); }, [vol]);
+            
+            // Mouse Parallax
+            useEffect(() => {
+                const handleMove = (e) => {
+                     setMousePos({ x: (e.clientX / window.innerWidth) * 20 - 10, y: (e.clientY / window.innerHeight) * 20 - 10 });
+                };
+                window.addEventListener('mousemove', handleMove);
+                return () => window.removeEventListener('mousemove', handleMove);
+            }, []);
+
+            // Flying Event Loop
+            useEffect(() => {
+                if (screen !== 'MENU') return;
+                const loop = setInterval(() => {
+                    if (Math.random() < 0.05) { // 5% chance every few secs
+                        setFlyer({ type: Math.random() > 0.5 ? '🐉' : '🛸', y: Math.random() * 20 + 5 });
+                        setTimeout(() => setFlyer(null), 15000);
+                    }
+                }, 5000);
+                return () => clearInterval(loop);
+            }, [screen]);
+
+            // Generate Decoration Props for Town (Static)
+            const [townProps, setTownProps] = useState([]);
+            useEffect(() => {
+                if (townProps.length > 0) return;
+                const props = [];
+                // Background Forest
+                for(let i=0; i<15; i++) {
+                    props.push({ id: `bg-tree-${i}`, type: '🌲', left: `${i * 7}%`, top: '2%', size: '40px', z: 1 });
+                }
+                // Massive Clutter
+                const items = ['🪨', '🌻', '🌲', '🌾', '🍄', '🪵', '🌿', '🌷'];
+                for(let i=0; i<60; i++) {
+                    const left = Math.random() * 100;
+                    const top = Math.random() * 90 + 10; 
+                    if (left > 35 && left < 65) continue; // Avoid Road
+                    let type = items[Math.floor(Math.random() * items.length)];
+                    // Logic for specific placements
+                    if (left < 30 && top > 30 && top < 50) type = Math.random() > 0.5 ? '📦' : '🛢️';
+                    if (left > 25 && left < 75 && top < 50) type = Math.random() > 0.5 ? '🪵' : '🕸️'; // Dungeon Scare Zone
+                    
+                    // Exclude Statue Area
+                    if (left > 40 && left < 60 && top > 55 && top < 75) continue;
+
+                    if (Math.random() > 0.90) type = '🏠'; 
+                    if (Math.random() > 0.95) type = '⛺';
+                    if (Math.random() > 0.96) type = '🔥';
+                    props.push({
+                        id: i, type: type, left: `${left}%`, top: `${top}%`,
+                        size: ['🏠','⛺'].includes(type) ? '50px' : '20px', z: Math.floor(top) 
+                    });
+                }
+                props.sort((a,b) => parseFloat(a.top) - parseFloat(b.top));
+                setTownProps(props);
+            }, []);
+
+            // Load/Save
+            const loadSlot = (id) => {
+                AudioEngine.init();
+                const raw = localStorage.getItem(`lootDrop_u_s${id}`);
+                const now = Date.now();
+                let data = raw ? JSON.parse(raw) : { 
+                    lvl: 1, xp: 0, gold: 0, hp: 3, maxHp: 3, dmg: 1, ngPlus: 0, maxFloor: 0,
+                    inv: [], eq: {}, potions: { p_health: 1, p_power: 0, p_insight: 0, clue_scroll: 0 },
+                    pets: [], activePet: null, relics: [], garden: { planted: false, progress: 0 }, quests: [],
+                    bestiary: [], badges: [], tutorialSeen: false, lastLogin: now
+                };
+                
+                // New Daily Quests
+                if (!data.quests || data.quests.length === 0 || now - data.lastLogin > 86400000) {
+                    const targets = ['Slime', 'Bat', 'Goblin'];
+                    data.quests = [
+                        { id: 1, txt: `Defeat 3 ${targets[Math.floor(Math.random()*3)]}s`, target: 3, curr: 0, reward: 50 },
+                        { id: 2, txt: "Answer 10 Correctly", target: 10, curr: 0, reward: 30 },
+                        { id: 3, txt: "Reach Floor 5", target: 5, curr: 0, reward: 40 }
+                    ];
+                    data.lastLogin = now;
+                }
+                
+                setPlayer(data); setSlot(id); setScreen('MENU');
+                if (musicOn) AudioEngine.start('TITLE');
+            };
+
+            useEffect(() => { if (slot > 0) localStorage.setItem(`lootDrop_u_s${slot}`, JSON.stringify(player)); }, [player]);
+
+            // Physics Loop
+            useEffect(() => {
+                const loop = setInterval(() => {
+                    setFloatItems(prev => prev.map(i => ({
+                        ...i, x: i.x + i.vx, y: i.y + i.vy, vy: i.vy + 0.5, life: i.life - 0.02
+                    })).filter(i => i.life > 0));
+                    
+                    if (speedRun && screen === 'GAME' && !readyGo && !bossWarning) setSpeedTime(t => t + 0.1);
+                }, 50);
+                return () => clearInterval(loop);
+            }, [speedRun, screen, readyGo, bossWarning]);
+
+            // Helpers
+            const spawnFloat = (txt, x, y, color) => {
+                setFloatItems(p => [...p, {
+                    id: Math.random(), txt, color, x, y, 
+                    vx: (Math.random()-0.5)*5, vy: -10, scale: 1, life: 1
+                }]);
+            };
+
+            const spawnGold = (amount, x, y) => {
+                // Gold Fly Animation Effect
+                const targetX = window.innerWidth - 50;
+                const targetY = 30;
+                // Since this is single file React, complex path animation for DOM elements is tricky without external lib.
+                // We'll simulate it with a specific float item that moves towards top right.
+                 setFloatItems(p => [...p, {
+                    id: Math.random(), txt: `+${amount}g`, color: 'gold', x, y, 
+                    vx: (targetX - x) / 20, vy: (targetY - y) / 20, scale: 1, life: 1
+                }]);
+            };
+            
+            const spawnSparkles = (x, y) => {
+                // Visual sparkles on click
+                for(let i=0; i<5; i++) {
+                     setFloatItems(p => [...p, {
+                        id: Math.random(), txt: '✨', color: 'yellow', x: x + (Math.random()-0.5)*40, y: y + (Math.random()-0.5)*40, 
+                        vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2, scale: 0.5 + Math.random(), life: 0.5
+                    }]);
+                }
+            };
+
+            const checkQuest = (type, val) => {
+                setPlayer(p => ({
+                    ...p, quests: p.quests.map(q => {
+                        if (q.curr >= q.target) return q; // Already done
+                        let progress = false;
+                        if (type === 'kill' && q.txt.includes(val)) progress = true;
+                        if (type === 'ans' && q.txt.includes('Answer')) progress = true;
+                        if (type === 'floor' && q.txt.includes('Floor') && val >= q.target) progress = true;
+                        
+                        if (progress) {
+                            const newCurr = q.curr + 1;
+                            if (newCurr === q.target) {
+                                spawnFloat(`Quest Done! +${q.reward}g`, window.innerWidth/2, 100, 'gold');
+                                AudioEngine.playSfx(600, 'square', 0.5);
+                                p.gold += q.reward;
+                            }
+                            return { ...q, curr: newCurr };
+                        }
+                        return q;
+                    })
+                }));
+            };
+
+            const checkPassword = (code) => {
+                const c = code.toUpperCase();
+                if (c === "RICH") { setPlayer(p => ({...p, gold: p.gold + 5000})); spawnFloat("+5000 Gold", window.innerWidth/2, 200, "gold"); }
+                else if (c === "POTION") { setPlayer(p => ({...p, potions: {...p.potions, p_health: p.potions.p_health + 1}})); spawnFloat("+1 Potion", window.innerWidth/2, 200, "lime"); }
+                else if (c === "MAX") { setPlayer(p => ({...p, lvl: 100, dmg: 10, hp: 10, maxHp: 10})); spawnFloat("MAX POWER!", window.innerWidth/2, 200, "red"); }
+                else { alert("Invalid Code"); return; }
+                setShowPasswords(false);
+                AudioEngine.playSfx(600, 'square', 0.5);
+            };
+            
+            const hitDummy = () => {
+                let dmg = player.dmg + (player.eq.weapon ? ITEMS.find(i=>i.id===player.eq.weapon).bonus : 0);
+                if (player.activePet === 'pet_wolf') dmg += 1;
+                spawnFloat(`${dmg} Damage!`, window.innerWidth/2, 200, "#fff");
+                AudioEngine.playSfx(400, 'square', 0.1);
+            };
+
+            // Game Logic
+            const startRun = (g, isSpeed=false) => {
+                setShowDungeonSelect(false); // Close modal
+                setGrade(g); setSpeedRun(isSpeed); setSpeedTime(0); setFloor(1); setCombo(0);
+                setIsRunActive(true);
+                setPlayer(p => ({...p, hp: p.maxHp})); setActiveEffects({});
+                setScreen('GAME');
+                if (musicOn) AudioEngine.start('DUNGEON', g);
+                
+                // Ready... Go! Sequence
+                setReadyGo('READY');
+                setTimeout(() => setReadyGo('GO!'), 1000);
+                setTimeout(() => {
+                    setReadyGo(null);
+                    spawnEnemy(1, g);
+                }, 2000);
+            };
+
+            const spawnEnemy = (f, g) => {
+                setTryAgain(false); setChestTaps(0); setMysteryDoors(false); setGooseTurns(0);
+                
+                // Boss Check
+                const isBoss = f % 5 === 0;
+                if (isBoss) {
+                     setBossWarning(true);
+                     AudioEngine.playSfx(100, 'sawtooth', 1.0, 1.0); // Alarm sound
+                     setTimeout(() => {
+                         setBossWarning(false);
+                         spawnEnemyLogic(f, g, true);
+                     }, 2500);
+                     return;
+                }
+
+                spawnEnemyLogic(f, g, false);
+            };
+            
+            const spawnEnemyLogic = (f, g, isBoss) => {
+                 if (f > 2 && Math.random() < 0.1 && !isBoss) { setMysteryDoors(true); setEnemy(null); setQ(null); return; }
+                let isGoose = Math.random() < 0.05 && !isBoss; if (isGoose) setGooseTurns(3);
+                
+                const pool = isBoss ? BOSSES : MONSTERS;
+                const tmpl = isGoose ? { id: 'goose', name: "Golden Goblin", icon: "👺", hp: 5 } : pool[Math.floor(Math.random()*pool.length)];
+                let hp = Math.floor((5 + f*1.5) * (isBoss?3:1) * (player.ngPlus+1)); if (isGoose) hp = 5;
+                if (f > 1 && (f-1) % 5 === 0 && !speedRun && !isBoss) { setEnemy({ name:"Chest", icon:"🎁", hp:5, maxHp:5, type:'chest' }); setQ(null); }
+                else { 
+                    setEnemy({ ...tmpl, hp, maxHp: hp, isBoss, isGoose, type: 'monster' }); 
+                    setQ(generateQ(g, isBoss)); 
+                    
+                    // Add to Bestiary Check
+                    if (!player.bestiary.includes(tmpl.id)) {
+                        setPlayer(p => ({...p, bestiary: [...p.bestiary, tmpl.id]}));
+                    }
+                }
+            };
+
+            const leaveShop = () => {
+                if (isRunActive) { 
+                    nextFloor(); // Advance to next floor and spawn new enemy
+                    if (musicOn) AudioEngine.start('DUNGEON', grade); 
+                }
+                else { setScreen('MENU'); if (musicOn) AudioEngine.start('MENU'); }
+            };
+
+            const combat = (ans, btnEvent) => {
+                if (!enemy) return;
+                const isCorrect = parseInt(ans) === q.a;
+                
+                // Button sparkle position
+                const rect = btnEvent ? btnEvent.target.getBoundingClientRect() : {left: window.innerWidth/2, top: window.innerHeight/2};
+                const clickX = rect.left + rect.width/2;
+                const clickY = rect.top + rect.height/2;
+
+                const monsterRect = document.querySelector('.monster-sprite')?.getBoundingClientRect();
+                const ex = monsterRect ? monsterRect.left + monsterRect.width/2 : window.innerWidth/2;
+                const ey = monsterRect ? monsterRect.top : 200;
+
+                if (isCorrect) {
+                    spawnSparkles(clickX, clickY);
+                    checkQuest('ans', 1); setCombo(c => Math.min(c+1, 5));
+                    let dmg = player.dmg + (player.eq.weapon ? ITEMS.find(i=>i.id===player.eq.weapon).bonus : 0);
+                    if (player.activePet === 'pet_wolf') dmg += 1;
+                    if (player.relics.includes('r_vamp')) setPlayer(p=>({...p, hp: Math.min(p.maxHp, p.hp+1)}));
+                    let isCrit = false; if (player.activePet === 'pet_drag' && Math.random() < 0.2) isCrit = true;
+                    if (combo >= 5) dmg *= 2; if (activeEffects.power) dmg *= 2; if (isCrit) dmg *= 2; if (tryAgain) dmg = Math.ceil(dmg/2);
+                    const remHp = enemy.hp - dmg;
+                    
+                    // Monster Squish
+                    setSquish(true); setTimeout(() => setSquish(false), 200);
+
+                    // Pitch shifting based on combo
+                    const pitchRate = 1.0 + (combo * 0.1);
+
+                    spawnFloat(isCrit ? `CRIT! -${dmg}` : `-${dmg}`, ex, ey, isCrit ? 'orange' : '#fff'); 
+                    AudioEngine.playSfx(isCrit?600:400, 'square', 0.1, 0.5, pitchRate);
+
+                    if (remHp <= 0) {
+                        // Kill
+                        checkQuest('kill', enemy.name);
+                        let xp = (enemy.isBoss?20:5) * (player.ngPlus+1); let gold = (enemy.isGoose?100: Math.floor(Math.random()*5)+3);
+                        if (player.activePet === 'pet_book') xp = Math.floor(xp*1.2); if (player.relics.includes('r_midas')) gold = Math.floor(gold*1.5); if (combo >= 5) gold *= 2;
+                        
+                        spawnGold(gold, ex, ey);
+
+                        if (enemy.isBoss) { for(let i=0; i<20; i++) spawnFloat("★", ex, ey, `hsl(${Math.random()*360},100%,50%)`); AudioEngine.playSfx(880, 'sawtooth', 0.5); }
+                        setPlayer(p => {
+                            let { xp: x, lvl, maxHp, dmg: d } = p; x += xp;
+                            if (x >= lvl * 10) { 
+                                x -= lvl * 10; lvl++; maxHp++; if (lvl%3===0) d++; 
+                                spawnFloat("LEVEL UP!", window.innerWidth/2, 300, '#4d88ff');
+                                // Level Up Fireworks
+                                for(let k=0; k<10; k++) spawnSparkles(window.innerWidth/2, 300);
+                            }
+                            return { ...p, xp: x, lvl, maxHp, dmg: d, gold: p.gold + gold, maxFloor: Math.max(p.maxFloor, floor) };
+                        });
+                        if (floor === 10 && speedRun) spawnFloat(`DONE! ${speedTime.toFixed(1)}s`, window.innerWidth/2, 200, 'gold');
+                        if (floor % 3 === 0) { setScreen('SHOP'); if(musicOn) AudioEngine.start('SHOP'); } else nextFloor();
+                    } else {
+                        setEnemy(e => ({...e, hp: remHp})); setTryAgain(false);
+                        setTimeout(() => {
+                            if (enemy.isGoose) { setGooseTurns(t => t - 1); if (gooseTurns <= 1) { spawnFloat("FLED!", ex, ey, 'red'); nextFloor(); return; } }
+                            setQ(generateQ(grade, enemy.isBoss)); setActiveEffects(p => ({...p, insight: false, power: false}));
+                        }, 500);
+                    }
+                } else {
+                    setCombo(0); AudioEngine.playSfx(150, 'sawtooth', 0.3);
+                    if (!tryAgain) { setTryAgain(true); spawnFloat("Try Again (½ Dmg)", ex, ey, 'yellow'); }
+                    else {
+                        spawnFloat("-1 HP", window.innerWidth/2, 300, 'red'); setShake(true); setTimeout(()=>setShake(false), 300);
+                        setPlayer(p => ({...p, hp: p.hp - 1}));
+                        if (player.hp - 1 <= 0) setTimeout(() => {setIsRunActive(false); setScreen('DEATH');}, 500); else setTimeout(() => setQ(generateQ(grade, enemy.isBoss)), 500);
+                    }
+                }
+            };
+
+            const handleDoor = (type) => {
+                setMysteryDoors(false);
+                if (type === 'loot') {
+                    const gold = 50 * (player.ngPlus+1); setPlayer(p => ({...p, gold: p.gold + gold})); spawnFloat(`+${gold}g`, window.innerWidth/2, 200, 'gold'); nextFloor();
+                } else if (type === 'trap') {
+                    if (player.relics.includes('r_sight')) spawnFloat("Trap Avoided!", window.innerWidth/2, 200, 'cyan');
+                    else { setPlayer(p => ({...p, hp: p.hp - 1})); spawnFloat("-1 HP", window.innerWidth/2, 200, 'red'); if (player.hp - 1 <= 0) setScreen('DEATH'); }
+                    nextFloor();
+                } else { setEnemy({ name:"Mimic", icon:"😈", hp:10, maxHp:10, type:'monster' }); setQ(generateQ(grade, false)); }
+            };
+
+            const nextFloor = () => { checkQuest('floor', floor+1); setFloor(f => f+1); setScreen('GAME'); spawnEnemy(floor+1, grade); };
+
+            // Screens
+            const renderGame = () => {
+                let themeClass = '';
+                let showClouds = false;
+                let weatherType = 'none';
+
+                // Map Grade to Theme
+                switch(grade) {
+                    case 0: themeClass = 'theme-meadow'; showClouds = true; weatherType = 'none'; break;
+                    case 1: themeClass = 'theme-forest'; showClouds = true; weatherType = 'rain'; break;
+                    case 2: themeClass = 'theme-desert'; showClouds = false; weatherType = 'none'; break;
+                    case 3: themeClass = 'theme-cave'; showClouds = false; weatherType = 'none'; break;
+                    case 4: themeClass = 'theme-ice'; showClouds = true; weatherType = 'snow'; break;
+                    case 5: themeClass = 'theme-lava'; showClouds = false; weatherType = 'ash'; break;
+                    default: themeClass = 'theme-forest';
+                }
+                
+                return (
+                    <div className="retro-box" style={{minHeight:'95vh', overflow:'hidden', position:'relative'}}>
+                        <div className={`bg-layer ${themeClass}`}></div>
+                        {showClouds && <div className="bg-layer clouds"></div>}
+                        <Weather type={weatherType} />
+                        <DamageText items={floatItems} />
+                        {player.hp <= 1 && <div className="vignette"></div>}
+                        
+                        {/* Boss Warning */}
+                        {bossWarning && <div className="overlay-text">⚠️ BOSS APPROACHING ⚠️</div>}
+                        
+                        {/* Ready Go */}
+                        {readyGo && <div className="ready-go">{readyGo}</div>}
+
+                    {/* HUD */}
+                    <div className="hud">
+                        <div className="stat-row">
+                            <span>Fl {floor} {speedRun && timeFmt(speedTime)}</span> 
+                            <span>❤️ {player.hp}/{player.maxHp}</span>
+                        </div>
+                        <div className="bar-wrap"><div className="bar-fill" style={{width:`${(player.xp/(player.lvl*10))*100}%`, background:'blue'}}></div></div>
+                        <div className="combo-container">
+                            <div className={`combo-fill ${combo===5?'combo-max':''}`} style={{width:`${combo*20}%`}}></div>
+                            <div className="combo-text">{combo===5?'MAX!':''}</div>
+                        </div>
+                        {player.eq.weapon && <div style={{position:'absolute', right:-30, top:0, fontSize:20}}>{ITEMS.find(i=>i.id===player.eq.weapon).icon}</div>}
+                    </div>
+
+                    {/* Combat */}
+                    <div className="monster-area">
+                        {mysteryDoors ? (
+                            <div style={{display:'flex', gap:20}}>
+                                {['🚪','🚪','🚪'].map((d, i) => (
+                                    <button key={i} style={{fontSize:30}} onMouseEnter={playHover} onClick={() => {
+                                        const r = Math.random(); handleDoor(r < 0.4 ? 'loot' : r < 0.7 ? 'monster' : 'trap');
+                                    }}>?</button>
+                                ))}
+                            </div>
+                        ) : enemy && enemy.type === 'chest' ? (
+                             <div className="monster-sprite" onClick={()=>{
+                                 setChestTaps(c=>c+1); AudioEngine.playSfx(300,'square',0.1);
+                                 if(chestTaps>=4) { spawnFloat("+50g", window.innerWidth/2, 200, 'gold'); setPlayer(p=>({...p, gold: p.gold+50})); nextFloor(); }
+                             }} style={{fontSize:100, cursor:'pointer'}}>🎁</div>
+                        ) : enemy && (
+                            <>
+                                <div className={`monster-sprite ${enemy.isBoss?'boss':''} ${enemy.isShiny?'shiny':''} ${squish?'squish':''}`}>{enemy.icon}</div>
+                                {enemy.isGoose && <div style={{color:'yellow'}}>Fleeing: {gooseTurns}</div>}
+                                <div style={{background:'rgba(0,0,0,0.6)', padding:'2px 8px', borderRadius:4}}>
+                                    {enemy.name} <small>{enemy.hp}/{enemy.maxHp}</small>
+                                </div>
+                            </>
+                        )}
+                        {player.activePet && <div className="pet-sprite">{ITEMS.find(i=>i.id===player.activePet).icon}</div>}
+                    </div>
+
+                    {/* Controls */}
+                    {q && (
+                        <div className="retro-box" style={{borderColor: tryAgain ? 'orange' : '#fff', zIndex:20}}>
+                            <div style={{display:'flex', justifyContent:'space-between', marginBottom:5, flexDirection: 'column'}}>
+                                <div className="potion-row">
+                                    {['p_health','p_power','p_insight','clue_scroll'].map(k => {
+                                        const item = ITEMS.find(i => i.id === k);
+                                        return player.potions[k] > 0 && (
+                                        <button key={k} className="potion-btn" onMouseEnter={playHover} onClick={()=>{
+                                            if(k==='p_health') setPlayer(p=>({...p, hp:Math.min(p.maxHp, p.hp+3), potions:{...p.potions, [k]:p.potions[k]-1}}));
+                                            if(k==='p_power') setActiveEffects(p=>({...p, power:true})) || setPlayer(p=>({...p, potions:{...p.potions, [k]:p.potions[k]-1}}));
+                                            if(k==='p_insight') setActiveEffects(p=>({...p, insight:true})) || setPlayer(p=>({...p, potions:{...p.potions, [k]:p.potions[k]-1}}));
+                                            if(k==='clue_scroll') {
+                                                const wrong = q.choices.find(c => c !== q.a);
+                                                setQ(prev => ({...prev, choices: prev.choices.filter(c => c !== wrong)}));
+                                                setPlayer(p=>({...p, potions:{...p.potions, [k]:p.potions[k]-1}}));
+                                            }
+                                        }}>
+                                            <div className="icon">{item.icon} <span style={{fontSize:10}}>x{player.potions[k]}</span></div>
+                                            <div className="info">
+                                                <div className="name">{item.name}</div>
+                                                <div className="desc">{item.desc}</div>
+                                            </div>
+                                        </button>
+                                    )})}
+                                </div>
+                                <div style={{display:'flex', justifyContent: 'flex-end', marginTop: 5}}>
+                                    <button className="a11y-btn" onMouseEnter={playHover} onClick={()=>speak(q.q)}>🗣️</button>
+                                    <button className="a11y-btn" onMouseEnter={playHover} style={{marginLeft:10}} onClick={()=>setShowScratch(true)}>✏️</button>
+                                </div>
+                            </div>
+
+                            <h3 style={{fontSize: q.q.length > 20 ? 12 : 18}}>{q.q}</h3>
+                            {q.visual && <div className="visual-aid">{q.visual.map((ico,i)=><span key={i}>{ico}</span>)}</div>}
+                            
+                            {q.type === 'choice' ? (
+                                <div className="grid-2">
+                                    {q.choices.map((c, i) => {
+                                        if (activeEffects.insight && c !== q.a && Math.random() > 0.5) return <button key={i} disabled>❌</button>;
+                                        return <button key={i} onMouseEnter={playHover} onClick={(e)=>combat(c, e)}>{c}</button>;
+                                    })}
+                                </div>
+                            ) : (
+                                <div style={{display:'flex', gap:5}}>
+                                    <input type="number" id="ansInput" autoFocus onKeyDown={(e)=>e.key==='Enter' && combat(e.target.value)} />
+                                    <button onMouseEnter={playHover} onClick={()=>combat(document.getElementById('ansInput').value)}>GO</button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    <button className="btn-red" onMouseEnter={playHover} onClick={()=>{setIsRunActive(false); AudioEngine.stop(); setScreen('MENU');}}>Flee</button>
+                    {showScratch && <Scratchpad onClose={()=>setShowScratch(false)} />}
+                </div>
+            );
+        };
+
+            // Time Formatter
+            const timeFmt = (s) => `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+
+            return (
+                <div style={{maxWidth:600, margin:'0 auto'}}>
+                    {screen === 'SLOT' && (
+                        <div className="retro-box theme-town">
+                            <div className="bg-layer clouds"></div>
+                            <h1>LOOT DROP: ULTIMATE</h1>
+                            {[1,2,3].map(i => {
+                                const savedData = localStorage.getItem(`lootDrop_u_s${i}`);
+                                const parsed = savedData ? JSON.parse(savedData) : null;
+                                return (
+                                <button key={i} onMouseEnter={playHover} onClick={()=>loadSlot(i)}>
+                                    Student {i} {parsed ? `(Max Floor: ${parsed.maxFloor || 0})` : ''}
+                                </button>
+                            )})}
+                        </div>
+                    )}
+                    
+                    {screen === 'MENU' && (
+                        <div className="retro-box">
+                            <div className="bg-layer clouds"></div>
+                            <h1>TOWN HUB</h1>
+                            <div className="hud"><span>Lvl {player.lvl}</span> <span>{player.gold}g</span></div>
+                            
+                            {/* 3D MAP */}
+                            <div className="town-viewport" onMouseMove={(e) => {
+                                const x = (e.clientX / window.innerWidth - 0.5) * 20;
+                                document.querySelector('.town-plane').style.transform = `rotateX(20deg) translateY(20px) translateZ(-50px) rotateY(${x}deg)`;
+                            }}>
+                                <div className="clouds-container"><div className="clouds"></div></div>
+                                <div className="town-plane">
+                                    {/* Ground Decor */}
+                                    <div className="town-wall"></div>
+                                    <div className="town-road"></div>
+                                    
+                                    {townProps.map(p => (
+                                        <div key={p.id} className="scenery" 
+                                            style={{ left: p.left, top: p.top, fontSize: p.size, zIndex: p.z }}>
+                                            {p.type}
+                                            {p.type === '🔥' && <div className="torch" style={{left:0, top:0}} onClick={(e)=>{e.target.style.opacity = e.target.style.opacity == 0.5 ? 1 : 0.5; AudioEngine.playSfx(200,'noise',0.1);}}></div>}
+                                        </div>
+                                    ))}
+
+                                    {/* Wandering NPCs */}
+                                    {['🤺','🏹','🧙','🧝','🚶','🏃','🛡️','🧔'].map((skin, i) => (
+                                        <TownNPC key={i} skin={skin} onClick={()=>{
+                                            spawnFloat("Math is fun!", 200, 200, "white");
+                                            AudioEngine.playSfx(400,'triangle',0.1);
+                                        }} />
+                                    ))}
+                                    
+                                    {/* Interactive Spots */}
+                                    <TownObject x="10%" y="20%" label="LIBRARY" onClick={()=>setShowLibrary(true)}>🏛️</TownObject>
+                                    <TownObject x="85%" y="20%" label="BANK" onClick={()=>{AudioEngine.playSfx(1000,'sine',0.1); spawnFloat(`${player.gold}g`, window.innerWidth*0.8, 150, "gold");}}>💰<div className="gold-pile" style={{transform:`scale(${Math.min(2, 0.5 + player.gold/1000)})`}}></div></TownObject>
+                                    
+                                    <TownObject x="15%" y="45%" label="SHOP" onClick={()=>{setScreen('SHOP'); if(musicOn) AudioEngine.start('SHOP');}}>⛺</TownObject>
+                                    <TownObject x="80%" y="45%" label="BOARD" onClick={()=>setShowBoard(true)}>
+                                        📋 {player.quests.some(q=>q.curr>=q.target) && <div className="quest-alert">!</div>}
+                                    </TownObject>
+                                    
+                                    <TownObject x="10%" y="75%" label="SMITH" onClick={()=>{AudioEngine.playSfx(200,'square',0.1); spawnFloat("CLANG!", window.innerWidth*0.2, 300, 'white');}}>⚒️</TownObject>
+                                    <TownObject x="20%" y="65%" label="TRAIN" onClick={hitDummy}>🎯</TownObject>
+                                    
+                                    <TownObject x="65%" y="65%" label="CODES" onClick={()=>setShowPasswords(true)}>🔑</TownObject>
+                                    <TownObject x="90%" y="75%" label="MAIL" onClick={()=>{setMailMsg(TOWN_MSGS[Math.floor(Math.random()*TOWN_MSGS.length)]); setShowMail(true);}}>📬</TownObject>
+                                    <TownObject x="35%" y="70%" label="BARD" onClick={()=>AudioEngine.changeTrack()}>🎸</TownObject>
+
+                                    <button className="town-building b-dungeon" onClick={()=>setShowDungeonSelect(true)}>
+                                        <span className="building-sprite">🏰</span>
+                                        <span className="building-label">DUNGEONS</span>
+                                    </button>
+                                    
+                                    <button className="town-building b-statue" onClick={()=>setShowHeroMenu(true)}>
+                                        <span className="building-sprite">🗿</span>
+                                        <span className="building-label">HERO</span>
+                                    </button>
+                                    
+                                    {/* Trophies */}
+                                    {player.bestiary.includes('king') && <div className="scenery" style={{left:'30%', top:'80%', fontSize:'30px', zIndex:100}}>🤮</div>}
+                                    {player.bestiary.includes('dragon') && <div className="scenery" style={{left:'70%', top:'80%', fontSize:'30px', zIndex:100}}>🐲</div>}
+
+                                    {/* Pets */}
+                                    {player.pets.map((pid, i) => (
+                                        <TownNPC key={`pet-${i}`} skin={ITEMS.find(it=>it.id===pid).icon} onClick={()=>{AudioEngine.playSfx(600,'triangle',0.1); spawnFloat("Bark!", 0,0,"lime");}}/>
+                                    ))}
+                                    
+                                    <div className="scenery" style={{left:'95%', top:'95%', fontSize:'10px', cursor:'pointer', zIndex:200}} onClick={()=>checkPassword('SECRET')}>🌳</div>
+                                </div>
+                            </div>
+                            
+                            <div style={{display:'flex', gap:10, marginTop:10}}>
+                                <button className="a11y-btn" onMouseEnter={playHover} onClick={()=>setMusicOn(!musicOn)}>{musicOn?'🔊':'🔇'}</button>
+                                <button className="a11y-btn" onMouseEnter={playHover} onClick={()=>setShowSettings(true)}>⚙️</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MODALS */}
+                    {showDungeonSelect && (
+                        <div className="modal-overlay">
+                            <div className="retro-box">
+                                <h2>SELECT DUNGEON</h2>
+                                <div className="grid-2">
+                                    <button className="btn-green" onMouseEnter={playHover} onClick={()=>startRun(0)}>🧸 Grade K</button>
+                                    <button className="btn-green" onMouseEnter={playHover} onClick={()=>startRun(1)}>🌳 Grade 1</button>
+                                    <button className="btn-gold" onMouseEnter={playHover} onClick={()=>startRun(2)}>🏰 Grade 2</button>
+                                    <button className="btn-gold" onMouseEnter={playHover} onClick={()=>startRun(3)}>⚔️ Grade 3</button>
+                                    <button className="btn-red" onMouseEnter={playHover} onClick={()=>startRun(4)}>🌋 Grade 4</button>
+                                    <button className="btn-red" onMouseEnter={playHover} onClick={()=>startRun(5)}>🔮 Grade 5</button>
+                                </div>
+                                <button className="btn-blue" onMouseEnter={playHover} onClick={()=>startRun(4, true)} style={{marginTop:10}}>⏱️ Speed Run (Gr 4)</button>
+                                <button onMouseEnter={playHover} onClick={()=>setShowDungeonSelect(false)} style={{marginTop:20}}>Cancel</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Hero Menu Modal */}
+                    {showHeroMenu && (
+                        <div className="modal-overlay">
+                            <div className="retro-box">
+                                <h2>HERO'S LOG</h2>
+                                <button className="btn-blue" onMouseEnter={playHover} onClick={()=>{setScreen('BADGES'); setShowHeroMenu(false);}}>🏅 Achievements</button>
+                                <button className="btn-blue" onMouseEnter={playHover} onClick={()=>{setScreen('BESTIARY'); setShowHeroMenu(false);}}>📖 Monster Book</button>
+                                {player.lvl >= 20 && <button className="btn-gold" onMouseEnter={playHover} onClick={()=>{
+                                    if(confirm("Rebirth? Unlock a Relic!")) {
+                                        setScreen('RELIC_SELECT');
+                                        setShowHeroMenu(false);
+                                    }
+                                }}>✨ REBIRTH ✨</button>}
+                                <button onMouseEnter={playHover} onClick={()=>setShowHeroMenu(false)} style={{marginTop:20}}>Close</button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {showBoard && (
+                        <div className="modal-overlay">
+                            <div className="retro-box" style={{background:'#d2b48c', color:'#000'}}>
+                                <h2>📋 NOTICE BOARD</h2>
+                                {player.quests.map(q => (
+                                    <div key={q.id} style={{borderBottom:'1px dashed #000', padding:5, textDecoration: q.curr>=q.target?'line-through':''}}>
+                                        {q.curr>=q.target ? '✅' : '⬜'} {q.txt} ({q.curr}/{q.target})
+                                    </div>
+                                ))}
+                                <button onMouseEnter={playHover} onClick={()=>setShowBoard(false)} style={{marginTop:20, background:'#8b4513', color:'#fff'}}>Close</button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {showLibrary && (
+                        <div className="modal-overlay">
+                            <div className="retro-box" style={{width: '90%', maxWidth: '500px'}}>
+                                <h2>📚 LIBRARY</h2>
+                                <div style={{display:'flex', gap:10, marginBottom:10, justifyContent:'center'}}>
+                                    <button onMouseEnter={playHover} onClick={()=>setLibTab('TABLES')} className={libTab==='TABLES'?'btn-gold':''}>Tables</button>
+                                    <button onMouseEnter={playHover} onClick={()=>setLibTab('SHAPES')} className={libTab==='SHAPES'?'btn-gold':''}>Shapes</button>
+                                    <button onMouseEnter={playHover} onClick={()=>setLibTab('PROPERTIES')} className={libTab==='PROPERTIES'?'btn-gold':''}>PROPERTIES</button>
+                                    <button onMouseEnter={playHover} onClick={()=>setLibTab('TIPS')} className={libTab==='TIPS'?'btn-gold':''}>Rules</button>
+                                </div>
+                                
+                                <div style={{maxHeight:'300px', overflowY:'auto'}}>
+                                    {libTab === 'TABLES' && (
+                                        <>
+                                            <h4>Multiplication</h4>
+                                            <table>
+                                                <tbody>
+                                                    {[1,2,3,4,5,6,7,8,9,10].map(r => (
+                                                        <tr key={r}>{[1,2,3,4,5].map(c => <td key={c} style={{fontSize:9, padding:2}}>{r}x{c}={r*c}</td>)}</tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </>
+                                    )}
+                                    
+                                    {libTab === 'SHAPES' && (
+                                         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, textAlign:'center'}}>
+                                            <div style={{border:'1px solid #fff', padding:5}}><div style={{fontSize:30}}>🔺</div>Triangle<br/>3 Sides</div>
+                                            <div style={{border:'1px solid #fff', padding:5}}><div style={{fontSize:30}}>🟥</div>Square<br/>4 Sides</div>
+                                            <div style={{border:'1px solid #fff', padding:5}}><div style={{fontSize:30}}>⬠</div>Pentagon<br/>5 Sides</div>
+                                            <div style={{border:'1px solid #fff', padding:5}}><div style={{fontSize:30}}>⬡</div>Hexagon<br/>6 Sides</div>
+                                            <div style={{border:'1px solid #fff', padding:5}}><div style={{fontSize:30}}>🛑</div>Octagon<br/>8 Sides</div>
+                                            <div style={{border:'1px solid #fff', padding:5}}><div style={{fontSize:30}}>⚪</div>Circle<br/>0 Sides</div>
+                                         </div>
+                                    )}
+                                    
+                                    {libTab === 'PROPERTIES' && (
+                                         <div style={{textAlign:'left', fontSize:12, lineHeight:1.5}}>
+                                            <p><strong>Distributive Property:</strong></p>
+                                            <ul>
+                                                <li>Multiplying a sum by a number is the same as multiplying each addend separately and then adding.</li>
+                                                ((a (b + c) = ab + ac))
+                                            </ul>
+                                            <hr/>
+                                            <p><strong>Associative Property:</strong></p>
+                                            <ul>
+                                                <li>The grouping of numbers does not change the result for addition or multiplication</li>
+                                                (a + (b+c) = (a + b) + c)
+                                            </ul>
+                                            <hr/>
+                                            <p><strong>Commutative Property:</strong></p>
+                                            <ul>
+                                                <li>The order of numbers does not change the result for addition or multiplication.</li>
+                                                (a x b = b x a)
+                                            </ul>
+                                        </div>
+                                    )}
+                                    
+                                    
+                                    {libTab === 'TIPS' && (
+                                        <div style={{textAlign:'left', fontSize:12, lineHeight:1.5}}>
+                                            <p><strong>PEMDAS:</strong> Order of Operations</p>
+                                            <ol>
+                                                <li><strong>P</strong>arentheses ()</li>
+                                                <li><strong>E</strong>xponents x²</li>
+                                                <li><strong>M</strong>ultiply × & <strong>D</strong>ivide ÷</li>
+                                                <li><strong>A</strong>dd + & <strong>S</strong>ubtract -</li>
+                                            </ol>
+                                            <hr/>
+                                            <p><strong>Symbols:</strong></p>
+                                            <ul>
+                                                <li><strong>&gt;</strong> Greater Than (5 &gt; 3)</li>
+                                                <li><strong>&lt;</strong> Less Than (2 &lt; 8)</li>
+                                                <li><strong>=</strong> Equal To (4 = 4)</li>
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button onMouseEnter={playHover} onClick={()=>setShowLibrary(false)} style={{marginTop:20}}>Close</button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {showMail && (
+                        <div className="modal-overlay">
+                            <div className="retro-box">
+                                <h2>📬 MAILBOX</h2>
+                                <div style={{background:'#fff', color:'#000', padding:10, borderRadius:5, fontStyle:'italic'}}>
+                                    "{mailMsg}"
+                                    <br/>- A Villager
+                                </div>
+                                <button onMouseEnter={playHover} onClick={()=>setShowMail(false)} style={{marginTop:20}}>Close</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {screen === 'RELIC_SELECT' && (
+                        <div className="retro-box">
+                            <h2>Choose Relic</h2>
+                            <div style={{marginBottom: 10, fontSize: 10}}>Collected: {player.relics.length}/{RELICS.length}</div>
+                            {RELICS.filter(r => !player.relics.includes(r.id)).map(r => (
+                                <button key={r.id} onMouseEnter={playHover} onClick={()=>{
+                                    setPlayer(p => ({
+                                        ...p, lvl:1, xp:0, hp:3, maxHp:3, dmg:1, gold:0, ngPlus: p.ngPlus+1, 
+                                        relics: [...p.relics, r.id], inv: [], eq: {}, maxFloor: 0
+                                    }));
+                                    setScreen('MENU');
+                                }}>{r.icon} {r.name}<br/><small>{r.desc}</small></button>
+                            ))}
+                        </div>
+                    )}
+
+                    {screen === 'SHOP' && (
+                        <div className="retro-box">
+                            <h2>MERCHANT</h2>
+                            <p>Gold: {player.gold}</p>
+                            <div style={{marginBottom: 10, fontSize: 10}}>Pets: {player.pets.length}/{ITEMS.filter(i=>i.type==='pet').length}</div>
+                            <div className="grid-2">
+                                {ITEMS.map(item => (
+                                    <button key={item.id} onMouseEnter={playHover} disabled={player.gold < item.price || (item.type !== 'consumable' && player.inv.includes(item.id))} onClick={() => {
+                                        if (item.type==='pet') { setPlayer(p=>({...p, gold: p.gold-item.price, pets:[...p.pets, item.id], activePet:item.id})); }
+                                        else { setPlayer(p => {
+                                            const ns = {...p, gold: p.gold-item.price};
+                                            if(item.type==='consumable') ns.potions[item.id]++;
+                                            else ns.inv.push(item.id);
+                                            return ns;
+                                        }); }
+                                        AudioEngine.playSfx(1000, 'sine', 0.1);
+                                    }}>
+                                        <div>{item.icon} {item.name}</div>
+                                        <small>{item.price}g</small>
+                                        <div style={{fontSize:9}}>{item.desc}</div>
+                                    </button>
+                                ))}
+                            </div>
+                            <button onMouseEnter={playHover} onClick={leaveShop} style={{marginTop:20}}>{isRunActive ? "Continue Dungeon" : "Back to Town"}</button>
+                        </div>
+                    )}
+
+                    {screen === 'BESTIARY' && (
+                        <div className="retro-box">
+                            <h2>Monster Book</h2>
+                            {viewMonster ? (
+                                <div>
+                                    <div style={{fontSize:60, marginBottom:10}}>{viewMonster.icon}</div>
+                                    <h3>{viewMonster.name}</h3>
+                                    <p style={{fontStyle:'italic', color:'#aaa'}}>{viewMonster.mathFact}</p>
+                                    <button onMouseEnter={playHover} onClick={()=>setViewMonster(null)}>Back</button>
+                                </div>
+                            ) : (
+                                <div className="grid-badges">
+                                    {[...MONSTERS, ...BOSSES, ...SPECIALS].map(m => {
+                                        const unlocked = player.bestiary.includes(m.id);
+                                        return (
+                                            <div key={m.id} className={`badge ${unlocked?'unlocked':''}`} onClick={()=>{if(unlocked) setViewMonster(m)}}>
+                                                {m.icon}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                            {!viewMonster && <button onMouseEnter={playHover} onClick={()=>setScreen('MENU')}>Back</button>}
+                        </div>
+                    )}
+
+                    {screen === 'BADGES' && (
+                        <div className="retro-box">
+                            <h2>Achievements</h2>
+                            <div className="grid-badges">
+                                {BADGES.map(b => (
+                                    <div key={b.id} className={`badge ${player.badges.includes(b.id)?'unlocked':''}`} title={b.desc}>
+                                        {b.name[0]}
+                                    </div>
+                                ))}
+                            </div>
+                            <p style={{fontSize:10, textAlign:'center'}}>Tap badges to see details</p>
+                            <button onMouseEnter={playHover} onClick={()=>setScreen('MENU')}>Back</button>
+                        </div>
+                    )}
+
+                    {screen === 'GAME' && renderGame()}
+                    
+                    {screen === 'DEATH' && (
+                        <div className="retro-box" style={{textAlign:'center'}}>
+                            <h1 style={{color:'red'}}>DEFEATED</h1>
+                            <div style={{marginBottom: 20}}>
+                                Time to rest up at town?<br/>
+                            </div>
+                            <button onMouseEnter={playHover} onClick={()=>{setScreen('MENU'); if(musicOn) AudioEngine.start('MENU');}}>Town</button>
+                        </div>
+                    )}
+
+                    {showSettings && (
+                        <div className="modal-overlay">
+                            <div className="retro-box">
+                                <h2>Settings</h2>
+                                <label>Music Volume <input type="range" min="0" max="1" step="0.1" value={vol.m} onChange={e=>setVol(v=>({...v, m:parseFloat(e.target.value)}))} /></label>
+                                <label>SFX Volume <input type="range" min="0" max="1" step="0.1" value={vol.s} onChange={e=>setVol(v=>({...v, s:parseFloat(e.target.value)}))} /></label>
+                                <button onMouseEnter={playHover} onClick={()=>setShowSettings(false)}>Close</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {showPasswords && (
+                        <div className="modal-overlay">
+                            <div className="retro-box">
+                                <h2>Secret Codes</h2>
+                                <input type="text" id="code-input" placeholder="Enter Code" />
+                                <button onMouseEnter={playHover} onClick={()=>checkPassword(document.getElementById('code-input').value)}>Enter</button>
+                                <button onMouseEnter={playHover} onClick={()=>setShowPasswords(false)}>Cancel</button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    <DamageText items={floatItems} />
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canyon Cross: Legends</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            overflow-x: hidden;
+            transition: background-color 1s;
+        }
+        h1, h2, .game-font {
+            font-family: 'Fredoka One', cursive;
+        }
+        
+        /* BIOME THEMES */
+        body.theme-grass { background-color: #e0f2fe; }
+        body.theme-ice { background-color: #f0f9ff; }
+        body.theme-volcano { background-color: #2a0a0a; }
+        body.theme-space { background-color: #0f172a; }
+
+        /* High Contrast Override */
+        body.high-contrast { background-color: #000000 !important; color: #ffff00 !important; }
+        body.high-contrast .canvas-container { border: 4px solid #ffffff; }
+        body.high-contrast button { border-color: #ffffff !important; color: #000000 !important; background-color: #ffff00 !important; }
+        body.high-contrast .title-card, body.high-contrast .shop-item, body.high-contrast .mode-card { background-color: #000 !important; border: 2px solid #fff !important; color: #fff !important; }
+        
+        /* Large Text Override */
+        body.large-text { font-size: 1.2rem; }
+        body.large-text button { font-size: 1.3rem; padding: 1rem; }
+
+        .canvas-container {
+            position: relative;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            transition: transform 0.1s;
+        }
+        
+        /* Custom Button Styles (Juicier) */
+        .btn-jump {
+            transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.1s;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-jump:active {
+            transform: scale(0.90) translateY(4px); 
+            box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+        }
+        .btn-jump:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        /* Shine effect */
+        .btn-jump::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: shine 3s infinite;
+        }
+        @keyframes shine { 100% { left: 100%; } }
+
+        /* Animations */
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+        
+        .pulse-danger { animation: pulseDanger 1s infinite; }
+        @keyframes pulseDanger {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .pop-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* Shop Grid */
+        .shop-item {
+            transition: all 0.2s;
+            border: 4px solid transparent;
+        }
+        .shop-item:hover { transform: scale(1.05); }
+        .shop-item.selected { border-color: #3b82f6; background-color: #eff6ff; }
+        .shop-item.locked { opacity: 0.6; filter: grayscale(100%); }
+
+        /* Mode Selection Cards */
+        .mode-card:hover {
+            transform: translateY(-5px);
+            border-color: #3b82f6;
+        }
+        
+        /* Main Title Menu Cards */
+        .title-card:hover {
+            transform: scale(1.02);
+        }
+        
+        /* Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #68D391;
+        }
+        
+    </style>
+</head>
+<body class="theme-grass flex flex-col items-center min-h-screen p-2 md:p-4 text-slate-800">
+
+    <!-- TOP BAR -->
+    <div class="w-full max-w-4xl flex justify-between items-center mb-2 px-2 z-50 relative">
+        <div class="flex gap-2 items-center">
+            <!-- ACCESSIBILITY BTN -->
+            <button onclick="toggleAccessibility()" class="bg-white text-gray-700 p-2 rounded-full font-bold shadow-sm border-2 border-gray-300 hover:bg-gray-100 flex items-center justify-center w-10 h-10 transition-transform active:scale-95" aria-label="Accessibility Settings">
+                ⚙️
+            </button>
+            
+            <div class="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full font-bold shadow-sm border-2 border-yellow-500 flex items-center gap-1">
+                🪙 <span id="gold-display">0</span>
+            </div>
+            <div class="bg-blue-500 text-white px-3 py-1 rounded-full font-bold shadow-sm border-2 border-blue-600 hidden md:flex items-center gap-1">
+                Level <span id="level-total-display">1</span>
+            </div>
+            <div id="ink-display-container" class="hidden transition-all duration-300 bg-slate-800 text-white px-4 py-1 rounded-full font-bold shadow-lg border-2 border-slate-600 flex items-center gap-2">
+                <span>💧 Moves:</span> 
+                <span id="ink-display" class="text-xl">5</span>
+            </div>
+        </div>
+        <button onclick="toggleShop()" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-1 rounded-full font-bold shadow-md border-b-4 border-purple-700 active:border-b-0 active:translate-y-1 transition">
+            🎩 Shop
+        </button>
+    </div>
+
+    <!-- MAIN TITLE SCREEN -->
+    <div id="title-screen" class="w-full max-w-4xl bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-2xl text-center z-10 border-4 border-blue-200 mt-10">
+        <h1 class="text-6xl md:text-8xl text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-2 drop-shadow-sm game-font">Canyon Cross</h1>
+        <h2 class="text-2xl text-gray-500 mb-10 font-bold tracking-widest uppercase">Legends of the Number Line</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div onclick="goToGradeSelect()" class="title-card col-span-1 md:col-span-2 bg-gradient-to-br from-green-100 to-green-200 border-4 border-green-400 p-8 rounded-3xl cursor-pointer shadow-xl relative overflow-hidden group">
+                <div class="absolute top-0 right-0 bg-yellow-400 text-yellow-900 font-black text-xs px-3 py-1 rounded-bl-xl border-l-2 border-b-2 border-yellow-500 uppercase tracking-widest">Main Mode</div>
+                <div class="flex flex-col md:flex-row items-center justify-center gap-6">
+                    <div class="text-7xl md:text-8xl group-hover:animate-bounce">🚀</div>
+                    <div class="text-center md:text-left">
+                        <h3 class="text-4xl font-black text-green-700 mb-2 drop-shadow-sm">Adventure</h3>
+                        <p class="text-lg font-bold text-green-600">Journey through the lands, earn gold, and unlock rare hats!</p>
+                        <div class="mt-4 inline-block bg-green-500 text-white px-6 py-2 rounded-full font-black shadow-md border-b-4 border-green-700 active:border-b-0 active:translate-y-1">PLAY NOW ▶</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div onclick="goToCamp()" class="title-card bg-orange-100 border-4 border-orange-300 p-6 rounded-2xl cursor-pointer hover:bg-orange-50 transform transition hover:scale-105">
+                <div class="text-5xl mb-2">⛺</div>
+                <h3 class="text-2xl font-black text-orange-700 mb-1">My Camp</h3>
+                <p class="text-xs font-bold text-orange-600">Build your base.</p>
+            </div>
+
+            <div onclick="goToEditor()" class="title-card bg-blue-100 border-4 border-blue-300 p-6 rounded-2xl cursor-pointer hover:bg-blue-50 transform transition hover:scale-105">
+                <div class="text-5xl mb-2">🏗️</div>
+                <h3 class="text-2xl font-black text-blue-700 mb-1">Level Editor</h3>
+                <p class="text-xs font-bold text-blue-600">Create & Play.</p>
+            </div>
+        </div>
+        
+        <div class="mt-8 pt-4 border-t border-gray-100">
+            <p class="text-xs text-gray-400 font-bold mb-2 uppercase">Classroom Code</p>
+            <div class="flex justify-center gap-2">
+                <input type="text" id="class-code" placeholder="ENTER CODE" class="bg-gray-100 rounded-lg px-4 py-2 font-bold text-center w-40 uppercase border-2 border-gray-200 focus:border-blue-400 outline-none">
+                <button onclick="redeemCode()" class="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold hover:bg-black">Submit</button>
+            </div>
+            <p id="code-msg" class="text-xs font-bold mt-2 h-4"></p>
+        </div>
+    </div>
+
+    <!-- GRADE SELECT PANEL -->
+    <div id="grade-select-panel" class="hidden w-full max-w-3xl bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-2xl text-center z-10 border-4 border-blue-200 mt-10 animate-pop-in">
+        <h3 class="text-2xl font-bold text-gray-400 uppercase mb-6">Select Difficulty</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <button onclick="selectGrade(1)" class="btn-jump bg-green-400 hover:bg-green-500 text-white text-xl p-4 rounded-xl border-b-4 border-green-600">Grade 1 <span class="block text-sm opacity-90">Sums to 20</span></button>
+            <button onclick="selectGrade(2)" class="btn-jump bg-teal-400 hover:bg-teal-500 text-white text-xl p-4 rounded-xl border-b-4 border-teal-600">Grade 2 <span class="block text-sm opacity-90">Sums to 100</span></button>
+            <button onclick="selectGrade(3)" class="btn-jump bg-blue-400 hover:bg-blue-500 text-white text-xl p-4 rounded-xl border-b-4 border-blue-600">Grade 3 <span class="block text-sm opacity-90">Sums to 1,000</span></button>
+            <button onclick="selectGrade(4)" class="btn-jump bg-indigo-400 hover:bg-indigo-500 text-white text-xl p-4 rounded-xl border-b-4 border-indigo-600">Grade 4 <span class="block text-sm opacity-90">Sums to 10,000</span></button>
+            <button onclick="selectGrade(5)" class="btn-jump bg-purple-400 hover:bg-purple-500 text-white text-xl p-4 rounded-xl border-b-4 border-purple-600 col-span-1 md:col-span-2">Grade 5 <span class="block text-sm opacity-90">Decimals</span></button>
+        </div>
+        <button onclick="showTitleScreen()" class="text-gray-400 font-bold hover:text-gray-600">Back</button>
+    </div>
+
+    <!-- MODE SELECT PANEL -->
+    <div id="mode-select-panel" class="hidden w-full max-w-3xl bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-2xl text-center z-10 border-4 border-blue-200 mt-10 animate-pop-in">
+        <h3 class="text-2xl font-bold text-gray-400 uppercase mb-6">Select Mode</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div onclick="startGame('standard')" class="mode-card bg-white border-4 border-gray-100 p-4 rounded-xl shadow-sm text-left relative group">
+                <div class="text-2xl mb-1">🌲 Adventure</div>
+                <p class="text-sm text-gray-500">Classic mode. Beware the Spike Wall after level 5!</p>
+            </div>
+            <div onclick="startGame('blueprint')" class="mode-card bg-white border-4 border-gray-100 p-4 rounded-xl shadow-sm text-left relative group">
+                <div class="text-2xl mb-1">📝 Blueprint</div>
+                <p class="text-sm text-gray-500">One shot. Plan your path, then execute.</p>
+            </div>
+            <div onclick="startGame('challenge')" class="mode-card bg-white border-4 border-gray-100 p-4 rounded-xl shadow-sm text-left relative group">
+                <div class="text-2xl mb-1">🔥 Challenge</div>
+                <p class="text-sm text-gray-500">Limited moves & checkpoints.</p>
+            </div>
+            <div onclick="startGame('rounding')" class="mode-card bg-white border-4 border-gray-100 p-4 rounded-xl shadow-sm text-left relative group">
+                <div class="text-2xl mb-1">🧲 Rounding Rally</div>
+                <p class="text-sm text-gray-500">Snap to destination if within 5 units.</p>
+            </div>
+        </div>
+        <button onclick="goToGradeSelect()" class="text-gray-400 font-bold hover:text-gray-600">Back</button>
+    </div>
+
+    <!-- LEVEL EDITOR SCREEN -->
+    <div id="editor-screen" class="hidden w-full max-w-3xl bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-2xl z-10 border-4 border-blue-200 mt-10 animate-pop-in">
+        <h2 class="text-4xl game-font text-blue-600 mb-6 text-center">Level Editor</h2>
+        <div class="bg-gray-100 p-6 rounded-xl space-y-4">
+            <div>
+                <label class="block text-sm font-bold text-gray-500 uppercase mb-1">Start Number</label>
+                <input type="number" id="ed-start" value="0" class="w-full p-2 rounded-lg border-2 border-gray-300 font-bold text-xl">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-gray-500 uppercase mb-1">Target Number</label>
+                <input type="number" id="ed-target" value="100" class="w-full p-2 rounded-lg border-2 border-gray-300 font-bold text-xl">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-gray-500 uppercase mb-1">Button Set (Grade Logic)</label>
+                <select id="ed-grade" class="w-full p-2 rounded-lg border-2 border-gray-300 font-bold text-xl">
+                    <option value="1">Grade 1 (1, 5)</option>
+                    <option value="2">Grade 2 (1, 5, 10)</option>
+                    <option value="3">Grade 3 (1, 10, 50, 100)</option>
+                    <option value="4">Grade 4 (10, 100, 1000)</option>
+                    <option value="5">Grade 5 (Decimals)</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-between">
+            <button onclick="showTitleScreen()" class="text-gray-400 font-bold hover:text-gray-600">Cancel</button>
+            <button onclick="playCustomLevel()" class="btn-jump bg-blue-500 text-white px-8 py-3 rounded-xl font-bold text-xl border-b-4 border-blue-700">▶ Play Level</button>
+        </div>
+    </div>
+
+    <!-- CAMP SCREEN -->
+    <div id="camp-screen" class="hidden w-full max-w-5xl flex-col items-center relative mt-14 h-[500px]">
+        <div class="absolute top-0 left-0 w-full h-full bg-emerald-100 rounded-3xl border-4 border-emerald-300 overflow-hidden shadow-2xl">
+            <div class="w-full h-1/2 bg-sky-200"></div>
+            <div class="w-full h-1/2 bg-emerald-600 relative">
+                <div id="camp-items-area" class="w-full h-full relative"></div>
+            </div>
+            <div class="absolute top-4 left-4 right-4 flex justify-between">
+                <button onclick="showTitleScreen()" class="bg-white/90 px-4 py-2 rounded-xl font-bold shadow border-b-4 border-gray-300">⬅ Back</button>
+                <div class="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-xl font-bold border-2 border-yellow-500 shadow">🪙 <span id="camp-gold">0</span></div>
+            </div>
+            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 p-2 rounded-2xl flex gap-2 shadow-xl">
+                <button onclick="buyCampItem('tent', 500)" class="flex flex-col items-center p-2 hover:bg-gray-100 rounded-lg"><span class="text-2xl">⛺</span><span class="text-xs font-bold text-yellow-600">500</span></button>
+                <button onclick="buyCampItem('fire', 200)" class="flex flex-col items-center p-2 hover:bg-gray-100 rounded-lg"><span class="text-2xl">🔥</span><span class="text-xs font-bold text-yellow-600">200</span></button>
+                <button onclick="buyCampItem('tree', 100)" class="flex flex-col items-center p-2 hover:bg-gray-100 rounded-lg"><span class="text-2xl">🌲</span><span class="text-xs font-bold text-yellow-600">100</span></button>
+                <button onclick="buyCampItem('rock', 50)" class="flex flex-col items-center p-2 hover:bg-gray-100 rounded-lg"><span class="text-2xl">🪨</span><span class="text-xs font-bold text-yellow-600">50</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME UI -->
+    <div id="game-ui" class="hidden w-full max-w-5xl flex-col items-center relative mt-14">
+        <div id="blueprint-bar" class="hidden w-full bg-slate-800 p-2 rounded-t-xl mb-0 flex items-center justify-between gap-2 border-b-2 border-slate-600 animate-pop-in">
+            <div id="blueprint-list" class="flex gap-2 overflow-x-auto text-white text-sm font-mono px-2"><span class="opacity-50 italic">Plan your moves...</span></div>
+            <div class="flex gap-2 shrink-0">
+                <button onclick="clearBlueprint()" class="bg-red-500 text-white px-3 py-1 rounded font-bold text-xs hover:bg-red-600">Clear</button>
+                <button onclick="executeBlueprint()" class="bg-green-500 text-white px-4 py-1 rounded font-bold text-xs hover:bg-green-600 shadow-md">▶ RUN</button>
+            </div>
+        </div>
+        <div class="absolute -top-12 left-0 bg-white/90 backdrop-blur px-4 py-2 rounded-t-xl text-xs font-bold shadow-sm border border-b-0 border-blue-100 flex items-center gap-2 z-0">
+            <span>📜 Quest:</span>
+            <span id="quest-desc" class="text-blue-600">Jump 20 times</span>
+            <div class="w-20 h-2 bg-gray-200 rounded-full overflow-hidden"><div id="quest-bar" class="h-full bg-green-500 w-0 transition-all duration-500"></div></div>
+        </div>
+        <div class="w-full bg-white p-3 rounded-xl rounded-tl-none shadow-sm border-b-4 border-blue-100 mb-2 flex justify-between items-center z-10 relative">
+            <button onclick="showMenu()" class="text-xs font-bold text-gray-400 hover:text-red-500 uppercase tracking-wider">Exit</button>
+            <div class="flex flex-col items-center">
+                <div class="text-xs text-gray-400 font-bold uppercase tracking-widest">Target</div>
+                <div class="text-4xl game-font text-blue-600 leading-none drop-shadow-sm" id="target-display">20</div>
+            </div>
+            <div class="flex flex-col items-end">
+                <div class="text-xs text-gray-400 font-bold uppercase">Moves</div>
+                <div class="text-xl font-bold text-gray-700" id="move-counter">0</div>
+            </div>
+        </div>
+        <div class="canvas-container w-full h-80 md:h-[400px] bg-slate-200 cursor-pointer mb-2" onclick="handleCanvasClick()">
+            <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+            <div id="feedback" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-6xl font-black text-white drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] hidden pointer-events-none z-20"></div>
+            <div id="perfect-msg" class="absolute top-10 left-1/2 transform -translate-x-1/2 text-4xl font-black text-yellow-300 drop-shadow-[0_4px_0_#b45309] hidden pointer-events-none z-20 rotate-[-5deg]">PERFECT!</div>
+            <div id="chase-warning" class="absolute top-24 left-1/2 transform -translate-x-1/2 text-xl font-bold text-red-600 bg-white/90 px-6 py-2 rounded-full hidden animate-pulse border-4 border-red-500 z-20 shadow-lg">⚠️ SPIKE WALL APPROACHING ⚠️</div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl shadow-xl w-full border-b-8 border-gray-100">
+             <div class="flex justify-between items-center mb-3 px-2">
+                <span class="text-gray-400 text-xs font-bold uppercase">Jump Controls</span>
+                <span id="biome-label" class="text-xs font-bold text-white bg-green-500 px-2 py-1 rounded shadow-sm">Grasslands</span>
+            </div>
+            <div id="controls-container" class="flex flex-wrap justify-center gap-3 md:gap-4"></div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div id="shop-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-lg p-6 rounded-3xl shadow-2xl m-4 animate-pop-in">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-gray-800">The Hat Shop</h2>
+                <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-lg font-bold border border-yellow-200">🪙 <span id="shop-gold">0</span></div>
+            </div>
+            <div class="grid grid-cols-3 gap-4 mb-6" id="shop-grid"></div>
+            <button onclick="toggleShop()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition">Close</button>
+        </div>
+    </div>
+
+    <div id="accessibility-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md p-6 rounded-3xl shadow-2xl m-4 animate-pop-in border-4 border-gray-200">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Accessibility</h2>
+                <button onclick="toggleAccessibility()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">✕</button>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- High Contrast -->
+                <div class="flex justify-between items-center p-3 bg-gray-100 rounded-xl">
+                    <span class="font-bold text-gray-700">High Contrast Mode</span>
+                    <button onclick="toggleSetting('highContrast')" id="btn-highContrast" class="w-12 h-6 rounded-full bg-gray-300 relative transition-colors duration-200 focus:outline-none">
+                        <div class="w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-200" style="transform: translateX(0)"></div>
+                    </button>
+                </div>
+                
+                <!-- Large Text -->
+                <div class="flex justify-between items-center p-3 bg-gray-100 rounded-xl">
+                    <span class="font-bold text-gray-700">Large Text</span>
+                    <button onclick="toggleSetting('largeText')" id="btn-largeText" class="w-12 h-6 rounded-full bg-gray-300 relative transition-colors duration-200 focus:outline-none">
+                        <div class="w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-200" style="transform: translateX(0)"></div>
+                    </button>
+                </div>
+                
+                <!-- Reduce Motion -->
+                <div class="flex justify-between items-center p-3 bg-gray-100 rounded-xl">
+                    <span class="font-bold text-gray-700">Reduce Motion</span>
+                    <button onclick="toggleSetting('reduceMotion')" id="btn-reduceMotion" class="w-12 h-6 rounded-full bg-gray-300 relative transition-colors duration-200 focus:outline-none">
+                        <div class="w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-200" style="transform: translateX(0)"></div>
+                    </button>
+                </div>
+                
+                <!-- Mute Sounds -->
+                <div class="flex justify-between items-center p-3 bg-gray-100 rounded-xl">
+                    <span class="font-bold text-gray-700">Mute Sounds</span>
+                    <button onclick="toggleSetting('muted')" id="btn-muted" class="w-12 h-6 rounded-full bg-gray-300 relative transition-colors duration-200 focus:outline-none">
+                        <div class="w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-200" style="transform: translateX(0)"></div>
+                    </button>
+                </div>
+            </div>
+            
+            <button onclick="toggleAccessibility()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition mt-6">Done</button>
+        </div>
+    </div>
+
+    <div id="game-over-screen" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl text-center transform scale-100 max-w-sm w-full mx-4 border-4 border-red-500 animate-pop-in relative">
+            <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 text-6xl drop-shadow-lg filter">☠️</div>
+            <h2 class="text-5xl game-font text-red-600 mt-6 mb-2">Game Over</h2>
+            <p id="game-over-reason" class="text-gray-500 font-bold mb-6 text-lg">Out of Moves!</p>
+            <div class="flex flex-col gap-3">
+                <button onclick="retryLevel()" class="w-full btn-jump bg-blue-500 hover:bg-blue-600 text-white text-xl py-3 rounded-xl border-b-4 border-blue-700 font-bold">🔄 Replay Level</button>
+                <button onclick="showMenu()" class="w-full btn-jump bg-gray-500 hover:bg-gray-600 text-white text-xl py-3 rounded-xl border-b-4 border-gray-700 font-bold">🏠 Main Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="victory-screen" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl text-center transform scale-100 max-w-sm w-full mx-4 border-4 border-yellow-300 animate-pop-in relative">
+            <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 text-6xl drop-shadow-lg filter">🏆</div>
+            <h2 class="text-4xl game-font text-blue-600 mt-6 mb-2">Level Complete!</h2>
+            <div class="flex justify-center gap-2 mb-4">
+                <span id="star-1" class="text-5xl text-gray-300 transition-colors duration-500">★</span>
+                <span id="star-2" class="text-5xl text-gray-300 transition-colors duration-500 delay-150">★</span>
+                <span id="star-3" class="text-5xl text-gray-300 transition-colors duration-500 delay-300">★</span>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-xl mb-4 border border-blue-100"><p id="equation-display" class="font-bold text-xl text-blue-900">0 + 10 = 10</p></div>
+            <div class="flex justify-center gap-4 mb-6 text-sm font-bold text-gray-600">
+                <div class="flex flex-col"><span>Moves</span><span id="res-moves" class="text-black text-lg">5</span></div>
+                 <div class="flex flex-col"><span>Gold</span><span id="res-gold" class="text-yellow-600 text-lg">+15</span></div>
+            </div>
+            <button onclick="nextLevel()" class="w-full btn-jump bg-green-500 hover:bg-green-600 text-white text-xl py-3 rounded-xl border-b-4 border-green-700 font-bold">Next Level ➡</button>
+        </div>
+    </div>
+
+    <script>
+        // --- AUDIO ENGINE ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let bgmInterval = null;
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- DATA & STATE ---
+        const HATS = [
+            { id: 'none', name: 'None', price: 0, icon: '😐' },
+            { id: 'tophat', name: 'Gentleman', price: 50, icon: '🎩' },
+            { id: 'cap', name: 'Cool Cap', price: 100, icon: '🧢' },
+            { id: 'crown', name: 'Royal', price: 250, icon: '👑' },
+            { id: 'space', name: 'Astro', price: 500, icon: '👨‍🚀' },
+            { id: 'wizard', name: 'Wizard', price: 1000, icon: '🧙‍♂️' },
+            { id: 'teacher', name: 'The Teacher', price: 9999, icon: '🎓', locked: true }
+        ];
+
+        let state = {
+            gold: 0, levelTotal: 1, inventory: ['none'], equippedHat: 'none',
+            dailyQuest: { type: 'jumps', target: 20, current: 0, reward: 50, desc: "Jump 20 times" },
+            campItems: [], grade: 1, mode: 'standard', isCustomLevel: false, savedLevelTotal: 1,
+            start: 0, target: 20, current: 0, checkpoints: [], maxInk: 0, ink: 0,
+            history: [], blueprintQueue: [], moves: 0, optimalMoves: 0, coins: [], hazards: [], biome: 'grass',
+            
+            // GRAPHICAL STATE
+            bgObjects: [], weatherParticles: [], floatingTexts: [],
+            foregroundObjects: [], livingBgObjects: [], grassBlades: [],
+            
+            playerX: 0, playerY: 0, cameraX: 0,
+            isAnimating: false, animStart: 0, animDuration: 0, jumpStartVal: 0, jumpEndVal: 0,
+            
+            // JUICE STATE
+            scaleX: 1, scaleY: 1, ghosts: [], lastInputTime: 0, 
+            victoryAnimType: null, victoryAnimStart: 0, liquidOffset: 0,
+            
+            particles: [], isExecutingBlueprint: false, blueprintIndex: 0,
+            chaseX: -500, chaseSpeed: 0, lastTime: 0, portalAngle: 0,
+            
+            // ACCESSIBILITY
+            accessibility: {
+                highContrast: false,
+                largeText: false,
+                reduceMotion: false,
+                muted: false
+            }
+        };
+        
+        const Sound = {
+            playTone: (freq, type, duration, vol=0.1) => {
+                if(state.accessibility.muted) return;
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            },
+            jump: () => Sound.playTone(300, 'sine', 0.2),
+            land: () => Sound.playTone(150, 'triangle', 0.1),
+            coin: () => {
+                Sound.playTone(1200, 'sine', 0.1, 0.05);
+                setTimeout(() => Sound.playTone(1800, 'square', 0.2, 0.05), 50);
+            },
+            error: () => Sound.playTone(150, 'triangle', 0.3, 0.1), 
+            win: () => { [0, 150, 300].forEach((d, i) => setTimeout(() => Sound.playTone(400 + (i*100), 'sine', 0.3), d)); },
+            click: () => Sound.playTone(800, 'triangle', 0.05, 0.05),
+            magnet: () => Sound.playTone(600, 'sawtooth', 0.3, 0.05),
+            startMusic: () => {
+                if(state.accessibility.muted) return;
+                if(bgmInterval) return;
+                let beat = 0;
+                bgmInterval = setInterval(() => {
+                    if(document.hidden || state.accessibility.muted) return;
+                    beat = (beat + 1) % 4;
+                    if(beat === 0) Sound.playTone(80, 'square', 0.1, 0.05);
+                    Sound.playTone(8000, 'sawtooth', 0.02, 0.01);
+                }, 500);
+            },
+            stopMusic: () => { if(bgmInterval) { clearInterval(bgmInterval); bgmInterval = null; } }
+        };
+
+        const BIOMES = ['grass', 'ice', 'volcano', 'space'];
+
+        // --- CORE FUNCTIONS ---
+        function saveGame() {
+            const levelToSave = state.isCustomLevel ? (state.savedLevelTotal || 1) : state.levelTotal;
+            localStorage.setItem('cc_save', JSON.stringify({
+                gold: state.gold, levelTotal: levelToSave, inventory: state.inventory,
+                equippedHat: state.equippedHat, campItems: state.campItems,
+                accessibility: state.accessibility
+            }));
+            updateHUD();
+        }
+
+        function loadGame() {
+            if(localStorage.getItem('cc_save')) {
+                try {
+                    const save = JSON.parse(localStorage.getItem('cc_save'));
+                    state.gold = save.gold || 0;
+                    state.levelTotal = save.levelTotal || 1;
+                    state.inventory = save.inventory || ['none'];
+                    state.equippedHat = save.equippedHat || 'none';
+                    state.campItems = save.campItems || [];
+                    if(save.accessibility) state.accessibility = save.accessibility;
+                } catch(e) { console.error("Save load error", e); }
+            }
+            applyAccessibility();
+        }
+
+        function updateHUD() {
+            const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+            setTxt('target-display', state.grade===5 ? state.target : state.target.toLocaleString());
+            setTxt('move-counter', state.moves);
+            setTxt('gold-display', state.gold);
+            setTxt('level-total-display', state.levelTotal);
+            setTxt('ink-display', state.ink);
+            setTxt('camp-gold', state.gold);
+            setTxt('shop-gold', state.gold);
+
+            const inkCont = document.getElementById('ink-display-container');
+            if(inkCont && !state.accessibility.reduceMotion) {
+                inkCont.classList.remove('bg-red-600', 'pulse-danger', 'bg-yellow-500');
+                inkCont.classList.add('bg-slate-800');
+                if (state.ink <= 3) { inkCont.classList.remove('bg-slate-800'); inkCont.classList.add('bg-yellow-500'); }
+                if (state.ink <= 1) { inkCont.classList.remove('bg-yellow-500'); inkCont.classList.add('bg-red-600', 'pulse-danger'); }
+            } else if(inkCont) {
+                inkCont.classList.remove('pulse-danger'); // Remove animation
+            }
+        }
+
+        // --- ACCESSIBILITY LOGIC ---
+        function toggleAccessibility() {
+            const modal = document.getElementById('accessibility-modal');
+            modal.classList.toggle('hidden');
+            renderAccessibilityToggles();
+        }
+        
+        function renderAccessibilityToggles() {
+            const updateBtn = (key, btnId) => {
+                const btn = document.getElementById(btnId);
+                const dot = btn.querySelector('div');
+                const isOn = state.accessibility[key];
+                
+                if(isOn) {
+                    btn.classList.remove('bg-gray-300');
+                    btn.classList.add('bg-green-500');
+                    dot.style.transform = 'translateX(100%)';
+                } else {
+                    btn.classList.add('bg-gray-300');
+                    btn.classList.remove('bg-green-500');
+                    dot.style.transform = 'translateX(0)';
+                }
+            };
+            
+            updateBtn('highContrast', 'btn-highContrast');
+            updateBtn('largeText', 'btn-largeText');
+            updateBtn('reduceMotion', 'btn-reduceMotion');
+            updateBtn('muted', 'btn-muted');
+        }
+        
+        function toggleSetting(key) {
+            state.accessibility[key] = !state.accessibility[key];
+            applyAccessibility();
+            renderAccessibilityToggles();
+            saveGame();
+        }
+        
+        function applyAccessibility() {
+            const body = document.body;
+            
+            // High Contrast
+            if(state.accessibility.highContrast) body.classList.add('high-contrast');
+            else body.classList.remove('high-contrast');
+            
+            // Large Text
+            if(state.accessibility.largeText) body.classList.add('large-text');
+            else body.classList.remove('large-text');
+            
+            // Mute
+            if(state.accessibility.muted) Sound.stopMusic();
+            else if(!document.getElementById('game-ui').classList.contains('hidden')) Sound.startMusic();
+        }
+
+        // ... (existing updateQuestUI, updateBlueprintUI, updateShopUI) ...
+        function updateQuestUI() {
+            const q = state.dailyQuest;
+            document.getElementById('quest-desc').innerText = q.desc;
+            const pct = Math.min(100, (q.current / q.target)*100);
+            document.getElementById('quest-bar').style.width = pct + "%";
+            if(q.current >= q.target && !q.claimed) { q.claimed = true; state.gold += q.reward; showFeedback("Quest Complete! +" + q.reward, "text-green-400"); Sound.win(); saveGame(); }
+        }
+
+        function updateBlueprintUI() { 
+            const list = document.getElementById('blueprint-list'); 
+            if(state.blueprintQueue.length === 0) list.innerHTML = '<span class="opacity-50 italic">Plan your moves...</span>'; 
+            else list.innerHTML = state.blueprintQueue.map(amt => `<span class="bg-blue-600 px-2 py-1 rounded shadow">${amt>0?'+':''}${amt}</span>`).join(' '); 
+        }
+
+        function updateShopUI() {
+            if(!document.getElementById('shop-gold')) return;
+            document.getElementById('shop-gold').innerText = state.gold;
+            const grid = document.getElementById('shop-grid');
+            grid.innerHTML = '';
+            HATS.forEach(hat => {
+                const owned = state.inventory.includes(hat.id);
+                const equipped = state.equippedHat === hat.id;
+                const div = document.createElement('div');
+                div.className = `shop-item bg-gray-50 rounded-xl p-4 flex flex-col items-center cursor-pointer relative ${equipped ? 'selected' : ''} ${hat.locked && !owned ? 'locked' : ''}`;
+                div.innerHTML = `<div class="text-4xl mb-2">${hat.icon}</div><div class="font-bold text-sm">${hat.name}</div><div class="text-xs text-gray-500 font-bold">${owned ? 'OWNED' : '🪙 ' + hat.price}</div>${equipped ? '<div class="absolute top-2 right-2 text-blue-500">✔</div>' : ''}`;
+                div.onclick = () => buyOrEquip(hat);
+                grid.appendChild(div);
+            });
+        }
+
+        function showFeedback(txt, col) {
+            const el = document.getElementById('feedback');
+            el.innerText = txt;
+            el.className = `absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-5xl font-black drop-shadow-md animate-pop-in ${col} pointer-events-none z-30`;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 1000);
+        }
+        
+        function spawnFloatingText(text, x, y, color='#ffd700') {
+            state.floatingTexts.push({ text: text, x: x, y: y, life: 1.0, color: color });
+        }
+
+        function resize() {
+             if (canvas && canvas.parentElement) {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+        }
+
+        // --- NAVIGATION LOGIC ---
+
+        function showTitleScreen() { hideAll(); document.getElementById('title-screen').classList.remove('hidden'); Sound.stopMusic(); }
+        function showMenu() { showTitleScreen(); state.isAnimating = false; }
+        function goToGradeSelect() { hideAll(); document.getElementById('grade-select-panel').classList.remove('hidden'); }
+        function goToCamp() { hideAll(); document.getElementById('camp-screen').classList.remove('hidden'); document.getElementById('camp-screen').classList.add('flex'); renderCamp(); }
+        function goToEditor() { hideAll(); document.getElementById('editor-screen').classList.remove('hidden'); }
+        function selectGrade(g) { state.grade = g; Sound.click(); document.getElementById('grade-select-panel').classList.add('hidden'); document.getElementById('mode-select-panel').classList.remove('hidden'); }
+        function resetMenu() { showTitleScreen(); }
+        function hideAll() {
+            document.getElementById('title-screen').classList.add('hidden');
+            document.getElementById('grade-select-panel').classList.add('hidden');
+            document.getElementById('mode-select-panel').classList.add('hidden');
+            document.getElementById('game-ui').classList.add('hidden');
+            document.getElementById('camp-screen').classList.add('hidden');
+            document.getElementById('editor-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            document.getElementById('victory-screen').classList.add('hidden');
+            document.getElementById('shop-modal').classList.add('hidden');
+            document.getElementById('accessibility-modal').classList.add('hidden'); // NEW
+            
+            document.getElementById('ink-display-container').classList.add('hidden');
+            document.getElementById('blueprint-bar').classList.add('hidden');
+            document.getElementById('chase-warning').classList.add('hidden');
+        }
+
+        function startGame(mode, customConfig = null) {
+            state.mode = mode; Sound.click(); Sound.startMusic(); hideAll();
+            document.getElementById('game-ui').classList.remove('hidden'); document.getElementById('game-ui').classList.add('flex');
+            const bpBar = document.getElementById('blueprint-bar'); const inkCont = document.getElementById('ink-display-container');
+            if(mode === 'blueprint') bpBar.classList.remove('hidden');
+            if(mode === 'challenge') inkCont.classList.remove('hidden');
+            resize(); updateShopUI();
+            if(customConfig) {
+                state.savedLevelTotal = state.levelTotal; state.grade = customConfig.grade; state.start = customConfig.start; state.target = customConfig.target; state.levelTotal = 999; state.isCustomLevel = true; 
+                resetLevelState(false); initLevel(true); 
+            } else {
+                if(state.isCustomLevel || state.levelTotal === 999) { state.levelTotal = state.savedLevelTotal || 1; loadGame(); }
+                state.isCustomLevel = false; nextLevel();
+            }
+            state.lastTime = performance.now(); state.lastInputTime = performance.now();
+            gameLoop();
+        }
+        function playCustomLevel() {
+            const start = parseFloat(document.getElementById('ed-start').value); const target = parseFloat(document.getElementById('ed-target').value); const grade = parseInt(document.getElementById('ed-grade').value);
+            startGame('standard', { start, target, grade });
+        }
+
+        // --- LEVEL LOGIC ---
+        function nextLevel() {
+            document.getElementById('victory-screen').classList.add('hidden'); document.getElementById('perfect-msg').classList.add('hidden'); 
+            state.isAnimating = false; state.levelTotal++; state.victoryAnimType = null;
+            resetLevelState(true);
+            const biomeIndex = Math.floor((state.levelTotal - 1) / 5) % BIOMES.length; setBiome(BIOMES[biomeIndex]);
+            const config = getGradeConfig(state.grade); const minJump = Math.min(...config.jumps);
+            let range = 20; if(state.grade === 2) range = 80; if(state.grade === 3) range = 500; if(state.grade === 4) range = 3000; if(state.grade === 5) range = 8; 
+            if (state.grade === 5) { state.target = parseFloat((Math.random() * 5 + 2).toFixed(2)); state.start = parseFloat((Math.random() * (state.target/2)).toFixed(2)); } 
+            else { let rawT = Math.floor(Math.random() * range) + (range*0.2); state.target = Math.ceil(rawT / minJump) * minJump; let rawS = Math.floor(Math.random() * (state.target * 0.5)); state.start = Math.floor(rawS / minJump) * minJump; }
+            if(state.mode === 'rounding') { state.target = Math.round(state.target / 10) * 10; if(state.target === 0) state.target = 10; }
+            initLevel();
+        }
+
+        function initLevel(isCustom = false) {
+            state.current = state.start; state.playerY = 0; state.scaleX=1; state.scaleY=1;
+            const config = getGradeConfig(state.grade); const minJump = Math.min(...config.jumps);
+            state.optimalMoves = calculateOptimalMoves(state.target - state.start, config.jumps);
+            generateInteractables(minJump); generateBgObjects(); initWeather();
+            if(state.mode === 'challenge') { state.maxInk = state.optimalMoves + 3; state.ink = state.maxInk; let mid = Math.floor((state.start + state.target) / 2); if(state.grade !== 5) mid = Math.ceil(mid / minJump) * minJump; if(Math.abs(mid - state.start) > 0.1 && Math.abs(mid - state.target) > 0.1) state.checkpoints.push({ val: mid, visited: false }); }
+            if(state.mode === 'standard' && state.levelTotal > 5 && !isCustom) { state.chaseX = state.start - 50; const unitsPerSec = (state.target - state.start) / 15; state.chaseSpeed = unitsPerSec; document.getElementById('chase-warning').classList.remove('hidden'); } else { state.chaseSpeed = 0; state.chaseX = -99999; document.getElementById('chase-warning').classList.add('hidden'); }
+            generateControls(config.jumps); updateHUD(); updateBlueprintUI(); updateQuestUI();
+        }
+
+        function retryLevel() {
+            document.getElementById('game-over-screen').classList.add('hidden'); resetLevelState(false);
+            state.coins.forEach(c => c.collected = false);
+            if(state.mode === 'challenge') { state.ink = state.maxInk; state.checkpoints.forEach(cp => cp.visited = false); }
+            if(state.chaseSpeed > 0) state.chaseX = state.start - 50;
+            state.current = state.start; state.victoryAnimType = null; updateHUD(); updateBlueprintUI(); state.isAnimating = false;
+        }
+
+        function resetLevelState(fullReset) {
+            state.history = []; state.blueprintQueue = []; state.moves = 0; state.isExecutingBlueprint = false; state.playerY = 0; state.isAnimating = false; state.scaleX = 1; state.scaleY = 1; state.ghosts = [];
+            if(fullReset) { state.coins = []; state.hazards = []; state.checkpoints = []; state.bgObjects = []; state.weatherParticles = []; state.floatingTexts = []; state.foregroundObjects = []; state.livingBgObjects = []; state.grassBlades = []; }
+        }
+        
+        function resetToStart() {
+            state.current = state.start; state.playerY = 0; state.history = []; state.moves = 0;
+            state.coins.forEach(c => c.collected = false); state.checkpoints.forEach(cp => cp.visited = false);
+            state.isAnimating = false; state.isExecutingBlueprint = false; state.scaleX = 1; state.scaleY = 1;
+            clearBlueprint(); updateHUD();
+        }
+
+        function gameOver(reason) { Sound.error(); state.isAnimating = false; document.getElementById('game-over-reason').innerText = reason; document.getElementById('game-over-screen').classList.remove('hidden'); }
+
+        function generateInteractables(step) {
+            const dist = state.target - state.start; const steps = Math.floor(dist / step); if(steps < 3) return;
+            const coinCount = Math.floor(Math.random() * 3) + 1;
+            for(let i=0; i<coinCount; i++) { const offset = (Math.random() * (dist * 0.8)) + (dist * 0.1); state.coins.push({val: state.start + offset, y: 100 + Math.random() * 50, collected: false}); }
+            if(state.grade >= 2 && state.mode !== 'challenge' && Math.random() > 0.3) {
+                const hazardCount = Math.floor(Math.random() * 2) + 1;
+                for(let i=0; i<hazardCount; i++) {
+                    const validSpots = []; let curr = state.start + step; while(curr < state.target) { validSpots.push(curr); curr += step; }
+                    if(validSpots.length > 0) { const spot = validSpots[Math.floor(Math.random() * validSpots.length)]; if(!state.hazards.some(h => Math.abs(h.val - spot) < 0.001)) state.hazards.push({val: spot}); }
+                }
+            }
+            // Grass
+            if(state.biome === 'grass') {
+                for(let i=0; i<30; i++) { state.grassBlades.push({ x: Math.random() * canvas.width * 2, h: 5 + Math.random() * 10, angle: 0 }); }
+            }
+        }
+        
+        function generateBgObjects() {
+            state.bgObjects = [];
+            const count = 5 + Math.floor(Math.random() * 5);
+            for(let i=0; i<count; i++) { state.bgObjects.push({ x: Math.random() * canvas.width * 2, y: Math.random() * canvas.height * 0.6, size: 20 + Math.random() * 40, speedFactor: 0.1 + Math.random() * 0.2, type: Math.floor(Math.random() * 3) }); }
+            // Foreground parallax
+            state.foregroundObjects = [];
+            for(let i=0; i<3; i++) { state.foregroundObjects.push({ x: Math.random() * canvas.width, y: canvas.height - Math.random() * 50, size: 40 + Math.random() * 30, speed: 2 + Math.random() }); }
+            // Living BG
+            state.livingBgObjects = [];
+            if(state.biome === 'grass') { for(let i=0; i<3; i++) state.livingBgObjects.push({x: -100 - Math.random()*500, y: 50+Math.random()*100, speed: 2+Math.random(), type:'bird'}); }
+            if(state.biome === 'space') { for(let i=0; i<2; i++) state.livingBgObjects.push({x: Math.random()*canvas.width, y: -100-Math.random()*500, speed: 4+Math.random(), type:'meteor'}); }
+        }
+        
+        function initWeather() {
+            state.weatherParticles = [];
+            if(state.biome === 'ice' || state.biome === 'volcano') {
+                const count = 50; for(let i=0; i<count; i++) { state.weatherParticles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, speed: 1 + Math.random() * 2, size: 2 + Math.random() * 3 }); }
+            }
+        }
+
+        // --- MODAL LOGIC ---
+        function toggleShop() { state.lastInputTime = performance.now(); const modal = document.getElementById('shop-modal'); modal.classList.toggle('hidden'); updateShopUI(); }
+        function buyOrEquip(hat) {
+            state.lastInputTime = performance.now();
+            if(state.inventory.includes(hat.id)) { state.equippedHat = hat.id; Sound.click(); } 
+            else { if(state.gold >= hat.price && !hat.locked) { state.gold -= hat.price; state.inventory.push(hat.id); state.equippedHat = hat.id; Sound.coin(); spawnConfetti(); } else { Sound.error(); } }
+            saveGame(); updateShopUI();
+        }
+        function redeemCode() {
+            state.lastInputTime = performance.now();
+            const code = document.getElementById('class-code').value.toUpperCase().trim(); const msg = document.getElementById('code-msg'); let success = false;
+            if(code === 'TEACHER') { state.gold += 1000; msg.innerText = "Accepted! +1000 Gold"; success=true; } 
+            else if (code === 'BRIDGES') { if(!state.inventory.includes('teacher')) state.inventory.push('teacher'); msg.innerText = "Accepted! Professor Hat"; success=true; } 
+            else if (code === 'GALAXY') { if(!state.inventory.includes('space')) state.inventory.push('space'); msg.innerText = "Accepted! Astro Hat"; success=true; } 
+            else if (code === 'WIZARD') { if(!state.inventory.includes('wizard')) state.inventory.push('wizard'); msg.innerText = "Accepted! Wizard Hat"; success=true; } 
+            else if (code === 'RICH') { state.gold += 5000; msg.innerText = "Accepted! +5000 Gold"; success=true; } 
+            else { msg.innerText = "Invalid Code"; msg.className = "text-xs font-bold mt-2 h-4 text-red-500"; Sound.error(); }
+            if(success) { msg.className = "text-xs font-bold mt-2 h-4 text-green-500"; Sound.win(); saveGame(); updateHUD(); }
+        }
+
+        // --- CAMP LOGIC ---
+        function renderCamp() {
+            const area = document.getElementById('camp-items-area'); area.innerHTML = ''; document.getElementById('camp-gold').innerText = state.gold;
+            state.campItems.forEach(item => { const el = document.createElement('div'); el.className = 'absolute text-4xl transform -translate-x-1/2 -translate-y-full'; el.style.left = item.x + '%'; el.style.top = item.y + '%'; el.innerText = item.icon; area.appendChild(el); });
+        }
+        function buyCampItem(type, cost) {
+            state.lastInputTime = performance.now();
+            if(state.gold >= cost) { state.gold -= cost; let icon = type==='tent'?'⛺': type==='fire'?'🔥': type==='tree'?'🌲':'🪨'; const x = 10 + Math.random() * 80; const y = 20 + Math.random() * 70; state.campItems.push({ icon, x, y }); Sound.coin(); saveGame(); renderCamp(); } else { Sound.error(); }
+        }
+
+        // --- INPUT & UPDATE ---
+        function doJump(amount) {
+            state.lastInputTime = performance.now();
+            if(state.mode === 'blueprint') { if(!state.isExecutingBlueprint) { state.blueprintQueue.push(amount); updateBlueprintUI(); Sound.click(); } return; }
+            if(state.isAnimating) return;
+            if(state.mode === 'challenge') {
+                if(state.ink <= 0) { Sound.error(); return; } state.ink--;
+                if(state.ink <= 3 && state.ink > 0) showFeedback(state.ink + " Moves Left!", "text-red-500"); updateHUD();
+            }
+            executeJumpAnimation(amount);
+        }
+
+        function executeJumpAnimation(amount) {
+            Sound.jump(); state.isAnimating = true; state.animStart = performance.now(); state.animDuration = 800; state.jumpStartVal = state.current;
+            const config = getGradeConfig(state.grade); let next = state.current + amount; if(config.precision > 0) next = parseFloat(next.toFixed(config.precision));
+            state.jumpEndVal = next; state.history.push({from: state.current, to: next, val: amount}); state.moves++; state.dailyQuest.current++; updateQuestUI();
+        }
+
+        function clearBlueprint() { state.blueprintQueue = []; updateBlueprintUI(); }
+        function executeBlueprint() { if(state.blueprintQueue.length === 0) return; state.isExecutingBlueprint = true; state.blueprintIndex = 0; processBlueprintStep(); }
+        function processBlueprintStep() { if(state.blueprintIndex >= state.blueprintQueue.length) { state.isExecutingBlueprint = false; clearBlueprint(); Sound.error(); showFeedback("Short!", "text-orange-500"); setTimeout(resetToStart, 800); return; } const amount = state.blueprintQueue[state.blueprintIndex]; state.blueprintIndex++; executeJumpAnimation(amount); }
+
+        function gameLoop() {
+            const now = performance.now(); const dt = (now - state.lastTime) / 1000; state.lastTime = now;
+            if(!document.getElementById('game-ui').classList.contains('hidden')) { updatePhysics(now); updateChase(dt); updateWeather(dt); draw(); }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateChase(dt) { if(state.chaseSpeed > 0 && !state.accessibility.reduceMotion) { state.chaseX += state.chaseSpeed * dt; if(state.chaseX > state.current) gameOver("Crushed by Wall!"); } }
+        
+        function updateWeather(dt) {
+            if(state.accessibility.reduceMotion) return;
+
+            state.floatingTexts.forEach(ft => { ft.y -= 30 * dt; ft.life -= 1.0 * dt; });
+            state.floatingTexts = state.floatingTexts.filter(ft => ft.life > 0);
+            
+            // Living BG
+            state.livingBgObjects.forEach(obj => {
+                if(obj.type === 'bird') { obj.x += obj.speed; obj.y += Math.sin(performance.now()/500)*0.5; if(obj.x > canvas.width + 50) obj.x = -100; }
+                else if(obj.type === 'meteor') { obj.x -= obj.speed; obj.y += obj.speed; if(obj.y > canvas.height + 50) { obj.y = -100; obj.x = Math.random()*canvas.width + 300; } }
+            });
+            
+            // Foreground
+            state.foregroundObjects.forEach(obj => { obj.x -= (obj.speed + (state.isAnimating ? 5 : 0)) * dt * 60; if(obj.x < -100) obj.x = canvas.width + 100; });
+            
+            state.weatherParticles.forEach(p => {
+                if(state.biome === 'ice') { p.y += p.speed; p.x += Math.sin(performance.now()/500)*0.5; } 
+                else if(state.biome === 'volcano') { p.y -= p.speed * 0.5; p.x += (Math.random()-0.5); }
+                if(p.y > canvas.height) p.y = 0; if(p.y < 0) p.y = canvas.height; if(p.x > canvas.width) p.x = 0; if(p.x < 0) p.x = canvas.width;
+            });
+            state.portalAngle += 2 * dt;
+            state.liquidOffset += 2 * dt;
+        }
+
+        function updatePhysics(now) {
+            if (state.isAnimating) {
+                let progress = Math.min((now - state.animStart) / state.animDuration, 1);
+                const currentVal = state.jumpStartVal + ((state.jumpEndVal - state.jumpStartVal) * progress);
+                const height = 150 * Math.sin(progress * Math.PI);
+                state.current = currentVal; state.playerY = height;
+                
+                // SQUASH & STRETCH
+                if(!state.accessibility.reduceMotion) {
+                    if(progress < 0.1) { state.scaleX = 1.2; state.scaleY = 0.8; } 
+                    else if (progress > 0.9) { state.scaleX = 0.9; state.scaleY = 1.1; } 
+                    else { state.scaleX = 0.8; state.scaleY = 1.2; }
+                }
+                
+                // SPEED LINES
+                // Drawn in draw() based on isAnimating
+                
+                // GHOSTING
+                if(!state.accessibility.reduceMotion && state.moves > 1 && progress % 0.1 < 0.05) state.ghosts.push({x: state.playerX, y: canvas.height*0.75 - state.playerY - 20, life: 0.5});
+                
+                if(Math.random() > 0.5 && !state.accessibility.reduceMotion) spawnTrail(state.playerX, canvas.height*0.75 - state.playerY);
+                
+                state.coins.forEach(c => { if(!c.collected && Math.abs(state.current - c.val) < (state.target-state.start)*0.05 && state.playerY < 50) { c.collected = true; Sound.coin(); spawnFloatingText("+2", mapValToX(c.val), canvas.height*0.75 - c.y - 20); } });
+                if (progress >= 1) handleLand();
+            } else {
+                state.scaleX += (1 - state.scaleX) * 0.2; state.scaleY += (1 - state.scaleY) * 0.2;
+                // Idle Zzz
+                if(!state.accessibility.reduceMotion && now - state.lastInputTime > 5000 && Math.random() > 0.98) {
+                     spawnFloatingText("Zzz...", state.playerX + 10, canvas.height*0.75 - 40, '#fff');
+                }
+            }
+            
+            const idealCam = state.current; state.cameraX += (idealCam - state.cameraX) * 0.1;
+            state.particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.02; }); state.particles = state.particles.filter(p => p.life > 0);
+            state.ghosts.forEach(g => g.life -= 0.05); state.ghosts = state.ghosts.filter(g => g.life > 0);
+        }
+
+        function handleLand() {
+            state.current = state.jumpEndVal; state.playerY = 0; 
+            if(!state.accessibility.reduceMotion) { state.scaleX = 1.4; state.scaleY = 0.6; }
+            const hitHazard = state.hazards.some(h => Math.abs(h.val - state.current) < 0.001);
+            const range = state.target - state.start; const minB = state.start - (range*0.2); const maxB = state.target + (range*0.2);
+            const outOfBounds = state.current < minB || state.current > maxB;
+
+            if(state.mode === 'rounding' && !hitHazard && !outOfBounds) {
+                if(Math.abs(state.current - state.target) <= 5 && Math.abs(state.current - state.target) > 0.001) { Sound.magnet(); showFeedback("Rounded!", "text-purple-400"); state.current = state.target; }
+            }
+            state.checkpoints.forEach(cp => { if(Math.abs(state.current - cp.val) < 0.001 && !cp.visited) { cp.visited = true; Sound.win(); showFeedback("Checkpoint!", "text-blue-500"); spawnConfetti(); } });
+
+            if (hitHazard || outOfBounds) {
+                Sound.error(); showFeedback("OUCH!", "text-red-500"); screenShake();
+                setTimeout(() => {
+                    if(state.mode === 'challenge' && state.ink <= 0) { state.isAnimating = false; gameOver("Out of Moves!"); return; }
+                    if(state.mode === 'blueprint') { state.isExecutingBlueprint = false; showFeedback("Failed!", "text-red-500"); setTimeout(resetToStart, 500); return; }
+                    if(state.chaseSpeed > 0) { gameOver("Caught by Spike Wall!"); return; }
+                    state.current = state.jumpStartVal; state.history.pop(); state.moves = Math.max(0, state.moves - 1); state.isAnimating = false; updateHUD();
+                }, 500);
+            } else {
+                Sound.land(); spawnDust(state.playerX, 0);
+                if (Math.abs(state.current - state.target) < 0.001) {
+                    if(state.mode === 'challenge' && !state.checkpoints.every(cp => cp.visited)) {
+                        showFeedback("Missed Checkpoint!", "text-red-400"); if(state.ink <= 0) { setTimeout(() => gameOver("Missed Checkpoint!"), 500); return; } state.isAnimating = false; updateHUD();
+                        if(state.mode === 'blueprint' && state.isExecutingBlueprint) setTimeout(processBlueprintStep, 500); return;
+                    }
+                    state.isAnimating = false; winLevel();
+                } else {
+                    updateHUD(); state.isAnimating = false;
+                    if(state.mode === 'challenge' && state.ink <= 0) { setTimeout(() => gameOver("Out of Moves!"), 500); return; }
+                    if(state.mode === 'blueprint' && state.isExecutingBlueprint) setTimeout(processBlueprintStep, 500);
+                }
+            }
+        }
+
+        function winLevel() {
+            Sound.win();
+            // Random Victory Pose
+            state.victoryAnimType = Math.random() > 0.5 ? 'spin' : 'backflip';
+            
+            let starCount = 1; if(state.moves <= state.optimalMoves) starCount = 3; else if(state.moves <= state.optimalMoves + 2) starCount = 2;
+            const goldEarned = (starCount * 5) + (state.coins.filter(c=>c.collected).length * 2); state.gold += goldEarned;
+            document.getElementById('res-moves').innerText = state.moves; document.getElementById('res-gold').innerText = "+" + goldEarned;
+            if(starCount === 3) { document.getElementById('perfect-msg').classList.remove('hidden'); document.getElementById('perfect-msg').classList.add('pop-in'); }
+            let eq = `${state.start}`; state.history.forEach(h => eq += (h.val>=0 ? ` + ${h.val}` : ` - ${Math.abs(h.val)}`)); eq += ` = ${state.target}`; document.getElementById('equation-display').innerText = eq;
+            ['star-1', 'star-2', 'star-3'].forEach(id => document.getElementById(id).classList.remove('text-yellow-400'));
+            setTimeout(() => document.getElementById('star-1').classList.add('text-yellow-400'), 100); if(starCount >= 2) setTimeout(() => document.getElementById('star-2').classList.add('text-yellow-400'), 400); if(starCount >= 3) setTimeout(() => document.getElementById('star-3').classList.add('text-yellow-400'), 700);
+            const nextBtn = document.querySelector('#victory-screen button');
+            if(state.isCustomLevel) { nextBtn.innerText = "Back to Editor 🛠️"; nextBtn.onclick = () => { document.getElementById('victory-screen').classList.add('hidden'); goToEditor(); }; } 
+            else { nextBtn.innerText = "Next Level ➡"; nextBtn.onclick = () => nextLevel(); }
+            document.getElementById('victory-screen').classList.remove('hidden'); saveGame();
+        }
+
+        function setBiome(b) {
+            state.biome = b;
+            document.body.className = `theme-${b} flex flex-col items-center min-h-screen p-2 md:p-4 text-slate-800`;
+            if(state.accessibility.highContrast) document.body.className += ' high-contrast';
+            if(state.accessibility.largeText) document.body.className += ' large-text';
+            
+            document.getElementById('biome-label').innerText = b.toUpperCase();
+            document.getElementById('biome-label').className = `text-xs font-bold text-white px-2 py-1 rounded shadow-sm ${b==='ice'?'bg-cyan-500': b==='volcano'?'bg-red-600': b==='space'?'bg-indigo-600':'bg-green-500'}`;
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            const w = canvas.width; const h = canvas.height; const groundY = h * 0.75;
+            
+            // High Contrast Check
+            if(state.accessibility.highContrast) {
+                ctx.fillStyle = "#000000"; ctx.fillRect(0,0,w,h);
+                ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(w, groundY); ctx.stroke();
+            } else {
+                // Normal Vignette
+                const g = ctx.createRadialGradient(w/2, h/2, h/3, w/2, h/2, h); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.15)');
+                drawBackground(ctx, w, h);
+                // Liquid
+                if(!state.accessibility.reduceMotion) {
+                    ctx.fillStyle = state.biome === 'volcano' ? 'rgba(239, 68, 68, 0.8)' : 'rgba(56, 189, 248, 0.5)';
+                    ctx.beginPath(); ctx.moveTo(0, h); for(let x=0; x<=w; x+=10) { ctx.lineTo(x, h - 20 + Math.sin(x*0.01 + state.liquidOffset)*10); } ctx.lineTo(w, h); ctx.fill();
+                }
+                ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(w, groundY); ctx.strokeStyle = state.biome === 'ice' ? '#bae6fd' : '#475569'; ctx.lineWidth = 4; ctx.stroke();
+                
+                // Biome details
+                if(state.biome === 'grass' && !state.accessibility.reduceMotion) {
+                    ctx.fillStyle = "#22c55e";
+                    const playerScreenX = mapValToX(state.current);
+                    state.grassBlades.forEach(gb => {
+                        let gx = (gb.x - state.cameraX*0.8) % (w+100); if(gx<0) gx+=w;
+                        let bend = 0; if(Math.abs(gx - playerScreenX) < 30 && state.playerY < 10) bend = (gx - playerScreenX) * 0.5;
+                        ctx.beginPath(); ctx.moveTo(gx, groundY); ctx.quadraticCurveTo(gx+bend, groundY-gb.h/2, gx+bend, groundY-gb.h); ctx.lineTo(gx+4+bend, groundY); ctx.fill();
+                    });
+                }
+            }
+
+            if(state.chaseSpeed > 0) {
+                const wallX = mapValToX(state.chaseX);
+                if(state.accessibility.highContrast) {
+                    ctx.fillStyle = "#ff0000"; ctx.fillRect(wallX-20, 0, 20, h);
+                } else {
+                    ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 0, wallX, h); ctx.fillStyle = "#ef4444"; ctx.fillRect(wallX - 20, 0, 20, h);
+                    ctx.fillStyle = "#7f1d1d"; ctx.beginPath(); for(let y=0; y<h; y+=40) { ctx.moveTo(wallX, y); ctx.lineTo(wallX+30, y+20); ctx.lineTo(wallX, y+40); } ctx.fill();
+                    if(Math.random() > 0.9 && !state.accessibility.reduceMotion) { ctx.fillStyle = "yellow"; ctx.fillRect(wallX-15, h/2 - 20, 10, 10); ctx.fillRect(wallX-15, h/2 + 20, 10, 10); }
+                }
+            }
+
+            const drawList = [state.start, state.target, ...state.hazards.map(h=>h.val), ...state.checkpoints.map(c=>c.val)]; state.history.forEach(his => drawList.push(his.to));
+            drawList.forEach(val => {
+                const x = mapValToX(val);
+                if(x > -50 && x < w + 50) {
+                    if(state.accessibility.highContrast) {
+                        ctx.strokeStyle = "#fff"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x, groundY-10); ctx.lineTo(x, groundY+10); ctx.stroke();
+                        ctx.fillStyle = "#ffff00"; ctx.font = "bold 20px Nunito"; ctx.textAlign = "center"; ctx.fillText(val, x, groundY + 30);
+                    } else {
+                        ctx.beginPath(); ctx.moveTo(x, groundY - 10); ctx.lineTo(x, groundY + 10); ctx.strokeStyle = "#334155"; ctx.lineWidth=2; ctx.stroke();
+                        ctx.fillStyle = "#1e293b"; if(state.biome === 'space') ctx.fillStyle = "#94a3b8"; if(state.mode === 'rounding' && val % 10 === 0) ctx.fillStyle = "#a855f7";
+                        ctx.font = "bold 14px Nunito"; ctx.textAlign = "center"; ctx.fillText(val, x, groundY + 25);
+                    }
+                    
+                    if(val === state.target) { 
+                        ctx.save(); ctx.translate(x, groundY-40); 
+                        if(!state.accessibility.reduceMotion) ctx.rotate(state.portalAngle);
+                        if(state.accessibility.highContrast) {
+                             ctx.strokeStyle = "#ff00ff"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0,0, 20, 0, Math.PI*2); ctx.stroke();
+                        } else {
+                            ctx.strokeStyle = "#8b5cf6"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0,0, 20, 0, Math.PI*1.5); ctx.stroke();
+                            ctx.strokeStyle = "#c4b5fd"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0,0, 10, Math.PI, Math.PI*3.5); ctx.stroke(); 
+                        }
+                        ctx.restore();
+                    }
+                }
+            });
+            state.checkpoints.forEach(cp => {
+                const x = mapValToX(cp.val);
+                if(x > -50 && x < w + 50) {
+                    ctx.fillStyle = cp.visited ? "#22c55e" : "#3b82f6"; ctx.beginPath(); ctx.moveTo(x, groundY-10); ctx.lineTo(x, groundY-50); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, groundY-50); ctx.lineTo(x+20, groundY-40); ctx.lineTo(x, groundY-30); ctx.fill();
+                    if(!cp.visited) { ctx.fillStyle = "#fff"; ctx.font = "10px Arial"; ctx.fillText("CP", x+5, groundY-37); }
+                }
+            });
+            state.hazards.forEach(haz => { const x = mapValToX(haz.val); if(x > -50 && x < w + 50) { ctx.fillStyle = "#dc2626"; ctx.beginPath(); ctx.moveTo(x-10, groundY); ctx.lineTo(x, groundY-20); ctx.lineTo(x+10, groundY); ctx.fill(); } });
+            state.coins.forEach(c => { if(!c.collected) { const x = mapValToX(c.val); const y = groundY - c.y; if(x > -50 && x < w + 50) { 
+                const bob = state.accessibility.reduceMotion ? 0 : Math.sin(performance.now() / 200) * 5; 
+                ctx.fillStyle = "#fbbf24"; ctx.beginPath(); ctx.arc(x, y + bob, 12, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle = "#b45309"; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = "#fff"; ctx.font = "12px Arial"; ctx.fillText("$", x, y + bob + 4); 
+            } } });
+            
+            // GHOSTING
+            if(!state.accessibility.reduceMotion) {
+                state.ghosts.forEach(gh => {
+                    ctx.globalAlpha = 0.3 * gh.life;
+                    ctx.fillStyle = "#f59e0b"; ctx.beginPath(); ctx.arc(mapValToX(gh.x), gh.y, 15, 0, Math.PI*2); ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                });
+            }
+
+            // Player with Squash/Stretch & Victory Anim
+            state.playerX = mapValToX(state.current); const py = groundY - state.playerY - 20;
+            if(!state.accessibility.highContrast) {
+                ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.beginPath(); ctx.ellipse(state.playerX, groundY, 15 * (1 - state.playerY/300), 5 * (1 - state.playerY/300), 0, 0, Math.PI*2); ctx.fill();
+            }
+            
+            ctx.save();
+            ctx.translate(state.playerX, py);
+            
+            if(state.victoryAnimType && !state.accessibility.reduceMotion) {
+                const rot = (performance.now() / 200);
+                if(state.victoryAnimType === 'spin') ctx.rotate(rot); else ctx.rotate(-rot); 
+            }
+            
+            ctx.scale(state.scaleX, state.scaleY);
+            drawPlayer(ctx, 0, 0); 
+            ctx.restore();
+            
+            // SPEED LINES
+            if(state.isAnimating && !state.accessibility.reduceMotion && !state.accessibility.highContrast) {
+                ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 2;
+                ctx.beginPath();
+                for(let i=0; i<5; i++) {
+                    const lx = Math.random()*w; const ly = Math.random()*h;
+                    ctx.moveTo(lx, ly); ctx.lineTo(lx - 50, ly + 20); 
+                }
+                ctx.stroke();
+            }
+
+            // Particles
+            if(!state.accessibility.reduceMotion) {
+                state.particles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size || 3, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1.0; });
+            }
+            
+            // Weather
+            if(!state.accessibility.reduceMotion && !state.accessibility.highContrast) {
+                state.weatherParticles.forEach(p => {
+                    ctx.fillStyle = state.biome === 'volcano' ? 'rgba(100,100,100,0.5)' : 'rgba(255,255,255,0.6)';
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+                });
+                
+                // Living BG
+                state.livingBgObjects.forEach(obj => {
+                    if(obj.type === 'bird') { ctx.fillStyle = "#333"; ctx.beginPath(); ctx.arc(obj.x, obj.y, 3, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.moveTo(obj.x, obj.y); ctx.lineTo(obj.x-5, obj.y-5); ctx.stroke(); ctx.lineTo(obj.x+5, obj.y-5); ctx.stroke(); } 
+                    else if(obj.type === 'meteor') { ctx.strokeStyle = "#fbbf24"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(obj.x, obj.y); ctx.lineTo(obj.x+20, obj.y-20); ctx.stroke(); }
+                });
+                
+                // Foreground Parallax (Blurred)
+                ctx.filter = 'blur(4px)';
+                state.foregroundObjects.forEach(obj => {
+                    ctx.fillStyle = "rgba(0,0,0,0.1)"; 
+                    ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.size, 0, Math.PI*2); ctx.fill();
+                });
+                ctx.filter = 'none';
+            }
+
+            // Floating Texts
+            state.floatingTexts.forEach(ft => {
+                ctx.globalAlpha = ft.life;
+                ctx.fillStyle = state.accessibility.highContrast ? "#ffff00" : ft.color;
+                ctx.font = state.accessibility.largeText ? "bold 28px Fredoka One" : "bold 20px Fredoka One";
+                ctx.strokeStyle = "black"; ctx.lineWidth = 3;
+                ctx.strokeText(ft.text, ft.x, ft.y); ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.globalAlpha = 1.0;
+            });
+            
+            if(!state.accessibility.highContrast) {
+                ctx.fillStyle = ctx.createRadialGradient(w/2, h/2, h/3, w/2, h/2, h); 
+                // Re-create gradient because context was saved/restored maybe? No, just good practice.
+                const g = ctx.createRadialGradient(w/2, h/2, h/3, w/2, h/2, h); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.15)');
+                ctx.fillStyle = g;
+                ctx.fillRect(0,0,w,h);
+            }
+        }
+
+        function drawBackground(ctx, w, h) {
+            if(state.accessibility.highContrast) return;
+
+            let g = ctx.createLinearGradient(0,0,0, h);
+            // Day/Night
+            if(state.levelTotal > 5) { g.addColorStop(0, '#1e1b4b'); g.addColorStop(1, '#4338ca'); } // Night
+            else if(state.biome === 'grass') { g.addColorStop(0, '#7dd3fc'); g.addColorStop(1, '#e0f2fe'); }
+            else if(state.biome === 'ice') { g.addColorStop(0, '#cffafe'); g.addColorStop(1, '#f0f9ff'); }
+            else if(state.biome === 'volcano') { g.addColorStop(0, '#450a0a'); g.addColorStop(1, '#7f1d1d'); }
+            else { g.addColorStop(0, '#0f172a'); g.addColorStop(1, '#1e293b'); }
+            ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+            
+            if(!state.accessibility.reduceMotion) {
+                state.bgObjects.forEach(obj => {
+                    let px = (obj.x - (state.cameraX * obj.speedFactor)) % (w + 200);
+                    if(px < -100) px += (w + 200);
+                    ctx.fillStyle = "rgba(255,255,255,0.3)";
+                    if(state.biome === 'space') ctx.fillStyle = "rgba(255,255,255,0.8)"; 
+                    ctx.beginPath();
+                    if(state.biome === 'space') { ctx.arc(px, obj.y, 2, 0, Math.PI*2); } 
+                    else if(state.biome === 'ice') { ctx.moveTo(px, obj.y); ctx.lineTo(px+obj.size, obj.y-obj.size); ctx.lineTo(px+obj.size*2, obj.y); } 
+                    else { ctx.arc(px, obj.y, obj.size, 0, Math.PI*2); ctx.arc(px+obj.size*0.8, obj.y-obj.size*0.2, obj.size*0.8, 0, Math.PI*2); }
+                    ctx.fill();
+                });
+            }
+            
+            const offset = state.cameraX * 0.5; ctx.fillStyle = "rgba(255,255,255,0.2)"; ctx.beginPath();
+            for(let x=0; x<w; x+=10) { const y = h*0.75 - Math.sin((x + offset)*0.01)*50 - 50; if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }
+            ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+        }
+        
+        function drawPlayer(ctx, x, y) {
+            if(state.accessibility.highContrast) {
+                ctx.fillStyle = "#00FFFF"; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke();
+                return;
+            }
+
+            ctx.fillStyle = "#f59e0b"; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "white"; 
+            
+            // REACTIVE EYES
+            let eyeScaleY = 1; let eyeY = -5;
+            if(state.isAnimating && state.playerY > 50) eyeScaleY = 0.2; 
+            
+            ctx.beginPath(); ctx.ellipse(-5, eyeY, 5, 5*eyeScaleY, 0, 0, Math.PI*2); ctx.fill(); // Left
+            ctx.beginPath(); ctx.ellipse(5, eyeY, 5, 5*eyeScaleY, 0, 0, Math.PI*2); ctx.fill(); // Right
+            
+            // Pupils (Look at target)
+            let lookX = state.isAnimating ? 0 : 2;
+            ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(-5+lookX, eyeY, 2, 0, Math.PI*2); ctx.arc(5+lookX, eyeY, 2, 0, Math.PI*2); ctx.fill();
+            
+            const h = state.equippedHat;
+            if(h === 'tophat') { ctx.fillStyle = "#1e293b"; ctx.fillRect(-12, -25, 24, 20); ctx.fillRect(-18, -5, 36, 4); }
+            else if (h === 'cap') { ctx.fillStyle = "#2563eb"; ctx.beginPath(); ctx.arc(0, -10, 16, Math.PI, 0); ctx.fill(); ctx.fillRect(-16, -10, 32, 5); }
+            else if (h === 'crown') { ctx.fillStyle = "#fbbf24"; ctx.beginPath(); ctx.moveTo(-15, -10); ctx.lineTo(-15, -25); ctx.lineTo(-5, -15); ctx.lineTo(0, -25); ctx.lineTo(5, -15); ctx.lineTo(15, -25); ctx.lineTo(15, -10); ctx.fill(); }
+            else if (h === 'space') { ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI*2); ctx.stroke(); }
+            else if (h === 'wizard') { ctx.fillStyle = "#7c3aed"; ctx.beginPath(); ctx.moveTo(-18, -10); ctx.lineTo(18, -10); ctx.lineTo(0, -40); ctx.fill(); }
+            else if (h === 'teacher') { ctx.fillStyle = "#000"; ctx.fillRect(-15, -18, 30, 8); ctx.fillRect(-2, -15, 4, 15); }
+        }
+        function mapValToX(val) {
+            let range = 20; if(state.grade === 2) range = 40; if(state.grade === 3) range = 200; if(state.grade === 4) range = 1000; if(state.grade === 5) range = 5;
+            const pxPerUnit = canvas.width / range; return (canvas.width / 2) + ((val - state.cameraX) * pxPerUnit);
+        }
+        function spawnDust(x, y) { 
+            if(state.accessibility.reduceMotion) return;
+            for(let i=0; i<8; i++) state.particles.push({x: x, y: y, vx: (Math.random()-0.5)*5, vy: (Math.random())*-3, life: 1.0, color: '#fff'}); 
+        }
+        
+        function spawnTrail(x, y) { 
+            if(state.accessibility.reduceMotion) return;
+            let color = 'rgba(59, 130, 246, 0.5)'; let size = 5;
+            // COSTUME TRAILS
+            if(state.equippedHat === 'wizard') { color = 'purple'; size = 3; } 
+            if(state.equippedHat === 'space') { color = 'orange'; size = 6; } 
+            if(state.equippedHat === 'crown') { color = 'cyan'; size = 4; }
+            state.particles.push({x: x, y: y, vx: 0, vy: 0, life: 0.5, color: color, size: size}); 
+        }
+        
+        function spawnConfetti() { 
+            if(state.accessibility.reduceMotion) return;
+            const colors = ['#f00', '#0f0', '#00f', '#ff0']; for(let i=0; i<30; i++) state.particles.push({x: canvas.width/2, y: canvas.height/2, vx: (Math.random()-0.5)*20, vy: (Math.random()-0.5)*20, life: 2.0, color: colors[i%4]}); 
+        }
+        function screenShake() { 
+            if(state.accessibility.reduceMotion) return;
+            document.querySelector('.canvas-container').classList.add('shake'); setTimeout(() => document.querySelector('.canvas-container').classList.remove('shake'), 500); 
+        }
+        
+        function getGradeConfig(g) { const c = {1: {jumps: [1, 5], precision: 0}, 2: {jumps: [1, 5, 10], precision: 0}, 3: {jumps: [1, 10, 50, 100], precision: 0}, 4: {jumps: [10, 100, 1000, 2500], precision: 0}, 5: {jumps: [0.01, 0.1, 0.5, 1], precision: 2}}; return c[g]; }
+        function calculateOptimalMoves(dist, jumps) { let r = Math.abs(dist); let c = 0; const s = [...jumps].sort((a,b)=>b-a); for(let j of s) { while(r >= j) { r = parseFloat((r-j).toFixed(2)); c++; } } return c; }
+        function generateControls(jumps) { const c = document.getElementById('controls-container'); c.innerHTML = ''; const createBtn = (val, neg) => { const b = document.createElement('button'); const vDisplay = state.grade===5 ? val : val.toLocaleString(); const col = neg ? 'bg-red-500 hover:bg-red-600 border-red-700' : 'bg-green-500 hover:bg-green-600 border-green-700'; b.className = `btn-jump ${col} text-white font-black text-lg md:text-2xl py-3 px-4 md:px-6 rounded-xl border-b-4 active:border-b-0 active:translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed`; b.innerText = (neg?'-':'+') + vDisplay; b.onclick = () => doJump(neg ? -val : val); c.appendChild(b); }; jumps.slice().reverse().forEach(j => createBtn(j, true)); jumps.forEach(j => createBtn(j, false)); }
+        
+        function handleCanvasClick() {}
+
+        // Init
+        loadGame();
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>

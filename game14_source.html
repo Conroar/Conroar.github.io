@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Math Maze: Ten More, Ten Less</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* UI Layer */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
+            z-index: 10;
+        }
+
+        /* HUD Top */
+        #top-bar {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            text-align: center;
+            border-bottom: 4px solid #4CAF50;
+            pointer-events: auto;
+            color: #333;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        #question-text {
+            font-size: 28px; color: #2E7D32; font-weight: bold; margin: 0;
+        }
+
+        #sub-info {
+            font-size: 16px; color: #555; margin-top: 5px; font-weight: bold;
+        }
+
+        /* HUD Bottom */
+        #bottom-bar {
+            padding: 15px;
+            text-align: center;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+            background: linear-gradient(transparent, rgba(0,0,0,0.6));
+        }
+
+        /* Messages */
+        #center-msg {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; 
+            display: block; 
+            z-index: 30; pointer-events: auto;
+        }
+
+        .modal-content {
+            background: linear-gradient(#fff, #e0f7fa);
+            border: 4px solid #4CAF50;
+            padding: 40px;
+            border-radius: 20px;
+            color: #333;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+        }
+
+        h1 { margin: 0 0 20px 0; color: #2E7D32; font-family: 'Verdana', sans-serif; }
+        p { font-size: 18px; line-height: 1.5; }
+
+        button {
+            padding: 15px 40px; font-size: 22px; cursor: pointer;
+            background: #4CAF50; color: white; border: none; border-radius: 50px;
+            margin-top: 20px;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #2E7D32;
+            transition: transform 0.1s;
+        }
+        button:hover { background: #66BB6A; transform: translateY(-2px); }
+        button:active { transform: translateY(2px); box-shadow: 0 2px 0 #2E7D32; }
+
+        /* Dead End Warning */
+        #dead-end-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(200, 0, 0, 0.4);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 60px; color: white; font-weight: 900;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s;
+            text-shadow: 3px 3px 0 #000;
+            z-index: 25;
+            font-family: Impact, sans-serif;
+            letter-spacing: 2px;
+        }
+
+        /* Flash Transition Overlay */
+        #flash-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 20; /* Above UI, Below Modal */
+            transition: opacity 0.5s linear;
+        }
+    </style>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Tween.js for smooth animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+</head>
+<body>
+
+<div id="ui-layer">
+    <div id="top-bar">
+        <div id="question-text">Loading...</div>
+        <div id="sub-info">Question 1/7 | Time: 0s</div>
+    </div>
+    <div id="bottom-bar">Click a path to choose your answer</div>
+</div>
+
+<div id="dead-end-overlay">DEAD END</div>
+<div id="flash-overlay"></div>
+
+<!-- Start/End Modal -->
+<div id="center-msg">
+    <div class="modal-content" id="modal-content">
+        <h1>Hedge Maze Math</h1>
+        <p>Explore the garden maze.</p>
+        <p>Click the correct path to answer the question.</p>
+        <button id="main-btn">Enter Maze</button>
+    </div>
+</div>
+
+<script>
+    // --- CONFIG ---
+    const TOTAL_QUESTIONS = 7;
+    
+    // Color Palette
+    const COLORS = {
+        bg: 0x87CEEB,       // Sky Blue
+        grass: 0x7CFC00,    // Lawn Green
+        hedge: 0x228B22,    // Forest Green (Hedges)
+        path: 0xE6D4A3,     // Sand/Dirt
+        wood: 0x8B4513,     // Wood Gate
+    };
+
+    // --- GAME STATE ---
+    let state = {
+        level: 1,
+        startTime: 0,
+        timerInterval: null,
+        isAnimating: false,
+        isPlaying: false, 
+        currentQ: null,
+        wrongIndices: []
+    };
+
+    // --- THREE.JS SETUP ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(COLORS.bg);
+    scene.fog = new THREE.Fog(COLORS.bg, 10, 50); // Increased fog distance for depth
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true; 
+    document.body.appendChild(renderer.domElement);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(50, 100, 50);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
+    
+    // Interaction
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    // --- OBJECTS ---
+    let doorGroups = []; 
+    let textSprites = []; 
+
+    function createHedgeBlock(w, h, d, x, y, z) {
+        const geo = new THREE.BoxGeometry(w, h, d);
+        const mat = new THREE.MeshStandardMaterial({ 
+            color: COLORS.hedge, 
+            roughness: 0.9,
+            flatShading: true 
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, y, z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        return mesh;
+    }
+
+    function createTunnel(xPosition, labelText, index) {
+        const group = new THREE.Group();
+        group.userData = { id: index, isInteractive: true };
+
+        // 1. Tunnel Hedges (Entrance)
+        group.add(createHedgeBlock(2.5, 6, 8, -2.5, 3, -4));
+        group.add(createHedgeBlock(2.5, 6, 8, 2.5, 3, -4));
+
+        // 2. Entrance Floor
+        const pathGeo = new THREE.PlaneGeometry(2.5, 12);
+        const pathMat = new THREE.MeshStandardMaterial({ color: COLORS.path });
+        const path = new THREE.Mesh(pathGeo, pathMat);
+        path.rotation.x = -Math.PI/2;
+        path.position.set(0, 0.05, -5); 
+        path.receiveShadow = true;
+        group.add(path);
+
+        // 3. The GATE (Door) with HINGE
+        const doorPivot = new THREE.Group();
+        doorPivot.position.set(-1.25, 2.5, -7); 
+        
+        const doorGeo = new THREE.BoxGeometry(2.5, 5, 0.2);
+        const doorMat = new THREE.MeshStandardMaterial({ color: COLORS.wood });
+        const door = new THREE.Mesh(doorGeo, doorMat);
+        door.position.set(1.25, 0, 0); 
+        door.castShadow = true;
+        
+        const barGeo = new THREE.BoxGeometry(2.6, 0.5, 0.3);
+        const bar1 = new THREE.Mesh(barGeo, doorMat); bar1.position.set(0, 1, 0); door.add(bar1);
+        const bar2 = new THREE.Mesh(barGeo, doorMat); bar2.position.set(0, -1, 0); door.add(bar2);
+        
+        doorPivot.add(door);
+        group.add(doorPivot);
+        group.userData.doorPivot = doorPivot;
+
+        // 4. "NEXT ROOM" VISUALS (The Phantom Hallway)
+        // This creates the illusion of the maze continuing behind the door
+        const nextRoomGroup = new THREE.Group();
+        nextRoomGroup.position.set(0, 0, -10); // Start right behind the main tunnel logic
+
+        // A long grass floor extending out
+        const nextFloorGeo = new THREE.PlaneGeometry(15, 30);
+        const nextFloorMat = new THREE.MeshStandardMaterial({ color: COLORS.grass });
+        const nextFloor = new THREE.Mesh(nextFloorGeo, nextFloorMat);
+        nextFloor.rotation.x = -Math.PI/2;
+        nextFloor.position.set(0, 0.01, -15); // Extend far back
+        nextRoomGroup.add(nextFloor);
+
+        // A long path extending out
+        const nextPathGeo = new THREE.PlaneGeometry(2.5, 30);
+        const nextPath = new THREE.Mesh(nextPathGeo, pathMat);
+        nextPath.rotation.x = -Math.PI/2;
+        nextPath.position.set(0, 0.02, -15);
+        nextRoomGroup.add(nextPath);
+
+        // Side Hedges for the next room to create walls
+        nextRoomGroup.add(createHedgeBlock(2, 6, 30, -5, 3, -15));
+        nextRoomGroup.add(createHedgeBlock(2, 6, 30, 5, 3, -15));
+
+        group.add(nextRoomGroup);
+
+
+        // 5. Click Trigger
+        const triggerGeo = new THREE.PlaneGeometry(2.5, 6);
+        const triggerMat = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.0, transparent: true }); 
+        const trigger = new THREE.Mesh(triggerGeo, triggerMat);
+        trigger.position.set(0, 3, -4); 
+        trigger.userData = { isDoor: true, index: index };
+        group.add(trigger);
+
+        // 6. Text Label
+        const canvas = document.createElement('canvas');
+        canvas.width = 512; canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "bold 100px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 4;
+        ctx.shadowOffsetY = 4;
+        ctx.fillText(labelText, 256, 128);
+        
+        const tex = new THREE.CanvasTexture(canvas);
+        const spriteMat = new THREE.SpriteMaterial({ map: tex });
+        const sprite = new THREE.Sprite(spriteMat);
+        sprite.position.set(0, 5, -1); 
+        sprite.scale.set(4, 2, 1);
+        group.add(sprite);
+        textSprites[index] = sprite;
+
+        // Position Group
+        group.position.set(xPosition, 0, -10); 
+        scene.add(group);
+        doorGroups.push(group);
+        
+        // Connect path to room
+        const connectorGeo = new THREE.PlaneGeometry(2.5, 10);
+        const connector = new THREE.Mesh(connectorGeo, new THREE.MeshStandardMaterial({ color: COLORS.path }));
+        connector.rotation.x = -Math.PI/2;
+        connector.position.set(xPosition, 0.02, -5); 
+        scene.add(connector);
+    }
+
+    function createRoom() {
+        // Floor
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.MeshStandardMaterial({ color: COLORS.grass, roughness: 1 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Background Hedges - CHANGED: No longer one solid wall.
+        // We create filler walls between the tunnels.
+        // Tunnels are at -8, 0, 8. Width approx 5.
+        // Wall between -8 and 0 (from -4 to -2)
+        // Wall between 0 and 8 (from 2 to 4)
+        
+        // Left Far Wall
+        scene.add(createHedgeBlock(10, 8, 2, -16, 4, -10)); 
+        // Right Far Wall
+        scene.add(createHedgeBlock(10, 8, 2, 16, 4, -10));
+        
+        // Middle Fillers (between paths)
+        scene.add(createHedgeBlock(4, 8, 2, -4, 4, -10));
+        scene.add(createHedgeBlock(4, 8, 2, 4, 4, -10));
+        
+        // Side Walls of main room
+        scene.add(createHedgeBlock(2, 8, 40, -15, 4, 0));
+        scene.add(createHedgeBlock(2, 8, 40, 15, 4, 0));
+
+        // Create 3 Paths
+        createTunnel(-8, "A", 0); 
+        createTunnel(0, "B", 1);
+        createTunnel(8, "C", 2);
+    }
+
+    // --- LOGIC ---
+
+    function generateQuestion() {
+        const isPlus = Math.random() > 0.5;
+        let base, answer, text;
+        if (isPlus) {
+            base = Math.floor(Math.random() * 111);
+            answer = base + 10;
+            text = `What is 10 MORE than ${base}?`;
+        } else {
+            base = Math.floor(Math.random() * 111) + 10;
+            answer = base - 10;
+            text = `What is 10 LESS than ${base}?`;
+        }
+        let options = [answer];
+        while(options.length < 3) {
+            let offset = (Math.floor(Math.random() * 3) + 1) * 10; 
+            let dir = Math.random() > 0.5 ? 1 : -1;
+            let fake = answer + (offset * dir);
+            if (fake < 0 || fake > 120 || options.includes(fake)) fake = Math.floor(Math.random() * 121);
+            if (!options.includes(fake)) options.push(fake);
+        }
+        options.sort(() => Math.random() - 0.5);
+        return { text, answer, options, correctIndex: options.indexOf(answer) };
+    }
+
+    function updateSceneForQuestion() {
+        state.wrongIndices = [];
+        camera.position.set(0, 1.7, 8); 
+        camera.lookAt(0, 1.7, -10);
+        
+        doorGroups.forEach((group, idx) => {
+            group.visible = true; 
+            
+            // Reset Door Position (Closed)
+            TWEEN.removeAll(); 
+            // Reset Rotation
+            group.userData.doorPivot.rotation.y = 0;
+            
+            // Text
+            const newText = state.currentQ.options[idx];
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#FFFFFF"; ctx.font = "bold 100px Arial";
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.shadowColor = "rgba(0,0,0,0.8)"; ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 4; ctx.shadowOffsetY = 4;
+            ctx.fillText(newText, 256, 128);
+            
+            if(textSprites[idx].material.map) textSprites[idx].material.map.dispose();
+            textSprites[idx].material.map = new THREE.CanvasTexture(canvas);
+        });
+
+        document.getElementById('question-text').innerText = state.currentQ.text;
+        updateHUD();
+    }
+
+    function updateHUD() {
+        const time = Math.floor((Date.now() - state.startTime) / 1000);
+        document.getElementById('sub-info').innerText = `Level: ${state.level}/${TOTAL_QUESTIONS} | Time: ${time}s`;
+    }
+
+    function startGame() {
+        document.getElementById('center-msg').style.display = 'none';
+        state.level = 1;
+        state.isPlaying = true;
+        state.startTime = Date.now();
+        state.timerInterval = setInterval(updateHUD, 1000);
+        state.currentQ = generateQuestion();
+        updateSceneForQuestion();
+    }
+
+    function finishGame() {
+        state.isPlaying = false;
+        clearInterval(state.timerInterval);
+        const totalTime = Math.floor((Date.now() - state.startTime) / 1000);
+        const modal = document.getElementById('modal-content');
+        modal.innerHTML = `
+            <h1 style="color:#2E7D32">Maze Conquered!</h1>
+            <p>You found your way out.</p>
+            <p style="font-size: 28px; font-weight:bold; color: #4CAF50;">Total Time: ${totalTime}s</p>
+            <button id="restart-btn">Play Again</button>
+        `;
+        document.getElementById('center-msg').style.display = 'block';
+        document.getElementById('restart-btn').onclick = () => {
+             modal.innerHTML = `<h1>Hedge Maze Math</h1><p>Explore the garden maze.</p><p>Click the correct path.</p><button id="main-btn">Enter Maze</button>`;
+             document.getElementById('main-btn').onclick = startGame;
+             startGame();
+        };
+    }
+
+    // --- INTERACTION ---
+
+    window.addEventListener('click', (event) => {
+        if(!state.isPlaying || state.isAnimating) return;
+        if(document.getElementById('center-msg').style.display === 'block') return;
+
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        
+        let interactables = [];
+        doorGroups.forEach(g => { if(g.visible) interactables.push(...g.children); });
+        const intersects = raycaster.intersectObjects(interactables);
+
+        if(intersects.length > 0) {
+            let obj = intersects[0].object;
+            while(obj.parent && !obj.parent.userData.isInteractive) obj = obj.parent;
+            if(obj.parent && obj.parent.userData.isInteractive) {
+                handlePathSelection(obj.parent.userData.id);
+            }
+        }
+    });
+
+    function handlePathSelection(index) {
+        if (!state.currentQ) return;
+        state.isAnimating = true;
+
+        if (state.wrongIndices.includes(index)) return;
+
+        const isCorrect = (index === state.currentQ.correctIndex);
+        const group = doorGroups[index];
+        const flashOverlay = document.getElementById('flash-overlay');
+        
+        // Target 1: Stop in front
+        const stopX = group.position.x;
+        const stopZ = group.position.z - 4; 
+        
+        // Target 2: Go Through (DEEP into the phantom room)
+        const throughZ = group.position.z - 20;
+
+        if (isCorrect) {
+            // STEP 1: Approach the door and stop
+            new TWEEN.Tween(camera.position)
+                .to({ x: stopX, z: stopZ }, 1500)
+                .easing(TWEEN.Easing.Quadratic.Out) // Smooth stop
+                .onUpdate(() => {
+                    camera.lookAt(stopX, 1.7, throughZ);
+                })
+                .onComplete(() => {
+                    // STEP 2: Swing Door Open
+                    const doorPivot = group.userData.doorPivot;
+                    new TWEEN.Tween(doorPivot.rotation)
+                        .to({ y: -Math.PI / 1.5 }, 800)
+                        .easing(TWEEN.Easing.Back.Out)
+                        .onComplete(() => {
+                            // STEP 3: Move through the door into the new "Fake" room
+                            new TWEEN.Tween(camera.position)
+                                .to({ z: throughZ }, 1500) // Slower move to enjoy view
+                                .easing(TWEEN.Easing.Quadratic.In)
+                                .onUpdate(() => {
+                                     // Start flash when getting close to end of move
+                                     if(camera.position.z < group.position.z - 12) {
+                                         if(flashOverlay.style.opacity < 1) flashOverlay.style.opacity = 1;
+                                     }
+                                })
+                                .onComplete(() => {
+                                    // STEP 4: Reset Level behind white screen
+                                    state.level++;
+                                    if(state.level > TOTAL_QUESTIONS) {
+                                        finishGame();
+                                        state.isAnimating = false;
+                                        flashOverlay.style.opacity = 0;
+                                    } else {
+                                        state.currentQ = generateQuestion();
+                                        updateSceneForQuestion();
+                                        state.isAnimating = false;
+                                        
+                                        // Fade out flash
+                                        setTimeout(() => {
+                                            flashOverlay.style.opacity = 0;
+                                        }, 300);
+                                    }
+                                })
+                                .start();
+                        })
+                        .start();
+                })
+                .start();
+
+        } else {
+            // Wrong Answer
+            new TWEEN.Tween(camera.position)
+                .to({ x: stopX, z: stopZ }, 1500) // Approach
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .onComplete(() => {
+                    const overlay = document.getElementById('dead-end-overlay');
+                    overlay.style.opacity = 1;
+                    
+                    setTimeout(() => {
+                        new TWEEN.Tween(camera.position)
+                            .to({ x: 0, z: 8 }, 1000)
+                            .easing(TWEEN.Easing.Quadratic.Out)
+                            .onUpdate(() => {
+                                camera.lookAt(0, 1.7, -10);
+                            })
+                            .onComplete(() => {
+                                overlay.style.opacity = 0;
+                                state.isAnimating = false;
+                                markAsWrong(index);
+                            })
+                            .start();
+                    }, 800);
+                })
+                .start();
+        }
+    }
+
+    function markAsWrong(index) {
+        state.wrongIndices.push(index);
+        doorGroups[index].visible = false;
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        TWEEN.update();
+        renderer.render(scene, camera);
+    }
+
+    createRoom();
+    animate();
+    document.getElementById('main-btn').addEventListener('click', startGame);
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+</script>
+</body>
+</html>

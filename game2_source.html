@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gingerbread Games</title>
+    <style>
+        :root {
+            /* Global Defaults */
+            --wood: #8B4513;
+            --cream: #fffdd0;
+            --text-color: #333;
+            
+            /* Theme Colors (Default Green) */
+            --theme-primary: #2e8b57;
+            --theme-dark: #006400;
+            --theme-light: #90ee90;
+
+            /* A11y Defaults */
+            --focus-ring: 4px solid #FFD700;
+            --selected-ring: 4px solid #fff;
+            --selected-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+        }
+
+        /* High Contrast Overrides */
+        body.high-contrast {
+            --theme-primary: #000 !important;
+            --theme-dark: #fff !important;
+            --theme-light: #333 !important;
+            --wood: #000 !important;
+            --text-color: #fff !important;
+            --cream: #fff !important;
+        }
+
+        body.high-contrast .menu-card {
+            border: 4px solid white;
+            background: black;
+            color: white;
+        }
+        
+        body.high-contrast .menu-title, 
+        body.high-contrast .instruction-banner,
+        body.high-contrast .btn,
+        body.high-contrast .pic-btn-label {
+            color: white !important;
+            background: #222 !important;
+            border: 2px solid white;
+        }
+
+        body.high-contrast .slot {
+            border-color: white !important;
+            border-width: 4px;
+        }
+
+        /* Large Text Mode */
+        body.large-text {
+            font-size: 1.2rem;
+        }
+        body.large-text .btn { font-size: 1.5rem; }
+        body.large-text .instruction-banner { font-size: 1.8rem; }
+
+        /* Reduced Motion */
+        body.reduced-motion * {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        /* Focus Styles for Keyboard Users */
+        *:focus-visible {
+            outline: var(--focus-ring);
+            outline-offset: 4px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+            background-color: var(--theme-primary);
+            background-image: 
+                radial-gradient(rgba(255,255,255,0.1) 15%, transparent 16%),
+                radial-gradient(rgba(255,255,255,0.1) 15%, transparent 16%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+            transition: background-color 0.5s ease;
+            overflow: hidden;
+            height: 100vh;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Screen Reader Only Class */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* --- UI Elements --- */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Menus */
+        .menu-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            text-align: center;
+            width: 90%;
+            max-width: 600px;
+            border: 8px solid var(--wood);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .menu-title {
+            color: var(--theme-dark);
+            font-size: 2.5rem;
+            margin: 0 0 1.5rem 0;
+            text-shadow: 1px 1px 0px rgba(0,0,0,0.1);
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            width: 100%;
+        }
+
+        @media(min-width: 500px) {
+            .btn-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        .btn {
+            background: var(--theme-primary);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        .btn-back {
+            background: #ff6b6b;
+            box-shadow: 0 4px 0 #c62828;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        /* Accessbility Menu Button */
+        .a11y-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #333;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+        }
+
+        /* Settings Modal */
+        #screen-settings .menu-card {
+            border-color: #333;
+        }
+        
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            font-size: 1.2rem;
+        }
+
+        .toggle-switch {
+            width: 60px;
+            height: 30px;
+            background: #ccc;
+            border-radius: 15px;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .toggle-switch.on { background: #4caf50; }
+        
+        .toggle-knob {
+            width: 26px;
+            height: 26px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: left 0.2s;
+        }
+        
+        .toggle-switch.on .toggle-knob { left: 32px; }
+
+
+        /* Game Header */
+        .game-header {
+            width: 100%;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            color: white;
+            z-index: 20;
+            padding-left: 70px; /* Space for a11y button */
+        }
+
+        .instruction-banner {
+            background: rgba(255,255,255,0.95);
+            padding: 10px 30px;
+            border-radius: 50px;
+            font-size: 1.4rem;
+            color: var(--theme-dark);
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 60%;
+        }
+
+        /* --- Game Areas --- */
+        .rack-container {
+            width: 95%;
+            max-width: 900px;
+            height: 180px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 4px solid rgba(255,255,255,0.5);
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px;
+            margin: 20px 0;
+        }
+
+        .slot {
+            width: 18%; 
+            height: 90%;
+            border: 2px dashed rgba(255,255,255,0.6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: background 0.2s;
+        }
+        
+        .slot:hover, .slot.highlight {
+            background: rgba(255,255,255,0.3);
+            border-color: white;
+        }
+
+        .big-gingerbread-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            width: 100%;
+        }
+
+        .big-gingerbread {
+            width: 250px;
+            height: 300px;
+            filter: drop-shadow(0 10px 10px rgba(0,0,0,0.2));
+            position: relative;
+        }
+
+        .drop-target-area {
+            position: absolute;
+            top: 30%;
+            left: 25%;
+            width: 50%;
+            height: 50%;
+        }
+
+        .number-pad {
+            background: var(--wood);
+            padding: 15px;
+            border-radius: 20px 20px 0 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .num-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: white;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--wood);
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 3px 0 rgba(0,0,0,0.2);
+        }
+        
+        .num-btn:active {
+            transform: translateY(3px);
+            box-shadow: none;
+        }
+
+        .matching-pair-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .match-card {
+            width: 120px;
+            height: 150px;
+            background: white;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--theme-primary);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 4px solid var(--theme-light);
+            cursor: pointer;
+        }
+        
+        .match-card.drop-zone {
+            background: rgba(255,255,255,0.5);
+            border-style: dashed;
+        }
+        
+        .match-card:hover, .match-card.highlight {
+            background: white;
+            border-color: #fff;
+            transform: scale(1.05);
+        }
+
+        /* --- Draggables --- */
+        .gingerbread {
+            width: 90px;
+            height: 110px;
+            cursor: grab;
+            position: relative; 
+            transition: transform 0.1s;
+            filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.3));
+            z-index: 100;
+        }
+        
+        /* Selected state for Click-to-Move */
+        .gingerbread.selected, .button-token.selected {
+            outline: var(--selected-ring);
+            filter: drop-shadow(0 0 10px gold);
+            transform: scale(1.1);
+            z-index: 2000;
+        }
+        
+        .gingerbread.dragging {
+            cursor: grabbing;
+            z-index: 1000;
+            transform: scale(1.1);
+        }
+
+        @media (min-width: 768px) {
+             .gingerbread { width: 120px; height: 150px; }
+             .rack-container { height: 200px; }
+        }
+
+        .button-token {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(0,0,0,0.3);
+            font-size: 10px;
+        }
+        
+        .button-token::after { content: "::"; font-weight: bold; }
+        .button-token.red { background: #e53935; border: 2px solid #b71c1c; }
+        .button-token.green { background: #43a047; border: 2px solid #1b5e20; }
+        .button-token.blue { background: #1e88e5; border: 2px solid #0d47a1; }
+        .button-token.purple { background: #8e24aa; border: 2px solid #4a148c; }
+
+        .tray-area {
+            width: 100%;
+            height: 200px;
+            background: var(--wood);
+            position: absolute;
+            bottom: 0;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+            z-index: 50;
+        }
+
+        /* Celebration */
+        .confetti {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: #f00;
+            animation: fall 3s linear forwards;
+            z-index: 2000;
+        }
+        @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
+        .correct-flash { animation: flashGreen 0.5s; }
+        .wrong-flash { animation: shake 0.4s; }
+
+        @keyframes flashGreen { 0%{transform:scale(1)} 50%{transform:scale(1.2)} 100%{transform:scale(1)} }
+        @keyframes shake { 0%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} 100%{transform:translateX(0)} }
+        
+        .hidden { display: none !important; }
+
+    </style>
+</head>
+<body class="theme-ordering">
+
+    <!-- Screen Reader Announcer -->
+    <div id="announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Accessibility Toggle Button -->
+    <button class="a11y-btn" onclick="showSettings()" aria-label="Open Accessibility Settings">
+        ♿
+    </button>
+
+    <!-- Main Menu Screen -->
+    <div id="screen-main-menu" class="screen active">
+        <div class="menu-card">
+            <h1 class="menu-title" style="color: #8B4513;">Gingerbread Games</h1>
+            <div class="btn-grid" style="grid-template-columns: 1fr;">
+                <button class="btn" style="background-color: #d32f2f;" onclick="showSubMenu('counting')">Counting</button>
+                <button class="btn" style="background-color: #7b1fa2;" onclick="showSubMenu('matching')">Matching</button>
+                <button class="btn" style="background-color: #2e8b57;" onclick="showSubMenu('ordering')">Ordering</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub Menu Screen -->
+    <div id="screen-sub-menu" class="screen">
+        <div class="menu-card">
+            <h1 id="sub-menu-title" class="menu-title">Select Mode</h1>
+            <div id="sub-menu-options" class="btn-grid">
+                <!-- Injected via JS -->
+            </div>
+            <button class="btn btn-back" onclick="showMainMenu()">Back</button>
+        </div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="screen-settings" class="screen" style="background: rgba(0,0,0,0.8); z-index: 2000;">
+        <div class="menu-card">
+            <h2 class="menu-title" style="font-size: 2rem;">Settings</h2>
+            
+            <div class="setting-row">
+                <span>High Contrast</span>
+                <div class="toggle-switch" onclick="toggleSetting('contrast', this)" role="switch" aria-checked="false" aria-label="Toggle High Contrast">
+                    <div class="toggle-knob"></div>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <span>Reduced Motion</span>
+                <div class="toggle-switch" onclick="toggleSetting('motion', this)" role="switch" aria-checked="false" aria-label="Toggle Reduced Motion">
+                    <div class="toggle-knob"></div>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <span>Large Text</span>
+                <div class="toggle-switch" onclick="toggleSetting('text', this)" role="switch" aria-checked="false" aria-label="Toggle Large Text">
+                    <div class="toggle-knob"></div>
+                </div>
+            </div>
+
+            <button class="btn btn-back" onclick="closeSettings()" style="background: #2e8b57; box-shadow:none;">Close</button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="screen-game" class="screen" style="justify-content: flex-start; background: transparent;">
+        <div class="game-header">
+            <button class="btn" style="padding: 5px 15px; font-size: 1rem; background: rgba(255,255,255,0.2);" onclick="showMainMenu()">Exit</button>
+            <div class="instruction-banner" id="instruction-text" aria-live="polite">Instructions</div>
+            <div><!-- Spacer --></div>
+        </div>
+
+        <!-- Dynamic Game Container -->
+        <div id="game-container" style="width: 100%; flex-grow: 1; position: relative; display: flex; flex-direction: column; align-items: center;">
+            <!-- Game elements injected here -->
+        </div>
+    </div>
+
+    <!-- Success Overlay -->
+    <div id="screen-success" class="screen" style="background: rgba(0,0,0,0.7); display: none;">
+        <div class="menu-card" style="border-color: #ffd700;">
+            <h1 style="color: #d4a017; font-size: 3rem;">Good Job!</h1>
+            <div style="font-size: 5rem; margin: 20px;">🌟</div>
+            <button class="btn" onclick="replayLevel()">Play Again</button>
+            <br><br>
+            <button class="btn btn-secondary" onclick="showMainMenu()">Menu</button>
+        </div>
+    </div>
+
+    <script>
+        // --- State ---
+        let currentSettings = {};
+        let gameState = {};
+        let a11yState = {
+            contrast: false,
+            motion: false,
+            text: false
+        };
+
+        // --- Configuration ---
+        const GAMES = {
+            counting: {
+                title: "Counting",
+                theme: "theme-counting",
+                modes: [
+                    { label: "Count Buttons (1-5)", type: 'countButtons', min: 1, max: 5 },
+                    { label: "Count Buttons (1-10)", type: 'countButtons', min: 1, max: 10 },
+                    { label: "Put Buttons On (1-5)", type: 'putButtons', min: 1, max: 5 },
+                    { label: "Put Buttons On (1-10)", type: 'putButtons', min: 1, max: 10 }
+                ]
+            },
+            ordering: {
+                title: "Ordering",
+                theme: "theme-ordering",
+                modes: [
+                    { label: "Smallest to Largest (1-5)", type: 'order', dir: 'asc', min: 1, max: 5 },
+                    { label: "Smallest to Largest (6-10)", type: 'order', dir: 'asc', min: 6, max: 10 },
+                    { label: "Smallest to Largest (1-10)", type: 'order', dir: 'asc', min: 1, max: 10 },
+                    { label: "Largest to Smallest (1-5)", type: 'order', dir: 'desc', min: 1, max: 5 },
+                    { label: "Largest to Smallest (1-10)", type: 'order', dir: 'desc', min: 1, max: 10 }
+                ]
+            },
+            matching: {
+                title: "Matching",
+                theme: "theme-matching",
+                modes: [
+                    { label: "Match Numbers (1-5)", type: 'match', min: 1, max: 5 },
+                    { label: "Match Numbers (6-10)", type: 'match', min: 6, max: 10 },
+                    { label: "Match Numbers (1-10)", type: 'match', min: 1, max: 10 }
+                ]
+            }
+        };
+
+        // --- Accessibility Utils ---
+        function announce(text) {
+            const el = document.getElementById('announcer');
+            el.textContent = '';
+            setTimeout(() => el.textContent = text, 50);
+        }
+
+        function showSettings() {
+            document.getElementById('screen-settings').classList.add('active');
+        }
+
+        function closeSettings() {
+            document.getElementById('screen-settings').classList.remove('active');
+        }
+
+        function toggleSetting(key, el) {
+            a11yState[key] = !a11yState[key];
+            el.classList.toggle('on', a11yState[key]);
+            el.setAttribute('aria-checked', a11yState[key]);
+            
+            if (key === 'contrast') document.body.classList.toggle('high-contrast', a11yState.contrast);
+            if (key === 'motion') document.body.classList.toggle('reduced-motion', a11yState.motion);
+            if (key === 'text') document.body.classList.toggle('large-text', a11yState.text);
+            
+            announce(`${key} turned ${a11yState[key] ? 'on' : 'off'}`);
+        }
+
+        // --- SVG Generator ---
+        function getGingerbreadSVG(content, type = 'text', labelPrefix = '') {
+            let decoration = '';
+            let ariaLabel = labelPrefix || "Gingerbread man";
+
+            if (type === 'text') {
+                decoration = `<text x="50" y="85" class="gb-text">${content}</text>`;
+                ariaLabel = `Gingerbread man with number ${content}`;
+            } else if (type === 'dots') {
+                const count = parseInt(content);
+                ariaLabel = `Gingerbread man with ${count} buttons`;
+                let dots = '';
+                const positions = [
+                    [{x:50, y:50}], 
+                    [{x:50, y:45}, {x:50, y:65}],
+                    [{x:50, y:40}, {x:50, y:55}, {x:50, y:70}],
+                    [{x:40, y:45}, {x:60, y:45}, {x:40, y:65}, {x:60, y:65}],
+                    [{x:40, y:40}, {x:60, y:40}, {x:50, y:55}, {x:40, y:70}, {x:60, y:70}],
+                ];
+                let posList = (count <= 5) ? positions[count-1] : [];
+                if (count > 5) {
+                    for(let i=0; i<count; i++) posList.push({x: (i%2===0)?40:60, y:35+(Math.floor(i/2)*12)});
+                }
+
+                const colors = ['#e53935', '#43a047', '#1e88e5', '#8e24aa'];
+                posList.forEach((pos, i) => {
+                    dots += `<circle cx="${pos.x}" cy="${pos.y}" r="4" fill="${colors[i%4]}" stroke="rgba(0,0,0,0.2)" stroke-width="1" />`;
+                });
+                decoration = dots;
+            } else if (type === 'empty') {
+                ariaLabel = "Empty Gingerbread man";
+            }
+
+            return `
+            <svg role="img" aria-label="${ariaLabel}" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:100%;">
+                <filter id="shadow">
+                    <feDropShadow dx="1" dy="2" stdDeviation="1" flood-opacity="0.3"/>
+                </filter>
+                <path d="M30,10 C30,0 70,0 70,10 C70,20 80,30 90,35 C100,40 100,50 90,60 L80,65 L80,90 C80,110 60,110 60,100 L50,90 L40,100 C40,110 20,110 20,90 L20,65 L10,60 C0,50 0,40 10,35 C20,30 30,20 30,10 Z" fill="#CD853F" stroke="#8B4513" stroke-width="2"/>
+                <circle cx="35" cy="20" r="3" fill="white" />
+                <circle cx="65" cy="20" r="3" fill="white" />
+                <path d="M35,30 Q50,40 65,30" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" />
+                ${decoration}
+            </svg>`;
+        }
+
+        // --- Navigation ---
+        function showMainMenu() {
+            hideAllScreens();
+            document.body.className = ''; 
+            if(a11yState.contrast) document.body.classList.add('high-contrast');
+            if(a11yState.motion) document.body.classList.add('reduced-motion');
+            if(a11yState.text) document.body.classList.add('large-text');
+            document.getElementById('screen-main-menu').classList.add('active');
+            announce("Main Menu");
+        }
+
+        function showSubMenu(category) {
+            hideAllScreens();
+            const menuData = GAMES[category];
+            document.body.className = menuData.theme;
+            if(a11yState.contrast) document.body.classList.add('high-contrast');
+            if(a11yState.motion) document.body.classList.add('reduced-motion');
+            if(a11yState.text) document.body.classList.add('large-text');
+            
+            document.getElementById('sub-menu-title').innerText = menuData.title;
+            const container = document.getElementById('sub-menu-options');
+            container.innerHTML = '';
+
+            menuData.modes.forEach((mode) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                btn.innerText = mode.label;
+                btn.onclick = () => launchGame(mode);
+                container.appendChild(btn);
+            });
+
+            document.getElementById('screen-sub-menu').classList.add('active');
+            announce(menuData.title + " menu");
+        }
+
+        function hideAllScreens() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-success').style.display = 'none';
+        }
+
+        // --- Game Launcher ---
+        function launchGame(settings) {
+            currentSettings = settings;
+            hideAllScreens();
+            document.getElementById('screen-game').classList.add('active');
+            
+            const container = document.getElementById('game-container');
+            container.innerHTML = ''; 
+            announce(settings.label);
+
+            if (settings.type === 'order') setupOrderingGame(settings);
+            else if (settings.type === 'countButtons') setupCountButtonsGame(settings);
+            else if (settings.type === 'putButtons') setupPutButtonsGame(settings);
+            else if (settings.type === 'match') setupMatchingGame(settings);
+        }
+
+        function replayLevel() {
+            launchGame(currentSettings);
+        }
+
+        // ------------------------------------------------------------------
+        // GAME LOGIC (Updated with Accessibility Click Handlers)
+        // ------------------------------------------------------------------
+        
+        function setupOrderingGame(settings) {
+            const container = document.getElementById('game-container');
+            const dirText = settings.dir === 'asc' ? "Smallest to Largest" : "Largest to Smallest";
+            document.getElementById('instruction-text').innerText = dirText;
+
+            let nums = [];
+            while(nums.length < 5) {
+                let n = Math.floor(Math.random() * (settings.max - settings.min + 1)) + settings.min;
+                if(!nums.includes(n)) nums.push(n);
+            }
+            gameState.targetOrder = [...nums].sort((a,b) => settings.dir === 'asc' ? a-b : b-a);
+
+            // Rack
+            const rack = document.createElement('div');
+            rack.className = 'rack-container';
+            rack.id = 'target-rack';
+            for(let i=0; i<5; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'slot';
+                slot.dataset.index = i;
+                slot.setAttribute('role', 'button');
+                slot.setAttribute('aria-label', `Slot ${i+1}`);
+                slot.setAttribute('tabindex', '0');
+                // Click Drop Logic
+                slot.onclick = () => handleClickDrop(slot, 'slot');
+                slot.onkeydown = (e) => { if(e.key === 'Enter' || e.key === ' ') handleClickDrop(slot, 'slot'); };
+                rack.appendChild(slot);
+            }
+            container.appendChild(rack);
+
+            // Tray
+            const tray = document.createElement('div');
+            tray.className = 'tray-area';
+            tray.id = 'source-tray';
+            
+            nums.forEach(n => {
+                const gb = document.createElement('div');
+                gb.className = 'gingerbread';
+                gb.innerHTML = getGingerbreadSVG(n, 'dots');
+                gb.dataset.value = n;
+                makeInteractive(gb);
+                tray.appendChild(gb);
+            });
+            container.appendChild(tray);
+
+            gameState.checkWinCondition = () => {
+                const slots = document.querySelectorAll('.slot');
+                let filledCount = 0;
+                let correctCount = 0;
+                slots.forEach((slot, idx) => {
+                    if(slot.children.length > 0) {
+                        filledCount++;
+                        const val = parseInt(slot.children[0].dataset.value);
+                        if(val === gameState.targetOrder[idx]) correctCount++;
+                    }
+                });
+                if(filledCount === 5 && correctCount === 5) celebrate();
+            };
+        }
+
+        function setupCountButtonsGame(settings) {
+            const container = document.getElementById('game-container');
+            document.getElementById('instruction-text').innerText = "Count the buttons!";
+            const count = Math.floor(Math.random() * (settings.max - settings.min + 1)) + settings.min;
+            
+            const bigCont = document.createElement('div');
+            bigCont.className = 'big-gingerbread-container';
+            const gb = document.createElement('div');
+            gb.className = 'big-gingerbread';
+            gb.innerHTML = getGingerbreadSVG(count, 'dots');
+            bigCont.appendChild(gb);
+            container.appendChild(bigCont);
+
+            const pad = document.createElement('div');
+            pad.className = 'number-pad';
+            const rangeMax = settings.max === 5 ? 5 : 10;
+            for(let i=1; i<=rangeMax; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'num-btn';
+                btn.innerText = i;
+                btn.onclick = () => {
+                    announce(`Selected ${i}`);
+                    if(i === count) celebrate();
+                    else {
+                        btn.classList.add('wrong-flash');
+                        announce("Try again");
+                        setTimeout(()=>btn.classList.remove('wrong-flash'), 500);
+                    }
+                };
+                pad.appendChild(btn);
+            }
+            container.appendChild(pad);
+        }
+
+        function setupPutButtonsGame(settings) {
+            const container = document.getElementById('game-container');
+            const target = Math.floor(Math.random() * (settings.max - settings.min + 1)) + settings.min;
+            document.getElementById('instruction-text').innerText = `Put ${target} buttons on him!`;
+
+            const bigCont = document.createElement('div');
+            bigCont.className = 'big-gingerbread-container';
+            const gb = document.createElement('div');
+            gb.className = 'big-gingerbread';
+            gb.innerHTML = getGingerbreadSVG('', 'empty');
+            
+            const dropZone = document.createElement('div');
+            dropZone.className = 'drop-target-area';
+            dropZone.id = 'chest-zone';
+            dropZone.setAttribute('role', 'button');
+            dropZone.setAttribute('aria-label', 'Gingerbread man chest');
+            dropZone.onclick = () => handleClickDrop(dropZone, 'chest');
+            gb.appendChild(dropZone);
+            bigCont.appendChild(gb);
+            container.appendChild(bigCont);
+
+            const checkBtn = document.createElement('button');
+            checkBtn.className = 'btn';
+            checkBtn.innerText = "Check!";
+            checkBtn.onclick = () => {
+                const currentButtons = dropZone.children.length;
+                announce(`You put ${currentButtons} buttons.`);
+                if(currentButtons === target) celebrate();
+                else {
+                    checkBtn.innerText = currentButtons < target ? "Need more!" : "Too many!";
+                    checkBtn.style.background = "#ffcc00";
+                    setTimeout(() => { checkBtn.innerText = "Check!"; checkBtn.style.background = ""; }, 1500);
+                }
+            };
+            container.appendChild(checkBtn);
+
+            const tray = document.createElement('div');
+            tray.className = 'tray-area';
+            tray.style.height = '120px'; 
+            tray.id = 'button-tray';
+            
+            const colors = ['red', 'green', 'blue', 'purple'];
+            for(let i=0; i<8; i++) {
+                const btn = document.createElement('div');
+                btn.className = `button-token ${colors[i%4]}`;
+                btn.style.position = 'absolute';
+                btn.style.left = (10 + Math.random() * 80) + '%';
+                btn.style.top = (20 + Math.random() * 40) + 'px';
+                btn.setAttribute('aria-label', `${colors[i%4]} button`);
+                makeInteractive(btn, true); 
+                tray.appendChild(btn);
+            }
+            container.appendChild(tray);
+        }
+
+        function setupMatchingGame(settings) {
+            const container = document.getElementById('game-container');
+            document.getElementById('instruction-text').innerText = "Match the cookie to the number!";
+
+            let choices = [];
+            while(choices.length < 3) {
+                let n = Math.floor(Math.random() * (settings.max - settings.min + 1)) + settings.min;
+                if(!choices.includes(n)) choices.push(n);
+            }
+            
+            const zoneContainer = document.createElement('div');
+            zoneContainer.className = 'matching-pair-container';
+            
+            const shuffledChoices = [...choices].sort(() => Math.random() - 0.5);
+            shuffledChoices.forEach(num => {
+                const card = document.createElement('div');
+                card.className = 'match-card drop-zone';
+                card.innerText = num;
+                card.dataset.targetValue = num;
+                card.setAttribute('role', 'button');
+                card.setAttribute('aria-label', `Number ${num}`);
+                card.setAttribute('tabindex', '0');
+                card.onclick = () => handleClickDrop(card, 'card');
+                card.onkeydown = (e) => { if(e.key === 'Enter' || e.key === ' ') handleClickDrop(card, 'card'); };
+                zoneContainer.appendChild(card);
+            });
+            container.appendChild(zoneContainer);
+
+            const tray = document.createElement('div');
+            tray.className = 'tray-area';
+            tray.id = 'source-tray';
+
+            choices.forEach(num => {
+                const gb = document.createElement('div');
+                gb.className = 'gingerbread';
+                gb.innerHTML = getGingerbreadSVG(num, 'dots'); 
+                gb.dataset.value = num;
+                makeInteractive(gb);
+                tray.appendChild(gb);
+            });
+            container.appendChild(tray);
+
+            gameState.checkWinCondition = () => {
+                const zones = document.querySelectorAll('.match-card.drop-zone');
+                let matches = 0;
+                zones.forEach(z => {
+                    if(z.querySelector('.gingerbread')) matches++;
+                });
+                if(matches === 3) celebrate();
+            };
+        }
+
+
+        // ------------------------------------------------------------------
+        // INTERACTIVE ENGINE (Touch/Drag & Click/Keyboard)
+        // ------------------------------------------------------------------
+        let activeDrag = null;
+        let selectedItem = null;
+        let dragOffset = {x:0, y:0};
+        let isCloneMode = false;
+
+        function makeInteractive(el, clone = false) {
+            el.dataset.cloneMode = clone;
+            el.setAttribute('role', 'button');
+            el.setAttribute('tabindex', '0');
+            
+            // Drag Events
+            el.addEventListener('mousedown', dragStart);
+            el.addEventListener('touchstart', dragStart, {passive: false});
+            
+            // Click/Key Selection
+            el.onclick = (e) => {
+                e.stopPropagation(); // Prevent tray clicks
+                toggleSelection(el);
+            };
+            el.onkeydown = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleSelection(el);
+                }
+            };
+        }
+
+        function toggleSelection(el) {
+            // If dragging, ignore click
+            if(activeDrag && activeDrag !== el) return;
+            
+            if(selectedItem === el) {
+                // Deselect
+                el.classList.remove('selected');
+                selectedItem = null;
+                announce("Deselected");
+            } else {
+                // Select new
+                if(selectedItem) selectedItem.classList.remove('selected');
+                selectedItem = el;
+                el.classList.add('selected');
+                
+                let name = el.getAttribute('aria-label') || "Item";
+                announce(`${name} selected. Choose a spot to place it.`);
+            }
+        }
+
+        // Handle dropping via Click/Tap (Accessibility Route)
+        function handleClickDrop(targetZone, type) {
+            if(!selectedItem) return;
+
+            const item = selectedItem;
+            let finalItem = item;
+
+            // Handle Clone Mode (Put Buttons)
+            if(item.dataset.cloneMode === 'true') {
+                finalItem = item.cloneNode(true);
+                finalItem.dataset.cloneMode = 'false';
+                finalItem.classList.remove('selected');
+                // Remove interactive listeners from clone to prevent re-selection confusion inside target
+                // Actually, might want to allow re-moving? For now, simplify.
+                makeInteractive(finalItem, false); 
+            }
+
+            // Logic per game type
+            let success = false;
+            
+            if(type === 'slot' && targetZone.children.length === 0) {
+                targetZone.appendChild(finalItem);
+                success = true;
+                validatePlacement(finalItem, targetZone, 'order');
+            }
+            else if(type === 'chest') {
+                targetZone.appendChild(finalItem);
+                finalItem.style.position = 'absolute';
+                finalItem.style.left = (Math.random() * 80) + '%';
+                finalItem.style.top = (Math.random() * 80) + '%';
+                success = true;
+                announce("Button placed on chest");
+            }
+            else if(type === 'card' && !targetZone.querySelector('.gingerbread')) {
+                const manVal = parseInt(finalItem.dataset.value);
+                const zoneVal = parseInt(targetZone.dataset.targetValue);
+                if(manVal === zoneVal) {
+                    targetZone.innerHTML = ''; 
+                    targetZone.appendChild(finalItem);
+                    finalItem.style.width = '100%'; 
+                    finalItem.style.height = '100%';
+                    success = true;
+                    gameState.checkWinCondition();
+                    announce("Correct match!");
+                } else {
+                    announce("That doesn't match.");
+                }
+            }
+
+            // Cleanup
+            item.classList.remove('selected');
+            selectedItem = null;
+            
+            if(success) {
+                resetStyle(finalItem);
+                if(item.dataset.cloneMode !== 'true') {
+                    // Item moved, nothing to do
+                }
+            }
+        }
+
+        function validatePlacement(item, slot, mode) {
+            if(mode === 'order') {
+                const val = parseInt(item.dataset.value);
+                const idx = parseInt(slot.dataset.index);
+                if(val !== gameState.targetOrder[idx]) {
+                     item.classList.add('wrong-flash');
+                     announce("Not quite right.");
+                     setTimeout(() => {
+                         if(item.parentElement === slot) {
+                             document.getElementById('source-tray').appendChild(item);
+                             resetStyle(item);
+                             item.classList.remove('wrong-flash');
+                         }
+                     }, 800);
+                } else {
+                    item.classList.add('correct-flash');
+                    announce("Correct spot!");
+                    gameState.checkWinCondition();
+                }
+            }
+        }
+
+        // --- Drag Logic ---
+        function dragStart(e) {
+            // e.preventDefault(); // Don't prevent default immediately to allow click to fire if no move
+            let target = e.target.closest('.gingerbread, .button-token');
+            if(!target) return;
+
+            // Prepare drag
+            if(target.dataset.cloneMode === 'true') {
+                activeDrag = target.cloneNode(true);
+                activeDrag.dataset.cloneMode = 'false';
+                document.body.appendChild(activeDrag); 
+                isCloneMode = true;
+            } else {
+                activeDrag = target;
+                isCloneMode = false;
+            }
+            
+            // If we start dragging, clear any click-selection
+            if(selectedItem) {
+                selectedItem.classList.remove('selected');
+                selectedItem = null;
+            }
+
+            const evt = e.touches ? e.touches[0] : e;
+            const rect = target.getBoundingClientRect(); 
+            
+            if (isCloneMode) {
+                 activeDrag.style.position = 'fixed';
+                 activeDrag.style.left = (evt.clientX - rect.width/2) + 'px';
+                 activeDrag.style.top = (evt.clientY - rect.height/2) + 'px';
+                 dragOffset.x = rect.width/2;
+                 dragOffset.y = rect.height/2;
+            } else {
+                dragOffset.x = evt.clientX - rect.left;
+                dragOffset.y = evt.clientY - rect.top;
+                activeDrag.style.position = 'fixed';
+                activeDrag.style.left = rect.left + 'px';
+                activeDrag.style.top = rect.top + 'px';
+            }
+            
+            activeDrag.style.zIndex = 1000;
+            // Only add dragging class after movement to allow clicks
+            // activeDrag.classList.add('dragging'); 
+
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('touchmove', dragMove, {passive: false});
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('touchend', dragEnd);
+        }
+
+        let hasMoved = false;
+
+        function dragMove(e) {
+            if(!activeDrag) return;
+            e.preventDefault();
+            hasMoved = true;
+            activeDrag.classList.add('dragging');
+            const evt = e.touches ? e.touches[0] : e;
+            activeDrag.style.left = (evt.clientX - dragOffset.x) + 'px';
+            activeDrag.style.top = (evt.clientY - dragOffset.y) + 'px';
+        }
+
+        function dragEnd(e) {
+            if(!activeDrag) return;
+            
+            if(!hasMoved) {
+                // Was just a click, cleanup drag vars and let click event bubble
+                if(isCloneMode) activeDrag.remove();
+                else resetStyle(activeDrag);
+                cleanupDrag();
+                return;
+            }
+
+            const evt = e.changedTouches ? e.changedTouches[0] : e;
+            const center = { x: evt.clientX, y: evt.clientY }; 
+
+            let dropped = false;
+
+            // 1. ORDERING
+            if(currentSettings.type === 'order') {
+                const slots = document.querySelectorAll('.slot');
+                slots.forEach(slot => {
+                    const rect = slot.getBoundingClientRect();
+                    if(isInside(center, rect) && slot.children.length === 0) {
+                        slot.appendChild(activeDrag);
+                        resetStyle(activeDrag);
+                        dropped = true;
+                        validatePlacement(activeDrag, slot, 'order');
+                    }
+                });
+            }
+            
+            // 2. PUT BUTTONS
+            else if(currentSettings.type === 'putButtons') {
+                const zone = document.getElementById('chest-zone');
+                if(zone) {
+                    const rect = zone.getBoundingClientRect();
+                    if(isInside(center, rect)) {
+                        zone.appendChild(activeDrag);
+                        activeDrag.style.position = 'absolute';
+                        activeDrag.style.left = (Math.random() * 80) + '%';
+                        activeDrag.style.top = (Math.random() * 80) + '%';
+                        activeDrag.style.zIndex = 10;
+                        dropped = true;
+                        announce("Placed");
+                    }
+                }
+            }
+
+            // 3. MATCHING
+            else if(currentSettings.type === 'match') {
+                const zones = document.querySelectorAll('.match-card.drop-zone');
+                zones.forEach(zone => {
+                    const rect = zone.getBoundingClientRect();
+                    if(isInside(center, rect) && !zone.querySelector('.gingerbread')) {
+                        const manVal = parseInt(activeDrag.dataset.value);
+                        const zoneVal = parseInt(zone.dataset.targetValue);
+                        
+                        if(manVal === zoneVal) {
+                            zone.innerHTML = ''; 
+                            zone.appendChild(activeDrag);
+                            resetStyle(activeDrag);
+                            activeDrag.style.width = '100%'; 
+                            activeDrag.style.height = '100%';
+                            dropped = true;
+                            gameState.checkWinCondition();
+                            announce("Matched!");
+                        } else {
+                            activeDrag.classList.add('wrong-flash');
+                        }
+                    }
+                });
+            }
+
+            // Cleanup if not dropped
+            if(!dropped) {
+                if(isCloneMode) {
+                    activeDrag.remove(); 
+                } else {
+                    document.getElementById('source-tray').appendChild(activeDrag);
+                    resetStyle(activeDrag);
+                    activeDrag.classList.remove('wrong-flash');
+                }
+                announce("Dropped back to tray");
+            }
+
+            cleanupDrag();
+        }
+        
+        function cleanupDrag() {
+            if(activeDrag) activeDrag.classList.remove('dragging');
+            activeDrag = null;
+            hasMoved = false;
+            document.removeEventListener('mousemove', dragMove);
+            document.removeEventListener('touchmove', dragMove);
+            document.removeEventListener('mouseup', dragEnd);
+            document.removeEventListener('touchend', dragEnd);
+        }
+
+        function isInside(point, rect) {
+            return point.x > rect.left && point.x < rect.right && point.y > rect.top && point.y < rect.bottom;
+        }
+
+        function resetStyle(el) {
+            el.style.position = '';
+            el.style.left = '';
+            el.style.top = '';
+            el.style.zIndex = '';
+        }
+
+        // --- Celebration ---
+        function celebrate() {
+            announce("Good Job! You finished the level.");
+            const overlay = document.getElementById('screen-success');
+            overlay.style.display = 'flex';
+            
+            if(a11yState.motion) return; // Skip particles if reduced motion
+
+            for(let i=0; i<40; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random()*100 + '%';
+                c.style.backgroundColor = `hsl(${Math.random()*360}, 100%, 50%)`;
+                c.style.animationDuration = (Math.random()*2 + 2) + 's';
+                document.body.appendChild(c);
+                setTimeout(()=>c.remove(), 4000);
+            }
+        }
+    </script>
+</body>
+</html>
+

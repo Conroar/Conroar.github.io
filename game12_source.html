@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizza Chef: Slice Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Open+Sans:wght@400;600&display=swap');
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #fce7cf;
+            user-select: none;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        h1, h2, .font-display {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        .pizza-slice {
+            transition: filter 0.1s;
+            cursor: pointer;
+        }
+        .pizza-slice:hover {
+            filter: brightness(1.05);
+        }
+        .pizza-slice:active {
+            filter: brightness(0.95);
+        }
+
+        .ingredient-btn {
+            transition: all 0.2s;
+        }
+        .ingredient-btn:active:not(:disabled) {
+            transform: scale(0.9);
+        }
+        .ingredient-btn.selected {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 4px #fbbf24;
+            z-index: 10;
+        }
+        .ingredient-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        /* Animations */
+        @keyframes popIn {
+            0% { transform: scale(0) translateY(20px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .customer-pop {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes slideUp {
+            0% { transform: translateY(20px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes slideDown {
+            0% { transform: translateY(-100%); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        .ticket-entry {
+            animation: slideDown 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center text-slate-800">
+
+    <!-- Start Screen Overlay -->
+    <div id="start-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-orange-100 modal-overlay">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-md mx-4 border-4 border-orange-400">
+            <div class="text-6xl mb-4">🍕</div>
+            <h1 class="text-4xl text-orange-600 mb-2">Pizza Chef</h1>
+            <p class="text-slate-600 mb-6 font-semibold">Ready to slice and serve?</p>
+            <button onclick="startGame()" class="bg-green-500 hover:bg-green-600 text-white font-display text-2xl px-8 py-3 rounded-full shadow-lg transform transition hover:scale-105">
+                START COOKING
+            </button>
+        </div>
+    </div>
+
+    <!-- Chef's Log Modal -->
+    <div id="menu-modal" class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 hidden modal-overlay" onclick="toggleMenu()">
+        <div class="bg-white p-6 rounded-3xl shadow-2xl max-w-md w-full mx-4 border-4 border-blue-400" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-3xl text-blue-600">Chef's Log</h2>
+                <button onclick="toggleMenu()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">✕</button>
+            </div>
+            
+            <div class="bg-blue-50 rounded-xl p-4 mb-4">
+                <h3 class="font-display text-slate-700 mb-2">Ingredients Unlocked</h3>
+                <div id="unlock-list" class="space-y-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <p class="text-center text-sm text-slate-500">Keep earning tips to unlock more toppings!</p>
+        </div>
+    </div>
+
+    <!-- Header / Score -->
+    <div class="w-full max-w-4xl flex justify-between items-center p-4 z-20 shrink-0">
+        <!-- Score/Streak -->
+        <div class="flex gap-3">
+            <div class="bg-white rounded-full px-4 py-2 shadow-lg border-2 border-orange-400 flex items-center gap-2">
+                <span class="text-2xl">💰</span>
+                <span id="score" class="font-display text-xl text-orange-600">$0.00</span>
+            </div>
+            <div class="bg-white rounded-full px-4 py-2 shadow-lg border-2 border-blue-400 flex items-center gap-2 hidden sm:flex">
+                <span class="text-2xl">⭐</span>
+                <span id="streak" class="font-display text-xl text-blue-600">Streak: 0</span>
+            </div>
+        </div>
+
+        <!-- System Controls -->
+        <div class="flex gap-2">
+            <button onclick="toggleMenu()" class="bg-white p-2 rounded-full shadow-md border-2 border-slate-200 hover:bg-slate-50" title="Chef's Log">
+                📜
+            </button>
+            <button onclick="audio.toggleMute()" id="mute-btn" class="bg-white p-2 rounded-full shadow-md border-2 border-slate-200 hover:bg-slate-50" title="Mute Music">
+                🔊
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Game Area -->
+    <div class="flex-1 w-full max-w-4xl flex flex-col md:flex-row items-center justify-center gap-4 relative overflow-hidden">
+        
+        <!-- Order Ticket Section -->
+        <div class="relative w-full md:w-1/3 h-64 md:h-full flex items-start justify-center pt-8">
+            <!-- Ticket Rail (Background visual) -->
+            <div class="absolute top-0 left-0 w-full h-4 bg-slate-300 border-b-4 border-slate-400 z-10 shadow-sm"></div>
+            
+            <!-- The Ticket Container -->
+            <div id="ticket-container" class="relative z-0 mt-2 transform transition-transform duration-300 origin-top">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- Pizza Board Section -->
+        <div class="relative w-full md:w-2/3 flex items-center justify-center p-4">
+            <div class="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 drop-shadow-2xl transition-transform" id="pizza-container">
+                <svg id="pizza-svg" viewBox="-105 -105 210 210" class="w-full h-full">
+                    <circle cx="0" cy="0" r="104" fill="#cbd5e1" />
+                    <circle cx="0" cy="0" r="100" fill="#fff" />
+                    <circle cx="0" cy="0" r="96" fill="#d97706" />
+                    <g id="pizza-slices"></g>
+                </svg>
+            </div>
+
+            <!-- Feedback Overlay -->
+            <div id="feedback" class="absolute inset-0 flex items-center justify-center pointer-events-none z-50 opacity-0 transition-opacity duration-300">
+                <div class="bg-white/95 backdrop-blur-sm px-8 py-4 rounded-3xl shadow-2xl border-4 border-green-500 transform scale-110">
+                    <span id="feedback-text" class="font-display text-3xl md:text-4xl text-green-600 text-center block">Perfect!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ingredient Station -->
+    <div class="w-full bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)] rounded-t-3xl z-30 shrink-0">
+        <div class="max-w-3xl mx-auto p-4">
+            
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-display text-slate-400 text-sm uppercase tracking-wide">Toppings</h2>
+                <div class="flex gap-2">
+                    <button onclick="game.trashPizza()" class="bg-red-100 hover:bg-red-200 text-red-600 p-2 rounded-full transition-colors" title="Trash Pizza">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                    <button onclick="game.serveOrder()" class="bg-green-500 hover:bg-green-600 text-white font-display px-6 py-2 rounded-full shadow-lg transform active:scale-95 transition-all text-lg tracking-wider">
+                        SERVE!
+                    </button>
+                </div>
+            </div>
+
+            <div id="ingredients-rack" class="flex gap-2 overflow-x-auto pb-4 scrollbar-hide snap-x px-2">
+                <!-- Generated via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Audio Controller (Synthesizer) ---
+        class AudioController {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.bgmTimer = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                    this.startBGM();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                const btn = document.getElementById('mute-btn');
+                btn.innerText = this.muted ? '🔇' : '🔊';
+                if(this.ctx && this.ctx.state === 'suspended' && !this.muted) this.ctx.resume();
+            }
+
+            playTone(freq, type, duration, vol=0.1) {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+
+            playSplat() {
+                if (this.muted || !this.ctx) return;
+                // White noise burst
+                const bufferSize = this.ctx.sampleRate * 0.1; // 0.1 sec
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                noise.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start();
+            }
+
+            playWin() {
+                this.playTone(523.25, 'sine', 0.1, 0.2); // C5
+                setTimeout(() => this.playTone(659.25, 'sine', 0.1, 0.2), 100); // E5
+                setTimeout(() => this.playTone(783.99, 'sine', 0.3, 0.2), 200); // G5
+            }
+
+            playFail() {
+                this.playTone(150, 'sawtooth', 0.4, 0.2); // Low
+                setTimeout(() => this.playTone(130, 'sawtooth', 0.6, 0.2), 300); // Lower
+            }
+
+            startBGM() {
+                if (this.bgmTimer) return;
+                const sequence = [
+                    {f: 392, d: 0.2}, {f: 523, d: 0.2}, {f: 659, d: 0.2}, {f: 0, d: 0.2},
+                    {f: 587, d: 0.2}, {f: 523, d: 0.2}, {f: 392, d: 0.4}, {f: 0, d: 0.4}
+                ];
+                let step = 0;
+                
+                const playStep = () => {
+                    if (!this.muted && this.ctx) {
+                        const note = sequence[step % sequence.length];
+                        if (note.f > 0) this.playTone(note.f, 'triangle', 0.1, 0.03);
+                    }
+                    step++;
+                    this.bgmTimer = setTimeout(playStep, 300); // tempo
+                };
+                playStep();
+            }
+        }
+        
+        const audio = new AudioController();
+
+        // --- Game Config & Data ---
+        // unlockAt = Score required to unlock
+        const ingredients = [
+            { id: 'cheese', name: 'Plain', color: '#fbbf24', icon: '🧀', unlockAt: 0, draw: null },
+            { 
+                id: 'pepperoni', name: 'Pepperoni', color: '#ef4444', icon: '🍕', unlockAt: 0,
+                draw: (g) => {
+                    const circles = [{x:0, y:-70, r:8}, {x:-15, y:-45, r:9}, {x:15, y:-45, r:8}, {x:0, y:-25, r:9}];
+                    circles.forEach(c => g.appendChild(createSVGEl("circle", {cx:c.x, cy:c.y, r:c.r, fill:"#b91c1c", opacity:"0.9"})));
+                }
+            },
+            { 
+                id: 'mushroom', name: 'Mushroom', color: '#a8a29e', icon: '🍄', unlockAt: 15,
+                draw: (g) => {
+                    const pos = [{x:-10, y:-60}, {x:10, y:-40}, {x:-5, y:-25}];
+                    pos.forEach(p => {
+                        g.appendChild(createSVGEl("path", {
+                            d: `M${p.x} ${p.y} q-6 0 -6 6 v5 h12 v-5 q0 -6 -6 -6 M${p.x} ${p.y+11} v4`,
+                            fill: "#e7e5e4", stroke: "#78716c", "stroke-width": "2"
+                        }));
+                    });
+                }
+            },
+            { 
+                id: 'peppers', name: 'Peppers', color: '#22c55e', icon: '🫑', unlockAt: 30,
+                draw: (g) => {
+                    const curves = [`M-10 -70 Q0 -80 10 -70`, `M-15 -40 Q0 -50 15 -40`, `M-10 -20 Q0 -25 10 -20`];
+                    curves.forEach(d => g.appendChild(createSVGEl("path", {d: d, fill:"none", stroke:"#15803d", "stroke-width":"5", "stroke-linecap":"round"})));
+                }
+            },
+            { 
+                id: 'beef', name: 'Beef', color: '#78350f', icon: '🍖', unlockAt: 50,
+                draw: (g) => {
+                    const chunks = [{x:-5, y:-75}, {x:15, y:-55}, {x:-15, y:-45}, {x:5, y:-30}];
+                    chunks.forEach(p => g.appendChild(createSVGEl("rect", {x:p.x, y:p.y, width:10, height:10, fill:"#451a03", rx:3})));
+                }
+            },
+            { 
+                id: 'olive', name: 'Olive', color: '#171717', icon: '🫒', unlockAt: 75,
+                draw: (g) => {
+                    const rings = [{x:10, y:-65}, {x:-10, y:-50}, {x:0, y:-35}];
+                    rings.forEach(p => g.appendChild(createSVGEl("circle", {cx:p.x, cy:p.y, r:6, fill:"none", stroke:"#171717", "stroke-width":"3"})));
+                }
+            }
+        ];
+
+        function createSVGEl(type, attrs) {
+            const el = document.createElementNS("http://www.w3.org/2000/svg", type);
+            for(let k in attrs) el.setAttribute(k, attrs[k]);
+            return el;
+        }
+
+        // --- Game Logic ---
+        class PizzaGame {
+            constructor() {
+                this.score = 0;
+                this.streak = 0;
+                this.currentOrder = null;
+                this.selectedIngredient = 'cheese'; 
+                this.slices = Array(8).fill('cheese'); 
+            }
+
+            init() {
+                this.initUI();
+                this.startLevel();
+            }
+
+            initUI() {
+                this.renderIngredientRack();
+                this.renderPizzaBase();
+            }
+
+            getUnlockedIngredients() {
+                return ingredients.filter(i => this.score >= i.unlockAt);
+            }
+
+            renderIngredientRack() {
+                const rack = document.getElementById('ingredients-rack');
+                rack.innerHTML = '';
+                
+                ingredients.forEach(ing => {
+                    const isLocked = this.score < ing.unlockAt;
+                    const btn = document.createElement('button');
+                    const isSelected = ing.id === this.selectedIngredient;
+                    
+                    btn.className = `ingredient-btn flex-shrink-0 flex flex-col items-center justify-center w-20 h-24 bg-white border-2 rounded-xl snap-start mx-1 
+                        ${isSelected ? 'selected border-yellow-400 bg-yellow-50' : 'border-slate-100'}`;
+                    
+                    if (isLocked) {
+                        btn.disabled = true;
+                        btn.innerHTML = `
+                            <div class="text-2xl mb-2 opacity-50">🔒</div>
+                            <span class="text-xs font-bold text-slate-400">$${ing.unlockAt}</span>
+                        `;
+                    } else {
+                        btn.onclick = () => {
+                            if (ing.id !== 'cheese') audio.playTone(400, 'sine', 0.05);
+                            this.selectIngredient(ing.id, btn);
+                        };
+                        btn.innerHTML = `
+                            <div class="text-4xl mb-2 transform transition-transform group-hover:scale-110">${ing.icon}</div>
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-tight">${ing.name}</span>
+                        `;
+                    }
+                    rack.appendChild(btn);
+                });
+            }
+
+            renderPizzaBase() {
+                const pizzaGroup = document.getElementById('pizza-slices');
+                pizzaGroup.innerHTML = ''; 
+                
+                for(let i=0; i<8; i++) {
+                    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                    group.setAttribute("class", "pizza-slice");
+                    group.setAttribute("transform", `rotate(${i * 45})`); 
+                    group.onclick = () => this.clickSlice(i);
+
+                    // Slice Shape
+                    const r = 95;
+                    const angle = 45 * (Math.PI / 180);
+                    const x1 = 0, y1 = -r;
+                    const x2 = r * Math.sin(angle), y2 = -r * Math.cos(angle);
+                    const pathD = `M 0 0 L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`;
+                    
+                    // Base
+                    const path = createSVGEl("path", {d:pathD, fill:"#fbbf24", stroke:"#b45309", "stroke-width":"2", id:`slice-bg-${i}`});
+                    
+                    // Toppings container
+                    const toppingsGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                    toppingsGroup.setAttribute("transform", "rotate(22.5)");
+                    toppingsGroup.id = `slice-toppings-${i}`;
+
+                    group.appendChild(path);
+                    group.appendChild(toppingsGroup);
+                    pizzaGroup.appendChild(group);
+                }
+                this.renderPizza();
+            }
+
+            selectIngredient(id, btnElement) {
+                this.selectedIngredient = id;
+                this.renderIngredientRack(); // Re-render to update selected state visually
+            }
+
+            clickSlice(index) {
+                this.slices[index] = this.selectedIngredient;
+                if(this.selectedIngredient !== 'cheese') audio.playSplat();
+                this.renderPizza();
+            }
+
+            renderPizza() {
+                this.slices.forEach((ingId, i) => {
+                    const toppingsGroup = document.getElementById(`slice-toppings-${i}`);
+                    const ingData = ingredients.find(x => x.id === ingId);
+                    toppingsGroup.innerHTML = ''; 
+                    if(ingData && ingData.draw) ingData.draw(toppingsGroup);
+                });
+            }
+
+            trashPizza() {
+                this.slices.fill('cheese'); 
+                this.renderPizza();
+            }
+
+            generateOrder() {
+                // 1. Allow Cheese! (Removed the .filter check)
+                const availableToppings = this.getUnlockedIngredients();
+                
+                // Helper to pick a topping, excluding specific IDs to avoid duplicates
+                const pickTopping = (excludeIds = []) => {
+                    const pool = availableToppings.filter(t => !excludeIds.includes(t.id));
+                    if(pool.length === 0) return availableToppings[0];
+                    return pool[Math.floor(Math.random() * pool.length)];
+                };
+
+                // --- Difficulty Progression ---
+                // Orders 1-2 (Streak 0-1): Whole only
+                // Orders 3-4 (Streak 2-3): Introduce 1/2
+                // Orders 5-7 (Streak 4-6): Introduce 1/4
+                // Orders 8-10 (Streak 7-9): Introduce 3-Way & Complex Fractions
+                // Orders 11+ (Streak 10+): All + increased complexity preference
+
+                let patterns = ['whole'];
+                let useComplexFractions = false;
+
+                // Unlock patterns based on Streak
+                if (this.streak >= 2 && availableToppings.length >= 2) {
+                    patterns.push('half');
+                }
+                
+                if (this.streak >= 4 && availableToppings.length >= 2) {
+                    patterns.push('quarter');
+                }
+
+                if (this.streak >= 7) {
+                    useComplexFractions = true;
+                    if (availableToppings.length >= 3) {
+                        patterns.push('three_way');
+                    }
+                }
+
+                // --- Weighting & Filtering for Higher Levels ---
+                
+                // From Streak 4 (Order 5) onwards, remove "whole" to force fraction practice
+                if (this.streak >= 4) {
+                    patterns = patterns.filter(p => p !== 'whole');
+                }
+
+                // From Streak 10 (Order 11) onwards, allow everything but prefer chaos
+                // Actually, let's keep 'whole' removed to keep it "insanely complex"
+                // If we run out of patterns (e.g. not enough ingredients unlocked), fallback to 'whole'
+                if (patterns.length === 0) patterns = ['whole'];
+
+                const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+
+                let desc = [];
+                let reqs = {};
+
+                if (pattern === 'whole') {
+                    const t = pickTopping();
+                    desc.push(`Whole ${t.name} ${t.icon}`);
+                    reqs[t.name] = 8;
+                } 
+                else if (pattern === 'half') {
+                    const t1 = pickTopping();
+                    const t2 = pickTopping([t1.id]);
+                    
+                    const f1 = useComplexFractions && Math.random() > 0.5 ? "4/8" : "1/2";
+                    const f2 = useComplexFractions && Math.random() > 0.5 ? "4/8" : "1/2";
+                    
+                    desc.push(`${f1} ${t1.name} ${t1.icon}`);
+                    desc.push(`${f2} ${t2.name} ${t2.icon}`);
+                    reqs[t1.name] = 4;
+                    reqs[t2.name] = 4;
+                } 
+                else if (pattern === 'quarter') {
+                    const t1 = pickTopping();
+                    const t2 = pickTopping([t1.id]);
+                    
+                    const f1 = useComplexFractions && Math.random() > 0.5 ? "2/8" : "1/4";
+                    const f2 = useComplexFractions && Math.random() > 0.5 ? "6/8" : "3/4";
+
+                    desc.push(`${f1} ${t1.name} ${t1.icon}`);
+                    desc.push(`${f2} ${t2.name} ${t2.icon}`);
+                    reqs[t1.name] = 2;
+                    reqs[t2.name] = 6;
+                }
+                else if (pattern === 'three_way') {
+                    const t1 = pickTopping();
+                    const t2 = pickTopping([t1.id]);
+                    const t3 = pickTopping([t1.id, t2.id]);
+                    
+                    // 1/2 of T1, 1/4 of T2, 1/4 of T3
+                    const f1 = useComplexFractions && Math.random() > 0.5 ? "4/8" : "1/2";
+                    const f2 = useComplexFractions && Math.random() > 0.5 ? "2/8" : "1/4";
+                    const f3 = useComplexFractions && Math.random() > 0.5 ? "2/8" : "1/4";
+
+                    desc.push(`${f1} ${t1.name} ${t1.icon}`);
+                    desc.push(`${f2} ${t2.name} ${t2.icon}`);
+                    desc.push(`${f3} ${t3.name} ${t3.icon}`);
+                    
+                    reqs[t1.name] = 4;
+                    reqs[t2.name] = 2;
+                    reqs[t3.name] = 2;
+                }
+
+                return {
+                    descriptors: desc,
+                    requirements: reqs
+                };
+            }
+
+            startLevel() {
+                this.currentOrder = this.generateOrder();
+                
+                const container = document.getElementById('ticket-container');
+                
+                // Animate ticket out if existing (optional polish, just overwriting for responsiveness)
+                this.renderTicket();
+                
+                this.trashPizza();
+            }
+
+            renderTicket() {
+                const container = document.getElementById('ticket-container');
+                const order = this.currentOrder;
+                
+                // Build list items
+                const listItems = order.descriptors.map(item => `
+                    <div class="flex items-center gap-2 border-b-2 border-dashed border-slate-200 py-3">
+                        <span class="text-xl font-bold text-slate-700 font-mono">${item}</span>
+                    </div>
+                `).join('');
+
+                container.innerHTML = `
+                    <div class="ticket-entry bg-white w-64 p-1 shadow-lg transform rotate-1 mx-auto relative">
+                        <!-- Ticket Header -->
+                        <div class="bg-yellow-50 border-2 border-slate-200 p-4 relative overflow-hidden">
+                            <!-- Paper rip top visual -->
+                            <div class="absolute top-0 left-0 right-0 h-2 bg-slate-300 opacity-20"></div>
+                            
+                            <div class="text-center border-b-4 border-slate-800 pb-2 mb-2">
+                                <h2 class="font-display text-2xl text-slate-800">ORDER #${this.streak + 1}</h2>
+                                <p class="text-xs text-slate-500 font-mono uppercase">Table ${Math.floor(Math.random() * 10) + 1}</p>
+                            </div>
+                            
+                            <div class="flex flex-col gap-1 mb-4">
+                                ${listItems}
+                            </div>
+                            
+                            <div class="text-center mt-4">
+                                <span class="text-xs font-bold text-slate-400 font-mono">--- PLEASE RUSH ---</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Realistic Clip/Pin visual at top center -->
+                        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 w-6 h-6 bg-gray-200 rounded-full border-2 border-gray-400 shadow-sm z-20 flex items-center justify-center">
+                            <div class="w-2 h-2 bg-black rounded-full opacity-20"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Removed renderCustomer()
+
+            serveOrder() {
+                const playerCounts = {};
+                this.slices.forEach(sId => {
+                    const name = ingredients.find(i => i.id === sId).name;
+                    playerCounts[name] = (playerCounts[name] || 0) + 1;
+                });
+
+                let perfect = true;
+                const reqs = this.currentOrder.requirements;
+                
+                for(let topName in reqs) {
+                    if ((playerCounts[topName] || 0) !== reqs[topName]) perfect = false;
+                }
+                for(let playerTop in playerCounts) {
+                    if(!reqs[playerTop]) perfect = false;
+                }
+
+                if(perfect) {
+                    this.handleWin();
+                } else {
+                    this.handleFail();
+                }
+            }
+
+            handleWin() {
+                audio.playWin();
+                const earned = 5 + (this.streak * 1.5);
+                this.score += earned;
+                this.streak++;
+                this.updateScoreboard();
+                
+                this.showFeedback("Perfect!", "text-green-600", "border-green-500");
+                
+                // Re-render racks in case something unlocked
+                this.renderIngredientRack();
+                
+                setTimeout(() => this.startLevel(), 2000);
+            }
+
+            handleFail() {
+                audio.playFail();
+                this.streak = 0;
+                this.updateScoreboard();
+                
+                const p = document.getElementById('pizza-container');
+                p.classList.add('shake');
+                setTimeout(() => p.classList.remove('shake'), 500);
+                
+                // Shake the ticket too
+                const t = document.getElementById('ticket-container');
+                t.classList.add('shake');
+                setTimeout(() => t.classList.remove('shake'), 500);
+
+                this.showFeedback("Wrong Order!", "text-red-600", "border-red-500");
+            }
+
+            updateScoreboard() {
+                document.getElementById('score').innerText = `$${this.score.toFixed(2)}`;
+                document.getElementById('streak').innerText = `Streak: ${this.streak}`;
+            }
+
+            showFeedback(msg, colorClass, borderClass) {
+                const fb = document.getElementById('feedback');
+                const txt = document.getElementById('feedback-text');
+                const box = fb.firstElementChild;
+                
+                txt.innerText = msg;
+                txt.className = `font-display text-3xl md:text-4xl ${colorClass} text-center block`;
+                box.className = `bg-white/95 backdrop-blur-sm px-8 py-4 rounded-3xl shadow-2xl border-4 ${borderClass} transform scale-110`;
+                
+                fb.classList.remove('opacity-0');
+                setTimeout(() => fb.classList.add('opacity-0'), 1500);
+            }
+        }
+
+        const game = new PizzaGame();
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            audio.init();
+            game.init();
+        }
+
+        // --- Menu / Modal Logic ---
+        function toggleMenu() {
+            const modal = document.getElementById('menu-modal');
+            const list = document.getElementById('unlock-list');
+            
+            if(modal.classList.contains('hidden')) {
+                // Opening
+                modal.classList.remove('hidden');
+                
+                // Populate List
+                list.innerHTML = ingredients.map(ing => {
+                    if (ing.id === 'cheese') return ''; // Skip default
+                    const isUnlocked = game.score >= ing.unlockAt;
+                    return `
+                        <div class="flex items-center justify-between p-2 rounded-lg ${isUnlocked ? 'bg-white' : 'bg-slate-100'}">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl ${isUnlocked ? '' : 'grayscale opacity-50'}">${ing.icon}</span>
+                                <span class="font-bold ${isUnlocked ? 'text-slate-700' : 'text-slate-400'}">${ing.name}</span>
+                            </div>
+                            <span class="text-sm font-bold ${isUnlocked ? 'text-green-500' : 'text-slate-400'}">
+                                ${isUnlocked ? '✓ Unlocked' : 'Needs $'+ing.unlockAt}
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+                
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+    </script>
+</body>
+</html>

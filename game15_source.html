@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zoo Area Tycoon 3D</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vt323&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #2c2c2c;
+            font-family: 'Vt323', monospace;
+            user-select: none;
+        }
+
+        #game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .rct-window {
+            background-color: #d4d0c8;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #404040;
+            border-bottom: 2px solid #404040;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            pointer-events: auto;
+        }
+
+        .rct-title-bar {
+            background: linear-gradient(90deg, #008000, #2E8B57);
+            color: white;
+            padding: 3px 6px;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rct-body {
+            padding: 10px;
+            color: black;
+            font-size: 22px;
+            text-align: center;
+        }
+
+        #task-box {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 450px;
+            max-width: 95%;
+        }
+
+        #controls-box {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .rct-btn {
+            background-color: #d4d0c8;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #404040;
+            border-bottom: 2px solid #404040;
+            padding: 5px 20px;
+            font-family: 'Vt323', monospace;
+            font-size: 24px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.05s;
+        }
+
+        .rct-btn:active {
+            border-top: 2px solid #404040;
+            border-left: 2px solid #404040;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+            transform: translate(2px, 2px);
+        }
+
+        .stat-red { color: #b22222; font-weight: bold; }
+        .stat-green { color: #008000; font-weight: bold; }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            pointer-events: auto;
+        }
+        
+        #feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: yellow;
+            text-shadow: 3px 3px 0 #000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 40;
+            width: 100%;
+            text-align: center;
+        }
+
+        .progress-dots {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            background: #808080;
+            border: 1px solid #404040;
+        }
+        .dot.active { background: #00FF00; }
+        .dot.current { background: #FFFF00; }
+
+        /* Feature 2: Floating Dim Label */
+        #dim-label {
+            position: absolute;
+            background: rgba(255, 255, 200, 0.9);
+            border: 1px solid #000;
+            padding: 2px 5px;
+            font-family: 'Vt323', monospace;
+            font-size: 20px;
+            pointer-events: none;
+            display: none;
+            z-index: 30;
+            transform: translate(15px, 15px); /* Offset from mouse */
+            white-space: nowrap;
+        }
+
+        .requirement-box {
+            background: #eee;
+            border: 1px solid #999;
+            padding: 2px;
+            font-size: 18px;
+            margin-top: 5px;
+            color: #d00;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="game-container"></div>
+<div id="dim-label">0 x 0 = 0</div>
+
+<div id="ui-layer">
+    
+    <!-- Top Task Bar -->
+    <div id="task-box" class="rct-window">
+        <div class="rct-title-bar">
+            <span>ZONING PERMIT</span>
+            <span id="level-indicator">1/10</span>
+        </div>
+        <div class="rct-body">
+            <div class="progress-dots" id="progress-container"></div>
+            <div id="instruction-text">Zone a Habitat with:</div>
+            
+            <div class="flex justify-center items-center gap-4">
+                <div style="font-size: 32px; margin: 5px 0;">
+                    AREA = <span id="target-area" class="stat-red">?</span>
+                </div>
+            </div>
+            
+            <!-- Feature 7: Logic Puzzles Display -->
+            <div id="extra-req" class="requirement-box hidden">
+                ⚠️ Requirement: Width ≥ 3
+            </div>
+
+            <div style="font-size: 18px; color: #444; margin-top:5px;">
+                Selected: <span id="current-area" class="stat-green">0</span> 
+                <span id="current-dims" style="font-size: 16px; color: #666;">(0x0)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div id="controls-box">
+        <button id="check-btn" class="rct-btn">BUILD IT</button>
+        <button id="reset-btn" class="rct-btn" style="font-size: 18px;">CLEAR ZONE</button>
+    </div>
+    
+    <div id="feedback">PERFECT!</div>
+
+    <!-- Instructions / Start -->
+    <div id="overlay">
+        <div class="rct-window" style="width: 400px;">
+            <div class="rct-title-bar"><span>ZOO TYCOON</span></div>
+            <div class="rct-body">
+                <p>Welcome, Park Director!</p>
+                <p>Build habitats to expand your zoo.</p>
+                <ul style="text-align: left; margin-left: 20px;">
+                    <li>Target the correct <strong>AREA</strong>.</li>
+                    <li>Watch out for special requirements!</li>
+                    <li>Drag to zone land.</li>
+                </ul>
+                <button id="start-btn" class="rct-btn">OPEN ZOO</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- AUDIO SYSTEM (Feature 22) ---
+    const AudioSys = {
+        ctx: null,
+        init: function() {
+            window.AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioContext();
+        },
+        playTone: function(freq, type, duration, vol=0.1) {
+            if(!this.ctx) this.init();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + duration);
+        },
+        playSuccess: function() {
+            this.playTone(523.25, 'sine', 0.1); // C5
+            setTimeout(() => this.playTone(659.25, 'sine', 0.1), 100); // E5
+            setTimeout(() => this.playTone(783.99, 'sine', 0.4), 200); // G5
+        },
+        playError: function() {
+            this.playTone(150, 'sawtooth', 0.3);
+        },
+        playBuildSound: function(type) {
+            if(type === 'lion' || type === 'tiger') {
+                // Low roar
+                this.playTone(100, 'sawtooth', 0.5, 0.2);
+                setTimeout(() => this.playTone(80, 'sawtooth', 0.5, 0.2), 100);
+            } else if (type === 'penguin' || type === 'flamingo') {
+                // Chirp/splash
+                this.playTone(800, 'square', 0.1, 0.05);
+                setTimeout(() => this.playTone(600, 'square', 0.1, 0.05), 50);
+            } else {
+                // Construction thud
+                this.playTone(200, 'square', 0.1);
+            }
+        }
+    };
+
+    // --- GAME ENGINE ---
+    const MAX_GRID_SIZE = 20; 
+    const TILE_SIZE = 8;
+    let visibleGridSize = 20; // Fixed size (no expansion)
+    
+    // Feature 7 & 16: New Levels and Constraints
+    // FIXED: Lion's Den now requires Min Width 2 (2x3), not 3 (impossible for area 6)
+    // FIXED: Elephant Yard now requires Min Width 3 (3x5), not 5 (impossible for area 15 if interpreted as min side)
+    const LEVELS = [
+        { target: 6, type: 'lion', name: "Lion's Den", constraint: {type:'minW', val:2, text:"Min Width: 2"} }, 
+        { target: 4, type: 'pizza', name: "Pizza Stall", constraint: null }, 
+        { target: 12, type: 'zebra', name: "Zebra Plains", constraint: null },
+        { target: 9, type: 'icecream', name: "Ice Cream Stand", constraint: {type:'square', val:true, text:"Must be a Square"} }, 
+        { target: 15, type: 'elephant', name: "Elephant Yard", constraint: {type:'minW', val:3, text:"Min Width: 3"} },
+        { target: 8, type: 'giraffe', name: "Giraffe Spot", constraint: null },
+        { target: 20, type: 'flamingo', name: "Flamingo Pond", constraint: null },
+        { target: 10, type: 'tree', name: "Botanical Garden", constraint: null }, 
+        { target: 16, type: 'tiger', name: "Tiger Jungle", constraint: {type:'square', val:true, text:"Must be a Square"} },
+        { target: 24, type: 'zebra', name: "Safari Zone", constraint: {type:'minW', val:4, text:"Min Width: 4"} }
+    ];
+
+    let currentLevelIdx = 0;
+    let selectedTiles = new Set();
+    let isGameActive = false;
+    
+    // Drag Logic
+    let isDragging = false;
+    let dragStart = null; 
+    let currentSelectionBounds = null; // {w, h, area}
+
+    // Entity System
+    let activeAnimals = [];
+    let visitors = [];
+    let vegetation = []; // Feature 25: For swaying
+    let pathSet = new Set(); 
+    let activePathKeys = []; // Array of keys for random selection
+
+    // --- THREE.JS SETUP ---
+    const container = document.getElementById('game-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87CEEB);
+
+    const aspect = container.clientWidth / container.clientHeight;
+    const d = 110; 
+    const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+    camera.position.set(100, 100, 100);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // LIGHTING
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(50, 100, 40);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.left = -150;
+    dirLight.shadow.camera.right = 150;
+    dirLight.shadow.camera.top = 150;
+    dirLight.shadow.camera.bottom = -150;
+    scene.add(dirLight);
+
+    const gridGroup = new THREE.Group();
+    scene.add(gridGroup);
+    
+    // MATERIALS
+    const matDirt = new THREE.MeshLambertMaterial({ color: 0x5C4033 }); 
+    const matZone = new THREE.MeshLambertMaterial({ color: 0xFFFF00, transparent: true, opacity: 0.6 }); 
+    const matWater = new THREE.MeshLambertMaterial({ color: 0x0099DB, opacity: 0.8, transparent: true });
+    const matPath = new THREE.MeshLambertMaterial({ color: 0x909090 }); 
+    const matVoid = new THREE.MeshBasicMaterial({ color: 0x1a1a1a }); // For locked area
+
+    // TILE MAP
+    const tiles = new Map();
+
+    function initGrid(size) {
+        visibleGridSize = size;
+        
+        // Remove old grid
+        while(gridGroup.children.length > 0){ 
+            gridGroup.remove(gridGroup.children[0]); 
+        }
+        tiles.clear();
+        pathSet.clear();
+        activePathKeys = [];
+        vegetation = [];
+
+        // We generate the MAX size, but only style the visible ones as 'playable'
+        // This keeps coordinates stable during expansion
+        const offset = (MAX_GRID_SIZE * TILE_SIZE) / 2;
+        const geometry = new THREE.BoxGeometry(TILE_SIZE - 0.2, 1, TILE_SIZE - 0.2);
+
+        // Center the visible grid within the max grid
+        const startIdx = (MAX_GRID_SIZE - visibleGridSize) / 2;
+        const endIdx = startIdx + visibleGridSize;
+
+        for(let x=0; x<MAX_GRID_SIZE; x++) {
+            for(let z=0; z<MAX_GRID_SIZE; z++) {
+                
+                const isVisible = (x >= startIdx && x < endIdx && z >= startIdx && z < endIdx);
+                
+                let tileMat = matVoid;
+                let isPath = false;
+                let isPlayable = false;
+
+                if (isVisible) {
+                    // Determine if path (perimeter of visible area)
+                    isPath = (x === startIdx || x === endIdx - 1 || z === startIdx || z === endIdx - 1);
+                    isPlayable = !isPath;
+                    
+                    if (isPath) {
+                        tileMat = matPath;
+                        pathSet.add(`${x},${z}`);
+                        activePathKeys.push(`${x},${z}`);
+                    } else {
+                        // Grass
+                        const grassColor = new THREE.Color(0x567d46);
+                        grassColor.offsetHSL(0, 0, (Math.random() - 0.5) * 0.1); 
+                        tileMat = new THREE.MeshLambertMaterial({ color: grassColor });
+                    }
+                }
+
+                const tile = new THREE.Mesh(geometry, tileMat);
+                const px = (x * TILE_SIZE) - offset + (TILE_SIZE/2);
+                const pz = (z * TILE_SIZE) - offset + (TILE_SIZE/2);
+                
+                tile.position.set(px, -0.5, pz);
+                if(isVisible) tile.receiveShadow = true;
+                
+                tile.userData = { gx: x, gz: z, isLocked: !isPlayable, isVisible: isVisible };
+                
+                gridGroup.add(tile);
+                tiles.set(`${x},${z}`, tile);
+
+                if (isVisible && !isPath) {
+                     if (Math.random() > 0.85) decorateGrass(tile);
+                }
+            }
+        }
+
+        // Baseplate
+        const baseGeo = new THREE.BoxGeometry(MAX_GRID_SIZE*TILE_SIZE + 20, 2, MAX_GRID_SIZE*TILE_SIZE + 20);
+        const baseMesh = new THREE.Mesh(baseGeo, matDirt);
+        baseMesh.position.y = -2;
+        gridGroup.add(baseMesh); // Add to group so it clears on rebuild if needed
+    }
+
+    function decorateGrass(tile) {
+        const type = Math.random();
+        if (type > 0.6) {
+            // Swaying Grass
+            const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1, 3), new THREE.MeshLambertMaterial({color: 0x336633}));
+            tuft.position.set((Math.random()-0.5)*4, 0.5, (Math.random()-0.5)*4);
+            tile.add(tuft);
+            vegetation.push({mesh: tuft, speed: 2 + Math.random(), offset: Math.random()*10});
+        } else if (type > 0.4) {
+            // Flower
+            const stem = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshLambertMaterial({color: 0x006400}));
+            const petal = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshLambertMaterial({color: Math.random() > 0.5 ? 0xFFFF00 : 0xFFFFFF}));
+            stem.position.set((Math.random()-0.5)*4, 0.4, (Math.random()-0.5)*4);
+            petal.position.y = 0.6;
+            stem.add(petal);
+            tile.add(stem);
+            vegetation.push({mesh: stem, speed: 1.5, offset: Math.random()*10});
+        }
+    }
+
+    // Start with grid 20
+    initGrid(20);
+    spawnVisitors(15);
+
+    // --- INPUT HANDLING ---
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    function getIntersect(e) {
+        let x, y;
+        if(e.changedTouches) {
+            x = e.changedTouches[0].clientX;
+            y = e.changedTouches[0].clientY;
+        } else {
+            x = e.clientX;
+            y = e.clientY;
+        }
+        
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
+
+        // Feature 2: Update Label Pos
+        const label = document.getElementById('dim-label');
+        if(label.style.display !== 'none') {
+            label.style.left = x + 'px';
+            label.style.top = y + 'px';
+        }
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(gridGroup.children);
+        
+        if (intersects.length > 0) {
+            return intersects[0].object;
+        }
+        return null;
+    }
+
+    function onPointerDown(e) {
+        if(!isGameActive) return;
+        const tile = getIntersect(e);
+        
+        if (tile && !tile.userData.isLocked && tile.userData.isVisible) {
+            isDragging = true;
+            dragStart = { x: tile.userData.gx, z: tile.userData.gz };
+            document.getElementById('dim-label').style.display = 'block'; // Show label
+            updateSelectionVisuals([dragStart.x, dragStart.z, dragStart.x, dragStart.z]);
+        }
+    }
+
+    function onPointerMove(e) {
+        if(!isGameActive || !isDragging) return;
+        const tile = getIntersect(e);
+        if (tile) {
+            const currentX = tile.userData.gx;
+            const currentZ = tile.userData.gz;
+            
+            const minX = Math.min(dragStart.x, currentX);
+            const maxX = Math.max(dragStart.x, currentX);
+            const minZ = Math.min(dragStart.z, currentZ);
+            const maxZ = Math.max(dragStart.z, currentZ);
+            
+            updateSelectionVisuals([minX, maxZ, maxX, minZ]); 
+        }
+    }
+
+    function onPointerUp() {
+        isDragging = false;
+        dragStart = null;
+        document.getElementById('dim-label').style.display = 'none'; // Hide label
+    }
+    
+    function clearSelection() {
+        selectedTiles.forEach(key => {
+            const t = tiles.get(key);
+            if(t && !t.userData.isLocked && t.userData.isVisible) {
+                const originalColor = new THREE.Color(0x567d46); 
+                t.material = new THREE.MeshLambertMaterial({color: originalColor});
+                t.position.y = -0.5;
+            }
+        });
+        selectedTiles.clear();
+        currentSelectionBounds = null;
+        updateUI();
+    }
+
+    function updateSelectionVisuals(bounds) {
+        const minX = Math.min(bounds[0], bounds[2]);
+        const maxX = Math.max(bounds[0], bounds[2]);
+        const minZ = Math.min(bounds[1], bounds[3]);
+        const maxZ = Math.max(bounds[1], bounds[3]);
+
+        clearSelection(); 
+
+        let w = 0; 
+        let h = 0;
+
+        // Visual selection
+        for(let x = minX; x <= maxX; x++) {
+            for(let z = minZ; z <= maxZ; z++) {
+                const key = `${x},${z}`;
+                const tile = tiles.get(key);
+                // Filter out invisible or locked tiles
+                if (tile && !tile.userData.isLocked && tile.userData.isVisible) {
+                    selectedTiles.add(key);
+                    tile.material = matZone;
+                    tile.position.y = 0; 
+                }
+            }
+        }
+
+        // Calculate actual playable dimensions found
+        // Since dragging might go over locked tiles, we need to count valid ones
+        // But for rectangle logic, usually we want the bounds.
+        // Let's rely on bounds but only if they are valid.
+        const width = (maxX - minX) + 1;
+        const height = (maxZ - minZ) + 1;
+        currentSelectionBounds = { w: width, h: height, area: selectedTiles.size };
+
+        updateUI();
+    }
+    
+    container.addEventListener('mousedown', onPointerDown);
+    container.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+    container.addEventListener('touchstart', onPointerDown, {passive: false});
+    container.addEventListener('touchmove', (e) => { e.preventDefault(); onPointerMove(e); }, {passive: false});
+    window.addEventListener('touchend', onPointerUp);
+
+    // --- GAME LOGIC ---
+
+    function updateUI() {
+        const current = selectedTiles.size;
+        document.getElementById('current-area').innerText = current;
+        
+        // Feature 2: Visual Feedback
+        if(currentSelectionBounds) {
+            const text = `${currentSelectionBounds.w} x ${currentSelectionBounds.h}`;
+            document.getElementById('current-dims').innerText = `(${text})`;
+            document.getElementById('dim-label').innerText = `${text} = ${current}`;
+        } else {
+             document.getElementById('current-dims').innerText = "(0 x 0)";
+             document.getElementById('dim-label').innerText = "0 x 0 = 0";
+        }
+    }
+
+    function loadLevel() {
+        const level = LEVELS[currentLevelIdx];
+        clearSelection();
+        
+        // Expansion Check REMOVED - Zoo is static 20x20
+
+        document.getElementById('target-area').innerText = level.target;
+        document.getElementById('instruction-text').innerHTML = `Zone a <span style="color:#006400; font-weight:bold">${level.name}</span>`;
+        document.getElementById('current-area').innerText = "0";
+        document.getElementById('level-indicator').innerText = `${currentLevelIdx + 1}/${LEVELS.length}`;
+        
+        // Feature 7: Requirement Display
+        const reqBox = document.getElementById('extra-req');
+        if(level.constraint) {
+            reqBox.innerText = `⚠️ Requirement: ${level.constraint.text}`;
+            reqBox.classList.remove('hidden');
+        } else {
+            reqBox.classList.add('hidden');
+        }
+
+        const dotContainer = document.getElementById('progress-container');
+        dotContainer.innerHTML = '';
+        LEVELS.forEach((_, idx) => {
+            const d = document.createElement('div');
+            d.className = `dot ${idx < currentLevelIdx ? 'active' : ''} ${idx === currentLevelIdx ? 'current' : ''}`;
+            dotContainer.appendChild(d);
+        });
+    }
+
+    function checkAnswer() {
+        const level = LEVELS[currentLevelIdx];
+        const current = selectedTiles.size;
+        
+        // Check Area
+        if(current !== level.target) {
+            const diff = current - level.target;
+            const msg = diff > 0 ? "ZONE TOO BIG!" : "ZONE TOO SMALL!";
+            showFeedback(msg, true);
+            AudioSys.playError(); // Feature 22
+            setTimeout(() => showFeedback("", false), 1500);
+            return;
+        }
+
+        // Feature 7: Check Constraints
+        if(level.constraint) {
+            const w = currentSelectionBounds.w;
+            const h = currentSelectionBounds.h;
+            let pass = true;
+            let errorMsg = "";
+
+            if(level.constraint.type === 'minW') {
+                // Width or Height must be >= val (since rotation allowed usually, but let's say strict dimension check on smallest side)
+                const minSide = Math.min(w, h);
+                const maxSide = Math.max(w, h); // user can draw vertical or horizontal
+                // Actually constraint usually means "at least this thick"
+                if(minSide < level.constraint.val) {
+                    pass = false;
+                    errorMsg = `TOO NARROW! (Needs ${level.constraint.val} wide)`;
+                }
+            }
+            if(level.constraint.type === 'square') {
+                if(w !== h) {
+                    pass = false;
+                    errorMsg = "MUST BE A SQUARE!";
+                }
+            }
+
+            if(!pass) {
+                showFeedback(errorMsg, true);
+                AudioSys.playError();
+                setTimeout(() => showFeedback("", false), 1500);
+                return;
+            }
+        }
+
+        // Success
+        AudioSys.playSuccess();
+        showFeedback("EXCELLENT!", true);
+        buildReward(level.type);
+        isGameActive = false;
+        
+        setTimeout(() => {
+            currentLevelIdx++;
+            if(currentLevelIdx < LEVELS.length) {
+                loadLevel();
+                isGameActive = true;
+                showFeedback("", false); 
+            } else {
+                showFeedback("ZOO COMPLETE!", true);
+            }
+        }, 2000);
+    }
+
+    function showFeedback(text, show) {
+        const el = document.getElementById('feedback');
+        el.innerText = text;
+        el.style.opacity = show ? 1 : 0;
+    }
+
+    // --- CONSTRUCTION ---
+
+    function buildReward(type) {
+        // Find bounds
+        let minX = 999, minZ = 999, maxX = -1, maxZ = -1;
+        selectedTiles.forEach(key => {
+            const [x, z] = key.split(',').map(Number);
+            if(x < minX) minX = x;
+            if(x > maxX) maxX = x;
+            if(z < minZ) minZ = z;
+            if(z > maxZ) maxZ = z;
+        });
+        
+        AudioSys.playBuildSound(type); // Feature 22
+
+        selectedTiles.forEach(key => {
+            const tile = tiles.get(key);
+            tile.userData.isLocked = true;
+            while(tile.children.length > 0) tile.remove(tile.children[0]); // Clear grass
+
+            const [gx, gz] = key.split(',').map(Number);
+            
+            // Feature 16: Food Stalls
+            if (type === 'pizza' || type === 'icecream' || type === 'shop') {
+                tile.material = new THREE.MeshLambertMaterial({color: 0xcccccc}); // Pavement
+            } 
+            else if (type === 'tree') {
+                 tile.material = new THREE.MeshLambertMaterial({color: 0x2E8B57});
+                 if (Math.random() > 0.5) createTree(tile);
+                 else createBush(tile);
+            } else {
+                // Habitats
+                if(type === 'flamingo' || type === 'penguin') {
+                    tile.material = matWater;
+                    tile.position.y = -0.7;
+                } else {
+                    tile.material = new THREE.MeshLambertMaterial({color: 0xD2B48C});
+                }
+                // Fences
+                if(!selectedTiles.has(`${gx},${gz-1}`)) addFence(tile, 0, -0.4, 0); 
+                if(!selectedTiles.has(`${gx},${gz+1}`)) addFence(tile, 0, 0.4, 0);  
+                if(!selectedTiles.has(`${gx-1},${gz}`)) addFence(tile, -0.4, 0, 1); 
+                if(!selectedTiles.has(`${gx+1},${gz}`)) addFence(tile, 0.4, 0, 1);  
+            }
+        });
+
+        // Spawn Buildings or Animals
+        if (type === 'shop' || type === 'pizza' || type === 'icecream') {
+            const centerKey = `${Math.floor((minX+maxX)/2)},${Math.floor((minZ+maxZ)/2)}`;
+            const t = tiles.get(centerKey);
+            if(t) {
+                let color = 0xFF69B4;
+                if(type === 'pizza') color = 0xFFA500;
+                if(type === 'icecream') color = 0xFFFFFF;
+                
+                const shop = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 4), new THREE.MeshLambertMaterial({color: color}));
+                shop.position.y = 1.5;
+                t.add(shop);
+                
+                // Roof
+                const roof = new THREE.Mesh(new THREE.ConeGeometry(3.5, 2, 4), new THREE.MeshLambertMaterial({color: 0xcc0000}));
+                roof.position.y = 3;
+                roof.rotation.y = Math.PI/4;
+                shop.add(roof);
+            }
+        } 
+        else if (type !== 'tree') {
+            const count = Math.max(1, Math.floor(selectedTiles.size / 4));
+            for(let i=0; i<count; i++) {
+                spawnDynamicAnimal(type, minX, maxX, minZ, maxZ);
+            }
+        }
+    }
+
+    function addFence(tile, dx, dz, rotation) {
+        const wall = new THREE.Mesh(
+            new THREE.BoxGeometry(rotation ? 1 : TILE_SIZE, 1.5, rotation ? TILE_SIZE : 1),
+            new THREE.MeshLambertMaterial({color: 0x8B4513})
+        );
+        wall.position.x = dx * (TILE_SIZE/2);
+        wall.position.z = dz * (TILE_SIZE/2);
+        wall.position.y = 0.5;
+        tile.add(wall);
+    }
+
+    function createTree(tile) {
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 2), new THREE.MeshLambertMaterial({color: 0x8B4513}));
+        trunk.position.y = 1;
+        const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(2), new THREE.MeshLambertMaterial({color: 0x228B22}));
+        leaves.position.y = 3;
+        tile.add(trunk);
+        tile.add(leaves);
+        vegetation.push({mesh: leaves, speed: 1, offset: Math.random()});
+    }
+
+    function createBush(tile) {
+        const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(1.5), new THREE.MeshLambertMaterial({color: 0x006400}));
+        bush.position.y = 1;
+        tile.add(bush);
+        vegetation.push({mesh: bush, speed: 2, offset: Math.random()});
+    }
+
+    // --- ANIMALS & VISITORS ---
+
+    function spawnVisitors(count) {
+        // Clear old
+        visitors.forEach(v => scene.remove(v.mesh));
+        visitors = [];
+
+        for(let i=0; i<count; i++) {
+            spawnVisitor();
+        }
+    }
+
+    function spawnVisitor() {
+        if(activePathKeys.length === 0) return;
+
+        const group = new THREE.Group();
+        const colors = [0xFF0000, 0x0000FF, 0xFFFF00, 0xFFFFFF, 0xFFA500];
+        const shirtColor = colors[Math.floor(Math.random() * colors.length)];
+        
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2, 1), new THREE.MeshLambertMaterial({color: shirtColor}));
+        body.position.y = 1;
+        group.add(body);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({color: 0xFFCCAA}));
+        head.position.y = 2.5;
+        group.add(head);
+        const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshLambertMaterial({color: 0x000088})); 
+        leg1.position.set(-0.4, 0, 0);
+        group.add(leg1);
+        const leg2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshLambertMaterial({color: 0x000088})); 
+        leg2.position.set(0.4, 0, 0);
+        group.add(leg2);
+
+        // Feature 24: Photo Flash light
+        const flash = new THREE.PointLight(0xffffff, 0, 10);
+        flash.position.set(0, 3, 1);
+        group.add(flash);
+
+        const startKey = activePathKeys[Math.floor(Math.random() * activePathKeys.length)];
+        const tile = tiles.get(startKey);
+        
+        group.position.set(tile.position.x, 0, tile.position.z);
+        scene.add(group);
+        
+        visitors.push({
+            mesh: group,
+            flash: flash,
+            gridX: tile.userData.gx,
+            gridZ: tile.userData.gz,
+            targetPos: null,
+            state: 'idle',
+            photoTimer: Math.random() * 500, // Random time until photo
+            speed: 0.08 + Math.random() * 0.04
+        });
+    }
+
+    function getNextPathNeighbor(gx, gz) {
+        const candidates = [];
+        const dirs = [[0,1], [0,-1], [1,0], [-1,0]];
+        dirs.forEach(d => {
+            const nx = gx + d[0];
+            const nz = gz + d[1];
+            if(pathSet.has(`${nx},${nz}`)) candidates.push({x: nx, z: nz});
+        });
+        if(candidates.length > 0) return candidates[Math.floor(Math.random() * candidates.length)];
+        return {x: gx, z: gz};
+    }
+
+    function spawnDynamicAnimal(type, minX, maxX, minZ, maxZ) {
+        // ... (Same animal mesh generation as before) ...
+        // Re-using simplified mesh generation for brevity, assume similar shapes
+        const offset = (MAX_GRID_SIZE * TILE_SIZE) / 2;
+        const worldMinX = (minX * TILE_SIZE) - offset + (TILE_SIZE/2) + 2;
+        const worldMaxX = (maxX * TILE_SIZE) - offset + (TILE_SIZE/2) - 2;
+        const worldMinZ = (minZ * TILE_SIZE) - offset + (TILE_SIZE/2) + 2;
+        const worldMaxZ = (maxZ * TILE_SIZE) - offset + (TILE_SIZE/2) - 2;
+        const bounds = { x1: worldMinX, x2: worldMaxX, z1: worldMinZ, z2: worldMaxZ };
+
+        const group = new THREE.Group();
+        const mat = (col) => new THREE.MeshLambertMaterial({color: col});
+        
+        let color = 0x888888;
+        if(type==='lion') color=0xCCAA00;
+        if(type==='tiger') color=0xFF8800;
+        if(type==='flamingo') color=0xFF69B4;
+        if(type==='giraffe') color=0xFFA500;
+        if(type==='penguin') color=0x222222;
+
+        const body = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 3), mat(color));
+        body.position.y = 1;
+        group.add(body);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), mat(color));
+        head.position.set(0, 2.2, 1.8);
+        group.add(head);
+
+        // Simple conditional shapes
+        if(type==='giraffe') {
+             const neck = new THREE.Mesh(new THREE.BoxGeometry(0.6, 5, 0.6), mat(color));
+             neck.position.set(0, 3, 1.5);
+             group.add(neck);
+             head.position.set(0, 5.5, 1.8);
+        }
+
+        group.position.x = Math.random() * (bounds.x2 - bounds.x1) + bounds.x1;
+        group.position.z = Math.random() * (bounds.z2 - bounds.z1) + bounds.z1;
+        scene.add(group);
+        
+        activeAnimals.push({
+            mesh: group,
+            bounds: bounds,
+            target: new THREE.Vector3(group.position.x, 0, group.position.z),
+            state: 'idle',
+            timer: 0,
+            speed: 0.05
+        });
+    }
+
+    // --- ANIMATION LOOP ---
+
+    function updateEntities() {
+        // Feature 25: Vegetation Sway
+        const time = Date.now() * 0.001;
+        vegetation.forEach(v => {
+            v.mesh.rotation.z = Math.sin(time * v.speed + v.offset) * 0.1;
+            v.mesh.rotation.x = Math.cos(time * v.speed + v.offset) * 0.1;
+        });
+
+        // Animals
+        activeAnimals.forEach(anim => {
+            if (anim.state === 'idle') {
+                anim.timer--;
+                if(anim.timer <= 0) {
+                    anim.target.x = Math.random() * (anim.bounds.x2 - anim.bounds.x1) + anim.bounds.x1;
+                    anim.target.z = Math.random() * (anim.bounds.z2 - anim.bounds.z1) + anim.bounds.z1;
+                    anim.state = 'moving';
+                }
+            } else {
+                const dx = anim.target.x - anim.mesh.position.x;
+                const dz = anim.target.z - anim.mesh.position.z;
+                const dist = Math.sqrt(dx*dx + dz*dz);
+                if (dist < 0.2) {
+                    anim.state = 'idle';
+                    anim.timer = 100 + Math.random() * 200;
+                } else {
+                    anim.mesh.lookAt(anim.target.x, anim.mesh.position.y, anim.target.z);
+                    anim.mesh.translateZ(anim.speed);
+                    anim.mesh.position.y = Math.abs(Math.sin(Date.now() * 0.005)) * 0.3;
+                }
+            }
+        });
+
+        // Visitors
+        visitors.forEach(vis => {
+            // Feature 24: Taking Photos
+            if(vis.photoTimer > 0) {
+                vis.photoTimer--;
+                if(vis.photoTimer <= 0) {
+                    // Flash!
+                    vis.flash.intensity = 2;
+                    setTimeout(() => vis.flash.intensity = 0, 100);
+                    vis.photoTimer = 300 + Math.random() * 500; // Reset
+                }
+            }
+
+            if (!vis.targetPos) {
+                vis.targetPos = new THREE.Vector3(vis.mesh.position.x, 0, vis.mesh.position.z);
+                vis.lastGridX = vis.gridX;
+                vis.lastGridZ = vis.gridZ;
+            }
+
+            const dist = vis.mesh.position.distanceTo(vis.targetPos);
+            if (dist < 0.2) {
+                const nextTileCoords = getNextPathNeighbor(vis.gridX, vis.gridZ);
+                vis.lastGridX = vis.gridX;
+                vis.lastGridZ = vis.gridZ;
+                vis.gridX = nextTileCoords.x;
+                vis.gridZ = nextTileCoords.z;
+                const nextTile = tiles.get(`${vis.gridX},${vis.gridZ}`);
+                if(nextTile) vis.targetPos.set(nextTile.position.x, 0, nextTile.position.z);
+            } else {
+                vis.mesh.lookAt(vis.targetPos.x, vis.mesh.position.y, vis.targetPos.z);
+                vis.mesh.translateZ(vis.speed);
+            }
+        });
+    }
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+        document.getElementById('overlay').style.display = 'none';
+        AudioSys.init(); // Init Audio Context
+        isGameActive = true;
+        loadLevel();
+    });
+
+    document.getElementById('check-btn').addEventListener('click', checkAnswer);
+    document.getElementById('reset-btn').addEventListener('click', () => { if(isGameActive) clearSelection(); });
+
+    function animate() {
+        requestAnimationFrame(animate);
+        updateEntities();
+        renderer.render(scene, camera);
+    }
+    
+    window.addEventListener('resize', () => {
+        const aspect = container.clientWidth / container.clientHeight;
+        camera.left = -d * aspect;
+        camera.right = d * aspect;
+        camera.top = d;
+        camera.bottom = -d;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    animate();
+
+</script>
+</body>
+</html>

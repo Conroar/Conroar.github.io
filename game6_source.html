@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoo Architect</title>
+    
+    <!-- Load React, ReactDOM, and Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Custom Animations */
+        @keyframes drop-crate {
+            0% { transform: translateY(-200%); }
+            60% { transform: translateY(-20%); }
+            80% { transform: translateY(-40%); }
+            100% { transform: translateY(0); }
+        }
+        .animate-drop-crate { animation: drop-crate 0.8s ease-out forwards; }
+
+        @keyframes float-up {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-100vh) rotate(20deg); opacity: 1; } 
+        }
+        .animate-float-up { animation: float-up 8s linear forwards; }
+
+        @keyframes walk-mini {
+            0% { transform: translateX(-20px) scaleX(1); }
+            50% { transform: translateX(20px) scaleX(1); }
+            51% { transform: translateX(20px) scaleX(-1); }
+            100% { transform: translateX(-20px) scaleX(-1); }
+        }
+        .animate-walk-mini { animation: walk-mini 4s ease-in-out infinite; }
+
+        @keyframes walk-right { 0% { left: -10%; } 100% { left: 110%; } }
+        .animate-walk-right { animation: walk-right 8s linear infinite; }
+
+        @keyframes walk-left { 0% { right: -10%; } 100% { right: 110%; } }
+        .animate-walk-left { animation: walk-left 10s linear infinite; }
+
+        @keyframes run-right { 0% { left: -20%; } 100% { left: 120%; } }
+        .animate-run-right { animation: run-right 2s linear infinite; }
+        
+        @keyframes run-left { 0% { right: -20%; } 100% { right: 120%; } }
+        .animate-run-left { animation: run-left 2.5s linear infinite; }
+
+        @keyframes chaos {
+            0% { transform: translate(100px, 100px) rotate(0deg); }
+            15% { transform: translate(300px, 50px) rotate(20deg); }
+            30% { transform: translate(50px, 450px) rotate(-10deg); } 
+            45% { transform: translate(250px, 350px) rotate(10deg); }
+            60% { transform: translate(350px, 420px) rotate(-20deg); } 
+            75% { transform: translate(50px, 200px) rotate(15deg); }
+            100% { transform: translate(100px, 100px) rotate(0deg); }
+        }
+        .animate-chaos { animation: chaos 3s linear infinite; }
+
+        .animate-bounce-slow { animation: bounce 3s infinite; }
+        
+        @keyframes bounce-in {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+        }
+        .animate-bounce-in { animation: bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes fall { 0% { top: -10%; } 100% { top: 110%; } }
+        .animate-fall { animation: fall 8s linear infinite; }
+
+        @keyframes float-slow { 0% { transform: translateX(0); } 50% { transform: translateX(20px); } 100% { transform: translateX(0); } }
+        .animate-float-slow { animation: float-slow 10s ease-in-out infinite; }
+
+        @keyframes curtain-wipe { 
+            0% { clip-path: circle(0% at 50% 50%); } 
+            50% { clip-path: circle(100% at 50% 50%); } 
+            100% { clip-path: circle(0% at 50% 50%); } 
+        }
+        .animate-curtain-wipe { animation: curtain-wipe 1.5s ease-in-out forwards; }
+
+        .bg-pattern {
+            background-image: radial-gradient(#166534 2px, transparent 2px);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- ICONS (SVG Components) ---
+        const IconBase = ({ d, className, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+                <path d={d} />
+            </svg>
+        );
+
+        const Play = (props) => <IconBase d="M5 3l14 9-14 9V3z" {...props} />;
+        const RotateCcw = (props) => <IconBase d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12" {...props} />;
+        const Check = (props) => <IconBase d="M20 6L9 17l-5-5" {...props} />;
+        const XCircle = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>;
+        const XIcon = (props) => <IconBase d="M18 6 6 18M6 6l12 12" {...props} />;
+        const MapIcon = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>;
+        const Trophy = (props) => <IconBase d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 4h1.5a2.5 2.5 0 0 0 0-5H18m-10 6v2a6 6 0 0 0 6 6v2a2 2 0 0 0-2 2h8a2 2 0 0 0-2-2v-2a6 6 0 0 0 6-6V9H8Z" {...props} />;
+        const Trees = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M10 10v.2A3 3 0 0 1 8.9 16v0H5v0h0a3 3 0 0 1-1-5.8V10a3 3 0 0 1 5.3-2.1"/><path d="M7 16v6"/><path d="M13 16v6"/><path d="M12 18h2"/><path d="M12 7v3a3 3 0 0 1-2.1 5.3h0v0a3 3 0 0 1-3.8-1.5"/><path d="M12 7V5a3 3 0 0 1 5.3-2.1 3 3 0 0 1 3.8 4.3A3 3 0 0 1 18.9 13H15"/></svg>;
+        const User = (props) => <IconBase d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2 M16 7a4 4 0 1 0-8 0 4 4 0 0 0 8 0z" {...props} />;
+        const AlertTriangle = (props) => <IconBase d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01" {...props} />;
+        const Cloud = (props) => <IconBase d="M17.5 19c0-1.7-1.3-3-3-3h-1.1c-.1-2.6-2.2-4.7-4.8-4.7-2.3 0-4.3 1.7-4.7 4H3c-1.7 0-3 1.3-3 3s1.3 3 3 3h14.5c1.7 0 3-1.3 3-3z" {...props} />;
+        const X = (props) => <IconBase d="M18 6 6 18M6 6l12 12" {...props} />;
+
+        const ZooBuilder = () => {
+            // Game States
+            const [gameState, setGameState] = useState('start');
+            const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+            
+            // Safe Local Storage with CRASH PREVENTION for old saves
+            const [unlockedAnimals, setUnlockedAnimals] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('zoo-builder-animals-v2'); // New key to avoid conflicts
+                    if (!saved) return [];
+                    const parsed = JSON.parse(saved);
+                    // Validate data structure to prevent crashes
+                    return parsed.map(a => ({
+                        ...a,
+                        mapR: a.mapR ?? 0, // Fallback if missing
+                        mapC: a.mapC ?? 0,
+                        savedDecor: a.savedDecor || []
+                    }));
+                } catch (e) { return []; }
+            });
+
+            const [totalVisitors, setTotalVisitors] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('zoo-builder-visitors-v2');
+                    return saved ? parseInt(saved) : 0;
+                } catch (e) { return 0; }
+            });
+
+            const [failureMessage, setFailureMessage] = useState("ESCAPE!");
+            const [showMap, setShowMap] = useState(false); 
+            const [mapLayout, setMapLayout] = useState([]); 
+            
+            // Stats
+            const [attempts, setAttempts] = useState(0);
+            
+            // Grid Selection
+            const [isDragging, setIsDragging] = useState(false);
+            const [selectionStart, setSelectionStart] = useState(null); 
+            const [selectionEnd, setSelectionEnd] = useState(null);     
+            const [hoverCell, setHoverCell] = useState(null);
+
+            // Enhancements
+            const [gridDecor, setGridDecor] = useState([]); 
+            const [crateDrop, setCrateDrop] = useState(false);
+            const [dustParticles, setDustParticles] = useState([]);
+            const [showHammers, setShowHammers] = useState(false); 
+            const [showSoundEffect, setShowSoundEffect] = useState(null);
+            
+            // Balloon
+            const [balloonPopped, setBalloonPopped] = useState(false);
+            const [showExplosion, setShowExplosion] = useState(false);
+            const [explosionPos, setExplosionPos] = useState(null); 
+
+            // Wander State
+            const [wanderPos, setWanderPos] = useState({ x: 50, y: 50, facingRight: true });
+            
+            // Visitor States
+            const [gameVisitors, setGameVisitors] = useState([]);
+            const [mapVisitors, setMapVisitors] = useState([]); // Smart Pathfinding Visitors
+            const [topVisitorState, setTopVisitorState] = useState('walking'); 
+            const [bottomVisitorState, setBottomVisitorState] = useState('walking');
+
+            // CONSTANTS
+            const GRID_SIZE = 10; 
+            const MAP_COLS = 30; 
+            const MAP_ROWS = 20; 
+            const CELL_PX = 30; // Size of map grid cell in pixels
+
+            // --- SAVE SYSTEM ---
+            useEffect(() => {
+                try {
+                    localStorage.setItem('zoo-builder-animals-v2', JSON.stringify(unlockedAnimals));
+                    localStorage.setItem('zoo-builder-visitors-v2', totalVisitors.toString());
+                } catch (e) { console.log('Storage not available in this embed'); }
+            }, [unlockedAnimals, totalVisitors]);
+
+            const LEVELS = [
+                { id: 1, animal: '🦁', name: 'Lion', target: 12, hint: 'Try 3x4 or 2x6!', bg: 'bg-[#14532d]', fence: 'wood', accent: 'border-green-600', button: 'bg-green-600 hover:bg-green-700', sound: 'ROAR!', fact: 'Lions sleep for 20 hours a day!' },
+                { id: 2, animal: '🐼', name: 'Panda', target: 16, constraint: { type: 'square', val: true, desc: 'Must be a Square' }, hint: 'Must be a perfect SQUARE!', bg: 'bg-[#14532d]', fence: 'bamboo', accent: 'border-green-600', button: 'bg-green-600 hover:bg-green-700', sound: 'CRUNCH!', fact: 'Pandas can poop 40 times a day!' },
+                { id: 3, animal: '🦒', name: 'Giraffe', target: 10, constraint: { type: 'height', val: 5, desc: 'Height must be 5' }, hint: 'Must be exactly 5 tall!', bg: 'bg-[#14532d]', fence: 'wood', accent: 'border-green-600', button: 'bg-green-600 hover:bg-green-700', sound: 'HUMMM!', fact: 'Giraffes have purple tongues!' },
+                { id: 4, animal: '🐘', name: 'Elephant', target: 24, hint: 'She needs lots of space!', bg: 'bg-[#14532d]', fence: 'iron', accent: 'border-green-600', button: 'bg-green-600 hover:bg-green-700', sound: 'TRUMPET!', fact: 'Elephants are afraid of bees!' },
+                { id: 5, animal: '🦓', name: 'Zebra', target: 18, hint: 'Run wild!', bg: 'bg-[#14532d]', fence: 'wood', accent: 'border-green-600', button: 'bg-green-600 hover:bg-green-700', sound: 'NEIGH!', fact: 'Zebra stripes are like fingerprints!' },
+                { id: 6, animal: '🐅', name: 'Tiger', target: 20, bannedShape: { w: 2, h: 10 }, hint: '4x5 is perfect!', bg: 'bg-[#14532d]', fence: 'iron', accent: 'border-green-600', button: 'bg-green-600 hover:bg-green-700', sound: 'GROWL!', fact: 'Tigers love to swim!' },
+                { id: 7, animal: '🦛', name: 'Hippo', target: 25, water: true, hint: 'A big 5x5 square!', bg: 'bg-[#14532d]', fence: 'stone', accent: 'border-green-600', button: 'bg-green-600 hover:bg-green-700', sound: 'SPLASH!', fact: 'Hippos sweat red liquid!' },
+                { id: 8, animal: '🦘', name: 'Kangaroo', target: 15, constraint: { type: 'width', val: 3, desc: 'Width must be 3' }, hint: 'Must be exactly 3 wide!', bg: 'bg-[#14532d]', fence: 'wood', accent: 'border-green-600', button: 'bg-green-600 hover:bg-green-700', sound: 'BOING!', fact: 'Kangaroos cannot walk backwards!' },
+                { id: 9, animal: '🦍', name: 'Gorilla', target: 24, hint: 'Strong 4x6!', bg: 'bg-[#14532d]', fence: 'iron', accent: 'border-green-600', button: 'bg-green-600 hover:bg-green-700', sound: 'OOH-AAH!', fact: 'Gorillas make their own beds every night!' },
+                { id: 10, animal: '🐊', name: 'Croc', target: 14, water: true, hint: 'Long 2x7 or 7x2!', bg: 'bg-[#14532d]', fence: 'glass', accent: 'border-green-600', button: 'bg-green-600 hover:bg-green-700', sound: 'SNAP!', fact: 'Crocs can live for 70 years!' },
+                { id: 11, animal: '🦇', name: 'Bat Cave', target: 16, constraint: { type: 'width', val: 2, desc: 'Width must be 2' }, hint: 'Bonus! Must be 2 wide (8 tall)!', bg: 'bg-slate-900', fence: 'iron', accent: 'border-purple-600', button: 'bg-purple-600 hover:bg-purple-700', sound: 'SCREECH!', fact: 'Bats are the only flying mammals!' },
+                { id: 12, animal: '🦖', name: 'T-Rex', target: 36, constraint: { type: 'square', val: true, desc: 'Must be a Square' }, hint: 'Final Boss! A MASSIVE 6x6!', bg: 'bg-red-950', fence: 'electric', accent: 'border-red-600', button: 'bg-red-600 hover:bg-red-700', sound: 'ROOOAAAR!', fact: 'T-Rex teeth were the size of bananas!' },
+            ];
+
+            const currentLevel = LEVELS[currentLevelIndex];
+
+            // --- Helper: Check if a grid cell is safe (not an enclosure) ---
+            const isCellSafe = (r, c, animals) => {
+                if (r < 0 || r >= MAP_ROWS || c < 0 || c >= MAP_COLS) return false;
+                for (const a of animals) {
+                    if (r >= a.mapR && r < a.mapR + a.height && 
+                        c >= a.mapC && c < a.mapC + a.width) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            // --- Initialize In-Game Visitors ---
+            useEffect(() => {
+                const baseVisitors = 2;
+                const additionalVisitors = Math.floor(unlockedAnimals.length / 2);
+                const totalGameVisitors = baseVisitors + additionalVisitors;
+
+                const newVisitors = Array.from({ length: totalGameVisitors }).map((_, i) => ({
+                    id: i,
+                    type: i % 2 === 0 ? '🚶' : '🚶‍♀️',
+                    duration: 6 + Math.random() * 6, 
+                    delay: Math.random() * 5,
+                    top: i % 2 === 0 
+                }));
+                setGameVisitors(newVisitors);
+            }, [unlockedAnimals.length]);
+
+            // --- Initialize Map Visitors with Pathfinding State ---
+            useEffect(() => {
+                if (!showMap) return;
+                
+                const mapVisitorCount = Math.min(30, 5 + Math.floor(totalVisitors / 20));
+                const newVisitors = [];
+
+                for (let i = 0; i < mapVisitorCount; i++) {
+                    let spawnR, spawnC, attempts = 0;
+                    do {
+                        spawnR = Math.floor(Math.random() * MAP_ROWS);
+                        spawnC = Math.floor(Math.random() * MAP_COLS);
+                        attempts++;
+                    } while (!isCellSafe(spawnR, spawnC, unlockedAnimals) && attempts < 100);
+
+                    if (attempts < 100) {
+                        newVisitors.push({
+                            id: `map-vis-${i}`,
+                            r: spawnR, c: spawnC, 
+                            targetR: spawnR, targetC: spawnC,
+                            type: Math.random() > 0.5 ? '🚶' : '🚶‍♀️',
+                            speed: 0.05 + Math.random() * 0.05, 
+                            progress: 0, 
+                        });
+                    }
+                }
+                setMapVisitors(newVisitors);
+            }, [showMap, unlockedAnimals.length, totalVisitors]); 
+
+            // --- Map Visitor Pathfinding Loop ---
+            useEffect(() => {
+                if (!showMap) return;
+
+                const interval = setInterval(() => {
+                    setMapVisitors(prev => prev.map(v => {
+                        if (!isCellSafe(Math.round(v.r), Math.round(v.c), unlockedAnimals)) {
+                            let safeR = 0, safeC = 0;
+                            for(let r=0; r<MAP_ROWS; r++) {
+                                for(let c=0; c<MAP_COLS; c++) {
+                                    if(isCellSafe(r,c, unlockedAnimals)) { safeR = r; safeC = c; break; }
+                                }
+                            }
+                            return { ...v, r: safeR, c: safeC, targetR: safeR, targetC: safeC, progress: 0 };
+                        }
+
+                        let newProgress = v.progress + v.speed;
+                        
+                        if (newProgress >= 1) {
+                            const currR = v.targetR;
+                            const currC = v.targetC;
+                            
+                            const neighbors = [
+                                { r: currR - 1, c: currC }, { r: currR + 1, c: currC }, 
+                                { r: currR, c: currC - 1 }, { r: currR, c: currC + 1 }
+                            ].filter(n => isCellSafe(n.r, n.c, unlockedAnimals));
+
+                            if (neighbors.length > 0) {
+                                const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                                return { ...v, r: currR, c: currC, targetR: next.r, targetC: next.c, progress: 0 };
+                            } else {
+                                return { ...v, r: currR, c: currC, progress: 0 };
+                            }
+                        } else {
+                            const dr = v.targetR - v.r;
+                            const dc = v.targetC - v.c;
+                            let nextR = v.r;
+                            let nextC = v.c;
+                            
+                            if (Math.abs(dr) > 0.01) nextR += Math.sign(dr) * v.speed;
+                            else nextR = v.targetR;
+
+                            if (Math.abs(dc) > 0.01) nextC += Math.sign(dc) * v.speed;
+                            else nextC = v.targetC;
+
+                            return { ...v, r: nextR, c: nextC, progress: newProgress >= 1 ? 1 : 0 };
+                        }
+                    }));
+                }, 50);
+
+                return () => clearInterval(interval);
+            }, [showMap, unlockedAnimals]);
+
+            const getFenceStyle = (type, side, color) => {
+                const w = '4px';
+                let style = `${w} solid ${color}`;
+                if (type === 'iron') style = `${w} double ${color}`;
+                if (type === 'glass') style = `${w} solid #60a5fa`; 
+                if (type === 'electric') style = `${w} dashed #facc15`;
+                if (type === 'stone') style = `${w} ridge #57534e`; 
+                return style;
+            };
+
+            const getMapFenceStyle = (type) => {
+                let border = '3px solid #78350f';
+                if (type === 'iron') border = '3px double #333';
+                if (type === 'glass') border = '3px solid #60a5fa';
+                if (type === 'stone') border = '3px ridge #57534e';
+                return border;
+            };
+
+            const renderMap = () => (
+                <div className="absolute inset-0 z-[100] bg-[#14532d]/95 backdrop-blur-md p-4 md:p-8 flex flex-col items-center justify-center animate-in fade-in duration-200">
+                    <div className="bg-[#f0fdf4] rounded-[2rem] p-4 md:p-8 max-w-6xl w-full h-full shadow-2xl border-8 border-[#86efac] flex flex-col relative overflow-hidden">
+                        <button onClick={() => setShowMap(false)} className="absolute top-4 right-4 bg-red-100 p-2 rounded-full hover:bg-red-200 text-red-600 z-50 shadow-md"><X size={28} /></button>
+                        <h2 className="text-3xl font-black text-green-800 text-center mb-6 flex items-center justify-center gap-3 border-b-4 border-green-200 pb-4"><MapIcon size={32} /> ZOO BLUEPRINT</h2>
+                        <div className="flex-1 relative bg-stone-300 rounded-3xl border-4 border-stone-500 shadow-inner overflow-auto">
+                                <div className="absolute inset-0 opacity-30 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/stone.png')]"></div>
+                                {unlockedAnimals.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-stone-600 text-xl font-bold gap-2"><Trees size={64} /><div>This park is empty! Go save some animals!</div></div>
+                                ) : (
+                                    <div className="relative mx-auto" style={{ width: `${MAP_COLS * CELL_PX}px`, height: `${MAP_ROWS * CELL_PX}px` }}>
+                                        {unlockedAnimals.map((data, i) => (
+                                            <div key={i} className="absolute bg-[#fcd34d] shadow-md flex items-center justify-center overflow-hidden"
+                                                style={{
+                                                    left: `${data.mapC * CELL_PX}px`, top: `${data.mapR * CELL_PX}px`,
+                                                    width: `${data.width * CELL_PX}px`, height: `${data.height * CELL_PX}px`,
+                                                    border: getMapFenceStyle(data.fence),
+                                                    backgroundColor: data.water ? '#60a5fa' : '#fcd34d'
+                                                }}
+                                            >
+                                                {data.savedDecor && data.savedDecor.map((d, idx) => (
+                                                    <div key={idx} className="absolute flex items-center justify-center text-[10px] pointer-events-none" style={{ left: `${(d.c / data.width) * 100}%`, top: `${(d.r / data.height) * 100}%`, width: `${(1/data.width)*100}%`, height: `${(1/data.height)*100}%` }}>{d.item}</div>
+                                                ))}
+                                                <div className="absolute bottom-0 w-full text-center bg-white/70 text-[8px] font-bold uppercase truncate px-1">{data.name}</div>
+                                                <div className="absolute text-xl animate-walk-mini" style={{ animationDuration: data.animDuration, animationDelay: data.animDelay }}>{data.animal}</div>
+                                            </div>
+                                        ))}
+                                        {mapVisitors.map((v) => (
+                                            <div key={v.id} className="absolute text-xl transition-all duration-75 linear" style={{ left: `${v.c * CELL_PX}px`, top: `${v.r * CELL_PX}px`, transform: `scaleX(${v.targetC > v.c ? -1 : 1})` }}>{v.type}</div>
+                                        ))}
+                                    </div>
+                                )}
+                        </div>
+                        <div className="mt-2 flex justify-between text-green-800 font-bold px-4 text-xs uppercase">
+                            <div>Visitors: {totalVisitors}</div>
+                            <div>Habitats: {unlockedAnimals.length} / {LEVELS.length}</div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // --- Reset Grid Function ---
+            const resetGrid = () => {
+                setSelectionStart(null);
+                setSelectionEnd(null);
+                setIsDragging(false);
+            };
+
+            const resetGame = () => {
+                try {
+                    localStorage.removeItem('zoo-builder-animals-v2');
+                    localStorage.removeItem('zoo-builder-visitors-v2');
+                } catch(e) {}
+                setCurrentLevelIndex(0);
+                setUnlockedAnimals([]);
+                setTotalVisitors(0);
+                setAttempts(0);
+                resetGrid();
+                setGameState('start');
+            };
+
+            const handleMouseDown = (row, col) => {
+                if (gameState !== 'playing' && gameState !== 'lose') return;
+                setIsDragging(true);
+                setSelectionStart({ row, col });
+                setSelectionEnd({ row, col });
+                createDust(row, col);
+            };
+
+            const handleMouseEnter = (row, col) => {
+                setHoverCell({ row, col });
+                if (isDragging) {
+                    setSelectionEnd({ row, col });
+                    if (Math.random() > 0.7) createDust(row, col);
+                }
+            };
+
+            const createDust = (row, col) => {
+                const id = Date.now() + Math.random();
+                const newParticle = { id, row, col, xOffset: Math.random() * 20 - 10, yOffset: Math.random() * 20 - 10 };
+                setDustParticles(prev => [...prev, newParticle]);
+                setTimeout(() => {
+                    setDustParticles(prev => prev.filter(p => p.id !== id));
+                }, 500);
+            };
+
+            const handleMouseUp = () => {
+                setIsDragging(false);
+            };
+
+            const clearSelection = () => {
+                setSelectionStart(null);
+                setSelectionEnd(null);
+            };
+
+            const getSelectionMetrics = () => {
+                if (!selectionStart || !selectionEnd) return { width: 0, height: 0, area: 0 };
+                const minRow = Math.min(selectionStart.row, selectionEnd.row);
+                const maxRow = Math.max(selectionStart.row, selectionEnd.row);
+                const minCol = Math.min(selectionStart.col, selectionEnd.col);
+                const maxCol = Math.max(selectionStart.col, selectionEnd.col);
+                const width = maxCol - minCol + 1;
+                const height = maxRow - minRow + 1;
+                return { width, height, area: width * height, minRow, maxRow, minCol, maxCol, centerRow: minRow + (height - 1) / 2, centerCol: minCol + (width - 1) / 2 };
+            };
+
+            const metrics = getSelectionMetrics();
+
+            // --- Balloon Logic ---
+            const handleBalloonClick = (e) => {
+                e.stopPropagation(); 
+                // Using clientX for fixed positioning is safest for iframe embeds
+                const x = e.clientX;
+                const y = e.clientY;
+                setExplosionPos({ top: y, left: x });
+                setBalloonPopped(true);
+                setShowExplosion(true);
+                setTimeout(() => setShowExplosion(false), 500);
+            };
+
+            // --- MAP PLACEMENT ALGORITHM ---
+            const findMapPosition = (w, h, currentAnimals) => {
+                const buffer = 2; // Spacing between cages
+                for (let r = 2; r < MAP_ROWS - h; r++) {
+                    for (let c = 2; c < MAP_COLS - w; c++) {
+                        let fits = true;
+                        for (const existing of currentAnimals) {
+                            if (r < existing.mapR + existing.height + buffer &&
+                                r + h + buffer > existing.mapR &&
+                                c < existing.mapC + existing.width + buffer &&
+                                c + w + buffer > existing.mapC) {
+                                fits = false;
+                                break;
+                            }
+                        }
+                        if (fits) return { r, c };
+                    }
+                }
+                return { r: 0, c: 0 }; 
+            };
+
+            const checkAnswer = () => {
+                setAttempts(prev => prev + 1);
+                let isValid = metrics.area === currentLevel.target;
+                let newFailureMsg = "WRONG AREA!"; 
+
+                if (!isValid) newFailureMsg = `AREA IS ${metrics.area}, NEED ${currentLevel.target}!`;
+
+                if (isValid && currentLevel.constraint) {
+                    const c = currentLevel.constraint;
+                    if (c.type === 'width' && metrics.width !== c.val) { isValid = false; newFailureMsg = `WIDTH MUST BE ${c.val}!`; }
+                    else if (c.type === 'height' && metrics.height !== c.val) { isValid = false; newFailureMsg = `HEIGHT MUST BE ${c.val}!`; }
+                    else if (c.type === 'square' && metrics.width !== metrics.height) { isValid = false; newFailureMsg = `MUST BE A SQUARE!`; }
+                }
+
+                if (isValid && currentLevel.bannedShape) {
+                    if ((metrics.width === currentLevel.bannedShape.w && metrics.height === currentLevel.bannedShape.h) || 
+                        (metrics.width === currentLevel.bannedShape.h && metrics.height === currentLevel.bannedShape.w)) {
+                        isValid = false; newFailureMsg = "I DON'T LIKE THAT SHAPE!";
+                    }
+                }
+
+                if (isValid) {
+                    setGameState('win');
+                    const generatedDecor = generateDecor(metrics.minRow, metrics.maxRow, metrics.minCol, metrics.maxCol);
+                    setGridDecor(generatedDecor); 
+
+                    setUnlockedAnimals(prev => {
+                        if (prev.find(a => a.id === currentLevel.id)) return prev;
+                        const animDuration = 3 + Math.random() * 4;
+                        const animDelay = Math.random() * 2;
+                        const pos = findMapPosition(metrics.width, metrics.height, prev);
+                        const savedDecor = generatedDecor.map(d => ({ r: d.r - metrics.minRow, c: d.c - metrics.minCol, item: d.item }));
+
+                        return [...prev, { 
+                            ...currentLevel, 
+                            width: metrics.width, height: metrics.height,
+                            mapR: pos.r, mapC: pos.c,
+                            animDuration: `${animDuration}s`, animDelay: `-${animDelay}s`,
+                            savedDecor: savedDecor
+                        }];
+                    });
+
+                    const newVisitors = Math.max(5, 20 - (attempts * 2));
+                    setTotalVisitors(prev => prev + newVisitors); 
+                    
+                    setShowHammers(true);
+                    setShowSoundEffect(currentLevel.sound);
+                    setTimeout(() => setShowHammers(false), 1000);
+                    setTimeout(() => setShowSoundEffect(null), 2000);
+                } else {
+                    setFailureMessage(newFailureMsg);
+                    setGameState('lose');
+                    setBalloonPopped(false); 
+                    setShowExplosion(false);
+                    setExplosionPos(null);
+                    setWanderPos({ x: 10, y: 90, facingRight: true }); 
+                }
+            };
+
+            const generateDecor = (minR, maxR, minC, maxC) => {
+                const newDecor = [];
+                const items = currentLevel.water ? ['🌊', '🫧', '🐟', '🪸'] : ['🪨', '🌻', '🌿', '🪵', '💧'];
+                for (let r = minR; r <= maxR; r++) {
+                    for (let c = minC; c <= maxC; c++) {
+                        const distToCenter = Math.sqrt(Math.pow(r - metrics.centerRow, 2) + Math.pow(c - metrics.centerCol, 2));
+                        if (Math.random() > 0.85 && distToCenter > 1.5) {
+                            newDecor.push({ r, c, item: items[Math.floor(Math.random() * items.length)] });
+                        }
+                    }
+                }
+                return newDecor;
+            };
+
+            const startLevelIntro = () => {
+                setAttempts(0);
+                setGridDecor([]);
+                resetGrid();
+                setGameState('intro');
+                setCrateDrop(true);
+                setTimeout(() => {
+                    setCrateDrop(false);
+                    setGameState('playing');
+                }, 1500);
+            };
+
+            const nextLevel = () => {
+                if (currentLevelIndex + 1 < LEVELS.length) {
+                    setCurrentLevelIndex(prev => prev + 1);
+                    startLevelIntro();
+                } else {
+                    setGameState('gameover');
+                }
+            };
+
+            // --- Effects ---
+            useEffect(() => {
+                if (gameState === 'win') {
+                    setWanderPos({ x: 50, y: 50, facingRight: true });
+                    const wander = () => {
+                        setWanderPos(prev => {
+                            const newX = Math.random() * 80 + 10;
+                            const newY = Math.random() * 80 + 10;
+                            return { x: newX, y: newY, facingRight: newX > prev.x };
+                        });
+                    };
+                    const interval = setInterval(wander, 3000);
+                    const initialTimeout = setTimeout(wander, 100);
+                    return () => { clearInterval(interval); clearTimeout(initialTimeout); };
+                }
+            }, [gameState]);
+
+            useEffect(() => {
+                if (gameState === 'win') {
+                    const topInterval = setInterval(() => {
+                        if (Math.random() > 0.4) {
+                            setTopVisitorState('admiring');
+                            setTimeout(() => setTopVisitorState('walking'), 2000);
+                        }
+                    }, 3500);
+                    const bottomInterval = setInterval(() => {
+                        if (Math.random() > 0.4) {
+                            setBottomVisitorState('admiring');
+                            setTimeout(() => setBottomVisitorState('walking'), 2000);
+                        }
+                    }, 4200);
+                    return () => { clearInterval(topInterval); clearInterval(bottomInterval); };
+                } else {
+                    setTopVisitorState('walking');
+                    setBottomVisitorState('walking');
+                }
+            }, [gameState]);
+
+            const Cell = ({ row, col }) => {
+                const isTop = row === metrics.minRow;
+                const isBottom = row === metrics.maxRow;
+                const isLeft = col === metrics.minCol;
+                const isRight = col === metrics.maxCol;
+                const isSelected = metrics.area > 0 && row >= metrics.minRow && row <= metrics.maxRow && col >= metrics.minCol && col <= metrics.maxCol;
+                const isEven = (row + col) % 2 === 0;
+                let cellClass = `${isEven ? 'bg-[#a3e635]' : 'bg-[#84cc16]'} border border-green-800/10 w-full h-full select-none transition-colors duration-300 relative`;
+                const style = {};
+                
+                if (isSelected) {
+                    if (currentLevel.water) { cellClass = isEven ? 'bg-blue-400' : 'bg-blue-500'; } 
+                    else { cellClass = 'bg-[#fcd34d]'; }
+                    const fenceColor = gameState === 'lose' ? '#ef4444' : '#78350f'; 
+                    const fenceType = gameState === 'lose' ? 'wood' : currentLevel.fence; 
+                    if (isTop) style.borderTop = getFenceStyle(fenceType, 'top', fenceColor);
+                    if (isBottom) style.borderBottom = getFenceStyle(fenceType, 'bottom', fenceColor);
+                    if (isLeft) style.borderLeft = getFenceStyle(fenceType, 'left', fenceColor);
+                    if (isRight) style.borderRight = getFenceStyle(fenceType, 'right', fenceColor);
+                }
+
+                return (
+                    <div className={cellClass} style={style} onMouseDown={() => handleMouseDown(row, col)} onMouseEnter={() => handleMouseEnter(row, col)} onMouseUp={handleMouseUp}>
+                        {isSelected && currentLevel.water && Math.random() > 0.8 && <div className="absolute inset-0 flex items-center justify-center text-xs animate-pulse opacity-50">🫧</div>}
+                        {showHammers && isSelected && (isTop || isBottom || isLeft || isRight) && <div className="absolute -top-3 -left-3 text-lg animate-ping z-50">🔨</div>}
+                        {dustParticles.map(p => p.row === row && p.col === col && (
+                            <div key={p.id} className="absolute w-2 h-2 bg-[#d6d3d1] rounded-full animate-ping pointer-events-none" style={{ left: '50%', top: '50%', transform: `translate(${p.xOffset}px, ${p.yOffset}px)` }} />
+                        ))}
+                    </div>
+                );
+            };
+
+            // --- MAIN RENDER ---
+            if (gameState === 'start') {
+                return (
+                    <div className="flex flex-col items-center justify-center min-h-screen bg-[#14532d] font-sans p-4 bg-pattern relative overflow-hidden">
+                        <div className="absolute inset-0 pointer-events-none opacity-20">
+                            {unlockedAnimals.map((data, i) => (
+                                <div key={i} className="absolute text-4xl bg-white/20 p-2 rounded-full" style={{ left: `${10 + (i * 25) % 80}%`, top: `${10 + Math.floor(i / 4) * 20}%` }}>{data.animal}</div>
+                            ))}
+                        </div>
+                        <div className="bg-[#f0fdf4] p-2 rounded-[2rem] shadow-2xl max-w-lg w-full transform -rotate-1 z-10">
+                            <div className="bg-gradient-to-b from-green-600 to-green-800 rounded-[1.5rem] p-8 text-center border-4 border-[#dcfce7] border-dashed">
+                                <div className="mb-6 relative">
+                                    <div className="text-7xl mb-2 filter drop-shadow-lg">🦁🦒</div>
+                                    <h1 className="text-5xl font-black text-[#f0fdf4] tracking-tighter drop-shadow-md transform -rotate-2">ZOO</h1>
+                                    <h1 className="text-4xl font-black text-yellow-400 tracking-widest drop-shadow-md">DESIGNER</h1>
+                                </div>
+                                {unlockedAnimals.length > 0 && (
+                                    <div className="mb-4 text-green-100 font-bold flex flex-col gap-1">
+                                        <span>Animals Saved: {unlockedAnimals.length}</span>
+                                        <span className="text-yellow-300 text-sm">Total Visitors: {totalVisitors}</span>
+                                    </div>
+                                )}
+                                <button onClick={() => startLevelIntro()} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 text-3xl font-black py-4 rounded-xl shadow-[0_4px_0_rgb(161,98,7)] transform transition active:translate-y-1 active:shadow-none flex items-center justify-center gap-3 border-b-4 border-yellow-700">
+                                    <Play size={32} fill="currentColor" /> {unlockedAnimals.length > 0 ? "CONTINUE" : "PLAY GAME"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameState === 'gameover') {
+                return (
+                    <div className="flex flex-col items-center justify-center min-h-screen bg-[#14532d] font-sans p-4 bg-pattern relative">
+                        {showMap && renderMap()}
+                        <div className="bg-white p-8 rounded-3xl shadow-xl border-b-8 border-green-700 max-w-lg w-full text-center animate-bounce-slow">
+                            <Trophy size={64} className="text-yellow-400 mx-auto mb-4" />
+                            <h1 className="text-4xl font-black text-green-700 mb-2">MASTER ARCHITECT!</h1>
+                            <p className="text-slate-600 mb-8 text-lg">You built exhibits for all {LEVELS.length} animals!</p>
+                            <div className="flex gap-4">
+                                <button onClick={() => setShowMap(true)} className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-4 rounded-xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2"><MapIcon size={24} /> View Map</button>
+                                <button onClick={resetGame} className="flex-1 bg-green-600 hover:bg-green-500 text-white text-xl font-bold py-4 rounded-xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2"><RotateCcw size={24} /> Reset Zoo</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className={`relative min-h-screen h-full flex flex-col items-center justify-center p-4 font-sans bg-pattern transition-colors duration-500 ${currentLevel.bg} overflow-hidden`} onMouseUp={handleMouseUp}>
+                    {showMap && renderMap()}
+                    {showSoundEffect && <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[70] pointer-events-none animate-ping text-9xl font-black text-white drop-shadow-[0_10px_10px_rgba(0,0,0,1)] stroke-black" style={{ WebkitTextStroke: '4px black' }}>{showSoundEffect}</div>}
+                    {gameState === 'lose' && <div className="absolute inset-0 pointer-events-none z-[5] bg-red-500/20 animate-pulse mix-blend-overlay"></div>}
+                    {gameState === 'win' && (
+                        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-50 animate-bounce-in pointer-events-none">
+                            <div className="bg-white/95 backdrop-blur rounded-2xl p-6 shadow-2xl border-4 border-green-500 text-center w-80">
+                                <h2 className="text-3xl font-black text-green-600 mb-2">Good Job!</h2>
+                                <div className="bg-green-50 p-3 rounded-lg border border-green-200 mb-4">
+                                    <div className="text-xs uppercase font-bold text-green-700 mb-1">Did You Know?</div>
+                                    <p className="text-sm text-green-900 leading-tight italic">"{currentLevel.fact}"</p>
+                                </div>
+                                <div className="pointer-events-auto"><button onClick={nextLevel} className="w-full bg-green-500 hover:bg-green-600 text-white text-xl font-bold px-8 py-3 rounded-xl shadow-lg border-b-4 border-green-700 active:translate-y-1 active:shadow-none transition-all">CONTINUE</button></div>
+                            </div>
+                        </div>
+                    )}
+                    <div className="w-full max-w-5xl flex items-center justify-between mb-4 bg-[#f0fdf4] p-3 rounded-full shadow-lg border-4 border-green-600/30 z-10">
+                        <div className="flex items-center gap-4 px-2">
+                            <div className="bg-green-800 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-sm">{currentLevelIndex + 1}</div>
+                            <h2 className="text-lg font-bold text-green-800 hidden sm:block">Zoo Architect <span className="text-green-600 font-normal">| {currentLevel.name}</span></h2>
+                        </div>
+                        <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full border border-slate-200"><User size={16} className="text-blue-500" /><span className="font-bold text-slate-600">{totalVisitors}</span></div>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setShowMap(true)} className="p-2 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-full flex items-center gap-1 font-bold text-sm bg-green-50 border border-green-200 shadow-sm transition-transform active:scale-95"><MapIcon size={20} /> <span className="hidden sm:inline">MAP</span></button>
+                            <button onClick={() => setGameState('start')} className="p-2 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-full"><RotateCcw size={20} /></button>
+                        </div>
+                    </div>
+                    <div className="relative z-10 flex flex-col md:flex-row items-stretch gap-6 w-full max-w-5xl">
+                        <div className="relative bg-[#dcfce7] p-4 pt-8 pb-0 rounded-[2rem] shadow-2xl border-8 border-[#86efac] flex-1 flex flex-col items-center overflow-hidden">
+                            <Trees className="absolute top-4 left-4 text-green-700 opacity-80" size={48} />
+                            <Trees className="absolute top-4 right-4 text-green-700 opacity-80" size={48} />
+                            {gameState === 'lose' && !balloonPopped && <div onClick={handleBalloonClick} className="absolute bottom-0 left-1/4 text-4xl animate-float-up z-[60] cursor-pointer hover:scale-125 transition-transform" title="Pop me!">🎈</div>}
+                            {showExplosion && explosionPos && <div className="fixed text-4xl animate-ping z-[100]" style={{ top: explosionPos.top, left: explosionPos.left }}>💥</div>}
+                            <div className="bg-[#14532d] p-0 rounded-none shadow-2xl ring-4 ring-[#14532d]/20 relative z-20">
+                                <div className="absolute -top-6 left-0 w-full flex justify-between px-2 text-green-900 font-mono text-xs font-bold">{[1,2,3,4,5,6,7,8,9,10].map(n => <span key={n}>{n}</span>)}</div>
+                                <div className="absolute top-0 -left-6 h-full flex flex-col justify-between py-2 text-green-900 font-mono text-xs font-bold">{[1,2,3,4,5,6,7,8,9,10].map(n => <span key={n}>{n}</span>)}</div>
+                                {gameState === 'win' && gridDecor.map((d, i) => <div key={i} className="absolute flex items-center justify-center text-xl z-30 animate-in zoom-in duration-300" style={{ left: `${d.c * 10}%`, top: `${d.r * 10}%`, width: '10%', height: '10%', pointerEvents: 'none' }}>{d.item}</div>)}
+                                {gameState === 'win' && (
+                                    <div className="absolute z-40" style={{ left: `calc(${metrics.minCol * 10}% + 2px)`, top: `calc(${metrics.minRow * 10}% + 2px)`, width: `calc(${metrics.width * 10}% - 4px)`, height: `calc(${metrics.height * 10}% - 4px)`, pointerEvents: 'none' }}>
+                                        <div className="text-6xl filter drop-shadow-md transition-[top,left] duration-[3000ms] ease-in-out absolute" style={{ left: `${wanderPos.x}%`, top: `${wanderPos.y}%`, transform: `translate(-50%, -50%) scaleX(${wanderPos.facingRight ? -1 : 1})` }}>{currentLevel.animal}</div>
+                                    </div>
+                                )}
+                                {gameState === 'lose' && <div className="absolute z-50 text-6xl animate-chaos pointer-events-none left-0 top-0">{currentLevel.animal}</div>}
+                                <div className="grid gap-0 bg-[#14532d] cursor-crosshair select-none relative" style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`, width: '400px', height: '400px' }}>
+                                    {Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, i) => { const row = Math.floor(i / GRID_SIZE); const col = i % GRID_SIZE; return <Cell key={i} row={row} col={col} />; })}
+                                </div>
+                            </div>
+                            <div className="w-[440px] h-24 bg-[#fde047] relative overflow-hidden z-10 border-t-4 border-[#ca8a04]">
+                                <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/sand.png')]"></div>
+                                {gameState === 'lose' && (
+                                    <div className="absolute inset-0 w-full h-full flex items-center pointer-events-none">
+                                        <div className="absolute top-2 animate-run-right w-full text-5xl" style={{ transform: 'scaleX(-1)' }}>🏃‍♂️</div>
+                                        <div className="absolute bottom-2 animate-run-left w-full text-5xl">🏃‍♀️</div>
+                                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white text-xs px-4 py-2 rounded-full font-black shadow-lg animate-pulse whitespace-nowrap z-30 border-2 border-red-800">{failureMessage}</div>
+                                    </div>
+                                )}
+                                {(gameState === 'playing' || gameState === 'win') && gameVisitors.map((v, i) => (
+                                    <div key={v.id} className={`absolute text-5xl opacity-60 ${v.top ? 'top-4' : 'bottom-2'} ${v.top ? 'animate-walk-right' : 'animate-walk-left'}`} style={{ animationDuration: `${v.duration}s`, animationDelay: `-${v.delay}s`, transform: v.top ? 'scaleX(-1)' : 'scaleX(1)' }}>{v.type}</div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="w-full md:w-64 bg-white/90 p-6 rounded-[2rem] shadow-xl backdrop-blur-sm flex flex-col justify-between items-center border-4 border-white">
+                            <div className="w-full flex flex-col items-center text-center space-y-6">
+                                <div className="relative group cursor-help">
+                                    <div className="w-28 h-28 bg-[#fef3c7] rounded-full flex items-center justify-center text-6xl shadow-inner border-4 border-[#fbbf24] transition-transform group-hover:scale-105 relative overflow-hidden">
+                                        {!crateDrop && currentLevel.animal}
+                                        {crateDrop && <div className="absolute inset-0 flex items-center justify-center animate-drop-crate text-6xl z-50">📦</div>}
+                                    </div>
+                                    <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity -bottom-16 bg-black/80 text-white text-xs p-2 rounded-lg w-40 z-50 pointer-events-none">{currentLevel.hint}</div>
+                                </div>
+                                <div className="w-full bg-slate-50 rounded-xl p-4 border-2 border-slate-100 relative" style={{ minHeight: '100px' }}>
+                                    <div className="text-xs uppercase font-bold text-slate-400 mb-1">Goal Area</div>
+                                    <div className="text-4xl font-black text-slate-800">{currentLevel.target}</div>
+                                    {currentLevel.constraint && <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm animate-pulse">RULE!</div>}
+                                    {currentLevel.constraint && <div className="mt-2 w-full bg-amber-50 rounded-lg p-2 border-2 border-amber-200 animate-in slide-in-from-bottom fade-in duration-300"><div className="flex items-center justify-center gap-1 text-amber-700 font-bold text-[10px] uppercase mb-0.5"><AlertTriangle size={10} /> Requirement</div><div className="text-xs font-black text-amber-900 leading-tight">{currentLevel.constraint.desc}</div></div>}
+                                </div>
+                                <div className="w-full bg-white rounded-xl p-4 border-2 border-slate-100 shadow-sm relative">
+                                    {attempts > 0 && <div className="absolute top-2 right-2 text-[10px] text-slate-400 font-bold">Try #{attempts + 1}</div>}
+                                    <div className="text-xs uppercase font-bold text-slate-400 mb-1">Selection</div>
+                                    <div className={`text-3xl font-black ${metrics.area === 0 ? 'text-slate-300' : 'text-green-600'}`}>{metrics.area > 0 ? `${metrics.width} × ${metrics.height}` : "0 × 0"}</div>
+                                </div>
+                            </div>
+                            <div className="w-full mt-6 space-y-2">
+                                <div className="text-center text-xs text-slate-400 font-medium">{metrics.area === 0 ? "Drag grid to measure" : "Ready to check?"}</div>
+                                {metrics.area > 0 && <button onClick={clearSelection} className="w-full text-slate-400 text-xs hover:text-red-500 hover:underline flex items-center justify-center gap-1"><XCircle size={12} /> Clear Selection</button>}
+                                <button onClick={checkAnswer} disabled={metrics.area === 0} className={`w-full py-4 rounded-xl font-black text-xl shadow-[0_4px_0_rgb(0,0,0,0.2)] transition-all transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 ${metrics.area === 0 ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : `${currentLevel.button} text-white border-b-4 border-black/20`}`}><Check size={28} strokeWidth={3} /> BUILD</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ZooBuilder />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pet Shop Math</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    /* 1. General Styles */
+    body {
+        font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+        background: repeating-linear-gradient(
+          45deg,
+          #e0f7fa,
+          #e0f7fa 20px,
+          #b2ebf2 20px,
+          #b2ebf2 40px
+        );
+        text-align: center;
+        margin: 0;
+        padding: 0;
+        user-select: none; 
+        touch-action: manipulation;
+        height: 100vh;
+        overflow: hidden; 
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* 2. Screens */
+    .screen { 
+        display: none; 
+        flex-direction: column; 
+        align-items: center; 
+        width: 100%;
+        height: 100%;
+        padding: 1rem;
+        box-sizing: border-box;
+        overflow-y: auto; 
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    #start-screen { 
+        display: flex; 
+        justify-content: center; 
+        z-index: 50;
+    }
+    
+    #game-screen { 
+        justify-content: flex-start; 
+        position: relative; 
+    }
+
+    #certificate-screen {
+        justify-content: center;
+        z-index: 100;
+        background: rgba(255, 255, 255, 0.95);
+    }
+
+    /* 3. Buttons */
+    .btn {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        border-radius: 15px;
+        margin: 10px;
+        cursor: pointer;
+        box-shadow: 0 4px #2E7D32;
+        transition: transform 0.1s;
+        font-family: inherit;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .btn:active { transform: translateY(4px); box-shadow: 0 0 #2E7D32; }
+    
+    .btn-mode { 
+        font-size: 1.2rem; 
+        width: 100%; 
+        display: block; 
+        margin-bottom: 15px;
+        padding: 15px;
+        text-align: left;
+        position: relative;
+        border-radius: 20px;
+        border: 2px solid rgba(255,255,255,0.5);
+    }
+    
+    .btn-clear { background: #ef5350; box-shadow: 0 4px #b71c1c; font-size: 0.9rem; padding: 10px 15px; flex: 1; }
+    .btn-undo { background: #FF9800; box-shadow: 0 4px #E65100; font-size: 0.9rem; padding: 10px 15px; flex: 1; }
+
+    .btn-buy { 
+        background: #2196F3; 
+        box-shadow: 0 4px #0d47a1;
+        color: white;
+        font-size: 1.4rem; 
+        padding: 15px 30px;
+        pointer-events: all;
+        transition: all 0.3s ease;
+        flex: 2;
+        position: relative;
+        overflow: hidden;
+    }
+    .btn-buy:active { transform: scale(0.98); box-shadow: 0 2px #0d47a1; }
+    .btn-buy::after {
+        content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        animation: shine 3s infinite;
+    }
+    @keyframes shine { 0% {left: -100%;} 20% {left: 100%;} 100% {left: 100%;} }
+
+    /* Mute Button */
+    .mute-btn {
+        background: white; border: 2px solid #ccc; border-radius: 50%;
+        width: 40px; height: 40px; display: flex; justify-content: center;
+        align-items: center; cursor: pointer; font-size: 1.2rem;
+    }
+
+    /* 4. Glass Panel for Menu */
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(5px);
+        padding: 2rem;
+        border-radius: 30px;
+        border: 4px solid white;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        max-width: 500px;
+        width: 95%;
+        margin: 20px auto;
+    }
+
+    /* Title Letters */
+    .title-letter {
+        display: inline-block;
+        transition: color 0.2s, transform 0.2s;
+        cursor: pointer;
+        color: #1e3a8a; /* blue-900 */
+    }
+    .title-letter:hover, .title-letter.active {
+        transform: translateY(-15px) scale(1.2);
+    }
+
+    /* 5. Game Areas */
+    .pet-display {
+        background: white;
+        border: 4px solid #4DB6AC;
+        border-radius: 20px;
+        padding: 10px 20px;
+        margin-bottom: 5px;
+        width: 100%;
+        max-width: 450px;
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        overflow: visible; 
+        flex-shrink: 0;
+        z-index: 40; /* Above tray */
+    }
+    
+    /* THE SHOPKEEPER OWL */
+    .owl-container {
+        position: absolute;
+        top: -50px;
+        right: -10px;
+        width: 80px;
+        height: 80px;
+        z-index: 20;
+        transition: transform 0.2s;
+    }
+    .owl-container.happy { transform: translateY(-10px) scale(1.1); }
+    .owl-container.confused { transform: rotate(-15deg); }
+
+    /* SVG PETS */
+    .pet-svg-container {
+        width: 100px;
+        height: 100px;
+        filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.2));
+        transition: transform 0.3s;
+    }
+    .pet-svg-container.hatch { animation: hatch 1s forwards; }
+    
+    @keyframes hatch {
+        0% { transform: scale(1) rotate(0); }
+        25% { transform: scale(1.1) rotate(10deg); }
+        50% { transform: scale(1.1) rotate(-10deg); }
+        75% { transform: scale(1.2) rotate(5deg); }
+        100% { transform: scale(1.5) rotate(0); opacity: 0; }
+    }
+    
+    .price-tag-container { display: flex; flex-direction: column; align-items: center; position: relative; }
+    
+    .price-tag { 
+        font-size: 2.2rem; 
+        color: #d32f2f; 
+        font-weight: bold; 
+        background: #ffecb3; 
+        padding: 5px 20px; 
+        border-radius: 10px; 
+        border: 3px solid #ffca28;
+        transform-origin: top center;
+        animation: swing 3s ease-in-out infinite;
+    }
+    @keyframes swing { 0% { transform: rotate(0deg); } 50% { transform: rotate(3deg); } 100% { transform: rotate(0deg); } }
+
+    /* Hint Bubble */
+    .hint-bubble {
+        position: absolute; bottom: -45px; left: 50%; transform: translateX(-50%);
+        background: #333; color: white; padding: 5px 10px; border-radius: 10px;
+        font-size: 0.9rem; white-space: nowrap; opacity: 0; transition: opacity 0.3s;
+        pointer-events: none; z-index: 50;
+    }
+    .hint-bubble.show { opacity: 1; bottom: -55px; }
+
+    /* The Tray (Cash Register Drawer) */
+    .tray-housing {
+        width: 100%;
+        max-width: 520px;
+        height: 190px;
+        margin: 10px 0;
+        position: relative;
+        background: #37474F; /* Dark housing */
+        border-radius: 15px;
+        padding: 5px;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        z-index: 10;
+        overflow: hidden; /* Hide drawer when closed */
+        flex-shrink: 0;
+    }
+
+    .tray-area {
+        background: #ECEFF1;
+        border-radius: 10px;
+        width: 100%; 
+        height: 100%;
+        border: 4px dashed #90A4AE;
+        position: relative;
+        transition: transform 0.5s cubic-bezier(0.4, 0.0, 0.2, 1), background 0.2s;
+        overflow: hidden; /* Keep coins inside */
+    }
+    
+    .tray-area.highlight {
+        background: rgba(200, 230, 201, 1);
+        border-color: #4CAF50;
+    }
+    
+    /* Register Animation Class */
+    .tray-area.closed {
+        transform: translateY(-100%); /* Slide UP into housing */
+    }
+
+    .total-label {
+        position: absolute; 
+        top: 0; 
+        left: 0;
+        background: #37474F; 
+        color: white; 
+        padding: 5px 15px;
+        border-bottom-right-radius: 15px; 
+        font-size: 1rem; 
+        font-weight: bold;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.2); 
+        z-index: 20;
+    }
+
+    /* The Bank */
+    .coin-bank {
+        display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;
+        margin-top: 5px; padding: 10px; background: rgba(255,255,255,0.9);
+        border-radius: 20px; box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+        width: 100%; max-width: 600px; position: relative; z-index: 30;
+        flex-shrink: 0;
+    }
+
+    /* Coins */
+    .coin {
+        border-radius: 50%; display: flex; justify-content: center; align-items: center;
+        font-weight: bold; 
+        box-shadow: 3px 3px 6px rgba(0,0,0,0.4); 
+        cursor: pointer; touch-action: none; user-select: none;
+        position: relative; z-index: 10; font-family: Arial, sans-serif;
+        overflow: hidden;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 100% 100%; /* Ensures full coin is visible */
+        background-color: rgba(200,200,200,0.5); /* Fallback color so never invisible */
+    }
+    .coin:active { transform: scale(0.95); }
+    
+    /* Coin Glint Animation */
+    .coin::after {
+        content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+        background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+        transform: rotate(30deg) translate(-120%, 0);
+        animation: glint 4s infinite;
+        pointer-events: none;
+    }
+    @keyframes glint {
+        0%, 80% { transform: rotate(30deg) translate(-120%, 0); }
+        90% { transform: rotate(30deg) translate(120%, 0); }
+        100% { transform: rotate(30deg) translate(120%, 0); }
+    }
+
+    /* Physics coins */
+    .tray-area .coin {
+        position: absolute;
+        transition: transform 0.5s ease-out, top 0.5s, left 0.5s;
+    }
+
+    /* REAL IMAGES - FIXED LINKS */
+    .penny { 
+        width: 60px; height: 60px; 
+        background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/US_One_Cent_Obv.png/240px-US_One_Cent_Obv.png');
+    }
+    
+    .nickel { 
+        width: 70px; height: 70px; 
+        /* Swapped to a reliable 2013 file */
+        background-image: url('https://upload.wikimedia.org/wikipedia/commons/7/72/Jefferson-Nickel-Unc-Obv.jpg');
+    }
+    
+    .dime { 
+        width: 50px; height: 50px; 
+        /* Standard Roosevelt Dime */
+        background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Dime_Obverse_13.png/240px-Dime_Obverse_13.png');
+    }
+    
+    .quarter { 
+        width: 85px; height: 85px; 
+        background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/2006_Quarter_Proof.png/240px-2006_Quarter_Proof.png');
+    }
+
+    /* Pet Park */
+    .shelf {
+        margin-top: 10px; width: 100%;
+        background: linear-gradient(to bottom, #81C784 0%, #66BB6A 100%);
+        border-top: 8px solid #388E3C;
+        padding: 10px; display: flex; justify-content: center; flex-wrap: wrap; align-items: flex-end;
+        min-height: 120px;
+        box-shadow: inset 0 10px 20px rgba(0,0,0,0.2);
+        position: relative;
+        flex-shrink: 0;
+        margin-bottom: 20px;
+    }
+    .shelf::before { content: '🌷 🌻 🌷'; position: absolute; bottom: 5px; right: 10px; font-size: 1.5rem; opacity: 0.8; }
+    
+    .collected-pet-item { 
+        width: 50px; height: 50px; margin: 0 5px; 
+        filter: drop-shadow(0px 5px 2px rgba(0,0,0,0.3)); 
+        animation: hop 1s infinite alternate ease-in-out; 
+        transform-origin: bottom center; 
+    }
+    
+    @keyframes hop { 0% { transform: translateY(0); } 100% { transform: translateY(-3px); } }
+    @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    .shake { animation: shake 0.4s; }
+    @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-10px); } 50% { transform: translateX(10px); } 75% { transform: translateX(-10px); } 100% { transform: translateX(0); } }
+    .confetti { position: fixed; width: 12px; height: 12px; background-color: #f00; animation: fall 3s linear forwards; z-index: 100; border-radius: 2px; }
+    @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
+
+    /* Float Animation for Menu Emojis */
+    .float-emoji { animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+</style>
+</head>
+<body>
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="screen">
+        <div class="glass-panel">
+            <h1 id="main-title" class="text-6xl mb-2 font-black text-blue-800 drop-shadow-sm select-none">
+                <!-- JS will inject spans here -->
+            </h1>
+            <p class="text-xl text-blue-600 mb-6 font-bold">Math Game</p>
+            
+            <!-- Owl Greeting -->
+            <div class="mb-6 flex justify-center">
+                 <svg viewBox="0 0 100 100" width="80" height="80">
+                    <circle cx="50" cy="50" r="45" fill="#795548" />
+                    <circle cx="50" cy="45" r="35" fill="#A1887F" />
+                    <circle cx="35" cy="40" r="12" fill="white" stroke="#3E2723" stroke-width="2"/>
+                    <circle cx="65" cy="40" r="12" fill="white" stroke="#3E2723" stroke-width="2"/>
+                    <circle cx="35" cy="40" r="4" fill="black" />
+                    <circle cx="65" cy="40" r="4" fill="black" />
+                    <polygon points="50,55 45,45 55,45" fill="#FFC107" />
+                    <path d="M10,50 Q20,80 40,70" fill="#5D4037" />
+                    <path d="M90,50 Q80,80 60,70" fill="#5D4037" />
+                </svg>
+            </div>
+
+            <button class="btn btn-mode" onclick="startGame('easy')">
+                <span class="block text-xl font-black">Easy Mode</span>
+                <span class="block text-sm opacity-90 mt-1">Prices up to 25¢</span>
+                <div class="flex mt-1 gap-1 opacity-80 scale-75 origin-left">
+                    <div class="w-6 h-6 rounded-full bg-yellow-700"></div>
+                    <div class="w-8 h-8 rounded-full bg-gray-400"></div>
+                </div>
+            </button>
+            
+            <button class="btn btn-mode" style="background-color: #009688;" onclick="startGame('medium')">
+                <span class="block text-xl font-black">Medium Mode</span>
+                <span class="block text-sm opacity-90 mt-1">Prices up to $1.00</span>
+                <span class="block text-xs opacity-90 font-bold text-teal-100">(No Quarters)</span>
+            </button>
+
+            <button class="btn btn-mode" style="background-color: #E91E63;" onclick="startGame('hard')">
+                <span class="block text-xl font-black">Hard Mode</span>
+                <span class="block text-sm opacity-90 mt-1">Prices up to $3.00</span>
+                <div class="flex mt-1 gap-1 items-center">
+                    <span class="text-xs font-bold text-pink-100 mr-2">Adds Quarters!</span>
+                    <div class="w-8 h-8 rounded-full border-2 border-dashed border-white bg-gray-300 opacity-80"></div>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- CERTIFICATE SCREEN -->
+    <div id="certificate-screen" class="screen">
+        <div class="bg-white p-8 rounded-xl shadow-2xl border-8 border-yellow-400 max-w-lg w-full mt-4 mb-4">
+            <h1 class="text-4xl text-yellow-600 font-bold mb-4">🏆 Certificate 🏆</h1>
+            <p class="text-xl text-gray-700">This certifies that</p>
+            <div class="w-48 border-b-2 border-black h-8 mb-4 mx-auto"></div>
+            <p class="text-xl mb-4 text-gray-700">is a Master Pet Adopter!</p>
+            
+            <div class="bg-blue-50 p-4 rounded-xl mb-6 w-full">
+                <p class="text-sm text-gray-500 mb-2 font-bold">PETS ADOPTED:</p>
+                <div id="final-collection" class="flex flex-wrap justify-center gap-2"></div>
+            </div>
+            
+            <!-- Tricky Numbers Report -->
+            <div id="report-card" class="bg-red-50 p-4 rounded-xl mb-6 w-full hidden border border-red-200">
+                <p class="text-sm text-red-500 font-bold mb-2">Tricky Prices to Practice:</p>
+                <div id="tricky-list" class="flex flex-wrap justify-center gap-2 text-red-800 font-mono text-lg"></div>
+            </div>
+
+            <button onclick="resetGame()" class="btn w-full" style="background-color: #2196F3;">Play Again</button>
+        </div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="screen">
+        <!-- Top Bar -->
+        <div class="w-full flex justify-between items-center mb-2 px-2 max-w-2xl mt-2">
+            <button onclick="goHome()" class="text-sm bg-white border-2 border-gray-300 text-gray-700 px-4 py-2 rounded-xl font-bold hover:bg-gray-100 shadow-sm">⬅ MENU</button>
+            
+            <div class="text-gray-500 text-sm font-bold bg-white px-3 py-1 rounded-full opacity-70 border border-gray-200">
+                Pets: <span id="pet-count">0</span>/10
+            </div>
+
+            <button id="mute-btn" class="mute-btn" onclick="toggleMute()">🔊</button>
+        </div>
+
+        <!-- The Item to Buy -->
+        <div class="pet-display">
+            <!-- THE SHOPKEEPER OWL SVG -->
+            <div id="owl" class="owl-container">
+                <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="#795548" />
+                    <circle cx="50" cy="45" r="35" fill="#A1887F" />
+                    <!-- Eyes -->
+                    <circle cx="35" cy="40" r="12" fill="white" stroke="#3E2723" stroke-width="2"/>
+                    <circle cx="65" cy="40" r="12" fill="white" stroke="#3E2723" stroke-width="2"/>
+                    <circle id="eye-l" cx="35" cy="40" r="4" fill="black" />
+                    <circle id="eye-r" cx="65" cy="40" r="4" fill="black" />
+                    <!-- Beak -->
+                    <polygon points="50,55 45,45 55,45" fill="#FFC107" />
+                    <!-- Wings -->
+                    <path d="M10,50 Q20,80 40,70" fill="#5D4037" />
+                    <path d="M90,50 Q80,80 60,70" fill="#5D4037" />
+                </svg>
+            </div>
+
+            <!-- DYNAMIC PET SVG CONTAINER -->
+            <div id="target-pet" class="pet-svg-container">
+                <!-- SVG inserted by JS -->
+            </div>
+
+            <div class="price-tag-container">
+                <span class="text-xs text-gray-500 font-bold mb-1 tracking-widest">PRICE</span>
+                <span id="target-price" class="price-tag">12¢</span>
+                <div id="hint-bubble" class="hint-bubble">Try adding more!</div>
+            </div>
+        </div>
+
+        <!-- The Tray (Cash Register Drawer) -->
+        <div class="tray-housing">
+            <div class="tray-area" id="tray">
+                <div id="total-badge" class="total-label">YOUR TRAY</div>
+                <p id="tray-hint" class="text-gray-400 text-sm w-full absolute bottom-2 text-center pointer-events-none font-bold opacity-60">DRAG COINS HERE</p>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-2 mb-2 w-full max-w-xl px-2">
+            <button id="btn-undo" class="btn btn-undo" onclick="undoCoin()">Undo</button>
+            <button id="btn-clear" class="btn btn-clear" onclick="clearTray()">Clear All</button>
+            <button id="btn-buy" class="btn btn-buy" onclick="checkWin()">BUY!</button>
+        </div>
+
+        <!-- The Bank -->
+        <div class="coin-bank">
+            <div id="bank-coins" class="flex justify-center gap-4 flex-wrap items-end">
+                <!-- Coins generated by JS -->
+            </div>
+        </div>
+
+        <!-- Collection Shelf (Pet Park) -->
+        <div class="shelf">
+            <div class="w-full text-center mb-1 absolute top-0">
+                <span class="bg-green-800 text-green-100 px-3 py-1 rounded-b-lg text-xs font-bold shadow-md">MY PET PARK</span>
+            </div>
+            <div id="collection" class="flex justify-center w-full flex-wrap gap-2"></div>
+        </div>
+    </div>
+
+<script>
+    // Game State
+    let currentMode = 'easy';
+    let currentPrice = 0;
+    let currentTotal = 0;
+    let petsAdoptedCount = 0;
+    let mistakeCount = 0;
+    let isMuted = false;
+    let trickyPrices = []; // Store mistakes
+    let isMysteryRound = false;
+    
+    // Updated Pet List (Types for SVG generation)
+    // types: dog, cat, mouse, bear, bunny, pig, frog
+    let availablePets = ['dog', 'cat', 'mouse', 'bear', 'bunny', 'pig', 'frog','fox','panda','koala','chicken','monkey','elephant','tiger'];
+    let rarePets = ['alien', 'dragon'];
+    let currentPetType = 'dog'; 
+    
+    // Audio Context
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+
+    // INIT Title
+    window.onload = function() {
+        const titleText = "Pet Shop";
+        const titleContainer = document.getElementById('main-title');
+        titleContainer.innerHTML = '';
+        for(let char of titleText) {
+            if(char === ' ') {
+                titleContainer.innerHTML += '<span>&nbsp;</span>';
+                continue;
+            }
+            let span = document.createElement('span');
+            span.innerText = char;
+            span.className = 'title-letter';
+            span.onclick = function() {
+                // Random color
+                const colors = ['#e11d48', '#2563eb', '#16a34a', '#d97706', '#9333ea'];
+                this.style.color = colors[Math.floor(Math.random() * colors.length)];
+                this.classList.add('active');
+                setTimeout(() => this.classList.remove('active'), 200);
+                playSound('coin');
+            }
+            titleContainer.appendChild(span);
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        document.getElementById('mute-btn').innerText = isMuted ? "🔇" : "🔊";
+    }
+
+    // Advanced Sound Engine
+    function playSound(type) {
+        if (isMuted) return;
+        if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'coin') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(2000, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+            gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        } 
+        else if (type === 'register') {
+            // Ka-ching!
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(1000, now);
+            osc.frequency.linearRampToValueAtTime(2000, now + 0.1);
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+            
+            // Second ding
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(2000, now + 0.2);
+            osc2.frequency.exponentialRampToValueAtTime(500, now + 0.6);
+            gain2.gain.setValueAtTime(0.1, now + 0.2);
+            gain2.gain.linearRampToValueAtTime(0, now + 0.6);
+            osc2.start(now + 0.2); osc2.stop(now + 0.6);
+        }
+        else if (type === 'dog') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+            gainNode.gain.setValueAtTime(0.15, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+        }
+        else if (type === 'cat') {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(600, now); osc.frequency.linearRampToValueAtTime(400, now + 0.4);
+            gainNode.gain.setValueAtTime(0, now); gainNode.gain.linearRampToValueAtTime(0.1, now + 0.1); gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+        }
+        else if (type === 'mouse') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(1500, now); osc.frequency.linearRampToValueAtTime(2000, now + 0.1);
+            gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        }
+        else if (type === 'error') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+            gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        }
+        else if (type === 'zip') {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.2);
+            gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        }
+    }
+    
+    function playPetSound(type) {
+        if(type === 'dog' || type === 'bear' || type === 'pig') playSound('dog');
+        else if(type === 'cat' || type === 'bunny') playSound('cat');
+        else playSound('mouse');
+    }
+
+    function setOwl(state) {
+        const owl = document.getElementById('owl');
+        const eyeL = document.getElementById('eye-l');
+        const eyeR = document.getElementById('eye-r');
+        
+        owl.classList.remove('happy', 'confused');
+        eyeL.setAttribute('cy', '40'); // reset
+        eyeR.setAttribute('cy', '40'); // reset
+        
+        if (state === 'happy') {
+            owl.classList.add('happy');
+        } else if (state === 'confused') {
+            owl.classList.add('confused');
+            eyeL.setAttribute('cy', '38');
+            eyeR.setAttribute('cy', '42');
+        }
+    }
+
+    // --- SVG PET GENERATOR ---
+    function getPetSVG(type) {
+        let color = '#a1887f'; // default brown
+        let ears = '';
+        let face = '';
+        
+        if (type === 'dog') {
+            color = '#8d6e63';
+            ears = '<path d="M20,30 Q10,60 25,60" fill="'+color+'" stroke="#3e2723" stroke-width="2"/><path d="M80,30 Q90,60 75,60" fill="'+color+'" stroke="#3e2723" stroke-width="2"/>';
+            face = '<circle cx="50" cy="55" r="8" fill="black"/><path d="M50,63 Q40,75 30,65 M50,63 Q60,75 70,65" stroke="black" fill="none" stroke-width="2"/>';
+        } else if (type === 'cat') {
+            color = '#ffcc80';
+            ears = '<polygon points="20,50 15,20 40,35" fill="'+color+'" stroke="#e65100" stroke-width="2"/><polygon points="80,50 85,20 60,35" fill="'+color+'" stroke="#e65100" stroke-width="2"/>';
+            face = '<circle cx="50" cy="55" r="4" fill="#f48fb1"/><line x1="15" y1="52" x2="40" y2="55" stroke="black"/><line x1="15" y1="60" x2="40" y2="58" stroke="black"/><line x1="85" y1="52" x2="60" y2="55" stroke="black"/><line x1="85" y1="60" x2="60" y2="58" stroke="black"/>';
+        } else if (type === 'mouse') {
+            color = '#e0e0e0';
+            ears = '<circle cx="20" cy="30" r="15" fill="#bdbdbd" stroke="#757575" stroke-width="2"/><circle cx="80" cy="30" r="15" fill="#bdbdbd" stroke="#757575" stroke-width="2"/>';
+            face = '<circle cx="50" cy="55" r="4" fill="#f48fb1"/><line x1="30" y1="55" x2="45" y2="55" stroke="black"/><line x1="70" y1="55" x2="55" y2="55" stroke="black"/>';
+        } else if (type === 'bear') {
+            color = '#5d4037';
+            ears = '<circle cx="25" cy="25" r="10" fill="'+color+'"/><circle cx="75" cy="25" r="10" fill="'+color+'"/>';
+            face = '<ellipse cx="50" cy="55" rx="12" ry="10" fill="#d7ccc8"/><circle cx="50" cy="52" r="4" fill="black"/>';
+        } else if (type === 'bunny') {
+            color = '#fff9c4';
+            ears = '<ellipse cx="30" cy="15" rx="8" ry="25" fill="'+color+'" stroke="#fbc02d" stroke-width="2"/><ellipse cx="70" cy="15" rx="8" ry="25" fill="'+color+'" stroke="#fbc02d" stroke-width="2"/>';
+            face = '<circle cx="50" cy="55" r="4" fill="#f48fb1"/><rect x="46" y="59" width="4" height="6" fill="white" stroke="#fbc02d" stroke-width="1"/><rect x="50" y="59" width="4" height="6" fill="white" stroke="#fbc02d" stroke-width="1"/>';
+        } else if (type === 'pig') {
+            color = '#f8bbd0';
+            ears = '<path d="M25,30 L20,15 L40,25 Z" fill="'+color+'" stroke="#c2185b" stroke-width="2"/><path d="M75,30 L80,15 L60,25 Z" fill="'+color+'" stroke="#c2185b" stroke-width="2"/>';
+            face = '<ellipse cx="50" cy="55" rx="10" ry="8" fill="#f48fb1" stroke="#c2185b"/><circle cx="46" cy="55" r="2" fill="black"/><circle cx="54" cy="55" r="2" fill="black"/>';
+        } else if (type === 'frog') {
+            color = '#66bb6a';
+            ears = '<circle cx="20" cy="30" r="8" fill="'+color+'"/><circle cx="80" cy="30" r="8" fill="'+color+'"/>';
+            face = '<path d="M35,60 Q50,70 65,60" stroke="#1b5e20" stroke-width="3" fill="none"/>';
+        } else if (type === 'alien') {
+            color = '#b2dfdb';
+            ears = '<line x1="50" y1="30" x2="50" y2="10" stroke="green" stroke-width="2"/><circle cx="50" cy="10" r="5" fill="lime"/>';
+            face = '<circle cx="50" cy="50" r="5" fill="black"/>';
+        } else if (type === 'fox') {
+            color = '#ff7043';
+            ears = '<polygon points="15,40 10,10 40,30" fill="'+color+'" stroke="#d84315" stroke-width="2"/><polygon points="85,40 90,10 60,30" fill="'+color+'" stroke="#d84315" stroke-width="2"/>';
+            face = '<circle cx="50" cy="60" r="5" fill="#3e2723"/><path d="M50,60 L40,50 L60,50 Z" fill="white" opacity="0.5"/>';
+        } else if (type === 'panda') {
+            color = '#ffffff';
+            ears = '<circle cx="20" cy="25" r="10" fill="black"/><circle cx="80" cy="25" r="10" fill="black"/>';
+            face = '<ellipse cx="35" cy="45" rx="8" ry="6" fill="black" opacity="0.8"/><ellipse cx="65" cy="45" rx="8" ry="6" fill="black" opacity="0.8"/><circle cx="50" cy="55" r="5" fill="black"/>';
+        } else if (type === 'koala') {
+            color = '#90a4ae';
+            ears = '<circle cx="15" cy="35" r="12" fill="#b0bec5"/><circle cx="85" cy="35" r="12" fill="#b0bec5"/>';
+            face = '<ellipse cx="50" cy="50" rx="8" ry="12" fill="#37474f"/>';
+        } else if (type === 'chicken') {
+            color = '#fff9c4';
+            ears = '<path d="M40,15 Q45,5 50,15 Q55,5 60,15" fill="#d32f2f" stroke="#b71c1c" stroke-width="2"/>';
+            face = '<polygon points="45,55 55,55 50,65" fill="#fbc02d" stroke="#f57f17" stroke-width="1"/>';
+        } else if (type === 'monkey') {
+            color = '#8d6e63';
+            ears = '<circle cx="15" cy="50" r="8" fill="#d7ccc8" stroke="#5d4037" stroke-width="2"/><circle cx="85" cy="50" r="8" fill="#d7ccc8" stroke="#5d4037" stroke-width="2"/>';
+            face = '<ellipse cx="50" cy="60" rx="15" ry="10" fill="#efebe9"/><line x1="40" y1="60" x2="60" y2="60" stroke="#3e2723" stroke-width="2"/>';
+        } else if (type === 'elephant') {
+            color = '#cfd8dc';
+            ears = '<ellipse cx="15" cy="40" rx="10" ry="15" fill="'+color+'" stroke="#90a4ae" stroke-width="2"/><ellipse cx="85" cy="40" rx="10" ry="15" fill="'+color+'" stroke="#90a4ae" stroke-width="2"/>';
+            face = '<path d="M48,50 Q50,90 58,80" stroke="#b0bec5" stroke-width="6" fill="none"/>';
+        } else if (type === 'tiger') {
+            color = '#ffb74d';
+            ears = '<circle cx="25" cy="25" r="9" fill="'+color+'" stroke="black" stroke-width="2"/><circle cx="75" cy="25" r="9" fill="'+color+'" stroke="black" stroke-width="2"/>';
+            face = '<path d="M45,20 L55,20 L50,30 Z" fill="black"/><path d="M45,35 L55,35 L50,45 Z" fill="black"/><circle cx="50" cy="60" r="5" fill="#f48fb1"/>';
+        }
+
+        // Common Body
+        let svg = `<svg viewBox="0 0 100 100" width="100%" height="100%">
+            ${ears}
+            <circle cx="50" cy="50" r="35" fill="${color}" stroke="rgba(0,0,0,0.1)" stroke-width="2"/>
+            <circle cx="35" cy="45" r="4" fill="white"/> <circle cx="35" cy="45" r="2" fill="black"/>
+            ${type === 'alien' ? '' : '<circle cx="65" cy="45" r="4" fill="white"/> <circle cx="65" cy="45" r="2" fill="black"/>'}
+            ${face}
+        </svg>`;
+        return svg;
+    }
+
+    function renderTargetPet(type) {
+        currentPetType = type;
+        const container = document.getElementById('target-pet');
+        
+        if(type === 'egg') {
+            container.innerHTML = `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="30" ry="40" fill="#eceff1" stroke="#cfd8dc" stroke-width="2"/><path d="M30,30 L70,70" stroke="#cfd8dc" stroke-width="2" stroke-dasharray="5,5"/></svg>`;
+        } else {
+            container.innerHTML = getPetSVG(type);
+        }
+    }
+
+    function goHome() {
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'flex';
+        clearTray();
+    }
+    
+    function resetGame() {
+        document.getElementById('certificate-screen').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'flex';
+        petsAdoptedCount = 0;
+        document.getElementById('pet-count').innerText = "0";
+        document.getElementById('collection').innerHTML = ""; 
+        clearTray();
+    }
+
+    function startGame(mode) {
+        currentMode = mode;
+        petsAdoptedCount = 0;
+        trickyPrices = [];
+        document.getElementById('pet-count').innerText = "0";
+        document.getElementById('collection').innerHTML = ""; 
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'flex';
+        setupBank();
+        nextRound();
+    }
+
+    function setupBank() {
+        const bank = document.getElementById('bank-coins');
+        bank.innerHTML = '';
+        
+        let coins = [
+            {val: 1, class: 'penny', text: ''},
+            {val: 5, class: 'nickel', text: ''},
+            {val: 10, class: 'dime', text: ''}
+        ];
+        
+        if (currentMode === 'hard') { 
+            coins.push({val: 25, class: 'quarter', text: ''}); 
+        }
+
+        coins.forEach(c => {
+            let btn = document.createElement('div');
+            btn.className = `coin ${c.class}`;
+            
+            btn.addEventListener('mousedown', (e) => initDrag(e, c));
+            btn.addEventListener('touchstart', (e) => initDrag(e, c), {passive: false});
+            
+            btn.onclick = () => {
+                if (!wasDragging) addToTray(c.val, c.class, c.text);
+            };
+            
+            bank.appendChild(btn);
+        });
+    }
+
+    // --- DRAG AND DROP ---
+    let dragItem = null;
+    let wasDragging = false;
+    let startX, startY;
+
+    function initDrag(e, coinData) {
+        if (e.type === 'mousedown' && e.button !== 0) return;
+        if(e.type === 'touchstart') e.preventDefault();
+        
+        const touch = e.touches ? e.touches[0] : e;
+        startX = touch.clientX;
+        startY = touch.clientY;
+        wasDragging = false;
+
+        dragItem = document.createElement('div');
+        dragItem.className = `coin ${coinData.class}`;
+        dragItem.style.position = 'fixed';
+        dragItem.style.zIndex = 1000;
+        dragItem.style.left = (touch.clientX - 30) + 'px';
+        dragItem.style.top = (touch.clientY - 30) + 'px';
+        dragItem.style.pointerEvents = 'none'; 
+        dragItem.style.opacity = '0.9';
+        dragItem.style.transform = 'scale(1.2)';
+        
+        document.body.appendChild(dragItem);
+
+        const moveHandler = (evt) => onDragMove(evt);
+        const endHandler = (evt) => onDragEnd(evt, coinData, moveHandler, endHandler);
+        
+        document.addEventListener('mousemove', moveHandler);
+        document.addEventListener('touchmove', moveHandler, {passive: false});
+        document.addEventListener('mouseup', endHandler);
+        document.addEventListener('touchend', endHandler);
+    }
+
+    function onDragMove(e) {
+        if (!dragItem) return;
+        e.preventDefault(); 
+        const touch = e.touches ? e.touches[0] : e;
+        dragItem.style.left = (touch.clientX - 30) + 'px';
+        dragItem.style.top = (touch.clientY - 30) + 'px';
+
+        if (Math.abs(touch.clientX - startX) > 10 || Math.abs(touch.clientY - startY) > 10) {
+            wasDragging = true;
+            const tray = document.getElementById('tray');
+            const rect = tray.getBoundingClientRect();
+            if (touch.clientX >= rect.left && touch.clientX <= rect.right && 
+                touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                tray.classList.add('highlight');
+            } else {
+                tray.classList.remove('highlight');
+            }
+        }
+    }
+
+    function onDragEnd(e, coinData, moveFn, endFn) {
+        document.removeEventListener('mousemove', moveFn);
+        document.removeEventListener('touchmove', moveFn);
+        document.removeEventListener('mouseup', endFn);
+        document.removeEventListener('touchend', endFn);
+        
+        const tray = document.getElementById('tray');
+        tray.classList.remove('highlight');
+
+        if (!dragItem) return;
+        const touch = e.changedTouches ? e.changedTouches[0] : e;
+        const rect = tray.getBoundingClientRect();
+
+        if (wasDragging && 
+            touch.clientX >= rect.left && touch.clientX <= rect.right && 
+            touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+            addToTray(coinData.val, coinData.class, coinData.text);
+        }
+        
+        dragItem.remove();
+        dragItem = null;
+    }
+
+    function nextRound() {
+        if (petsAdoptedCount >= 10) {
+            showCertificate();
+            return;
+        }
+
+        // FIX: Remove hatch class so the next animal is visible!
+        document.getElementById('target-pet').classList.remove('hatch');
+
+        // Don't animate clear on new round, just reset
+        const tray = document.getElementById('tray');
+        tray.innerHTML = '<div id="total-badge" class="total-label">YOUR TRAY</div><p id="tray-hint" class="text-gray-400 text-sm w-full absolute bottom-2 text-center pointer-events-none font-bold opacity-60">DRAG COINS HERE</p>';
+        currentTotal = 0;
+        
+        mistakeCount = 0;
+        hideHint();
+        setOwl('neutral');
+
+        let min = 5; 
+        let max = 25;
+
+        if (currentMode === 'medium') { max = 100; } 
+        else if (currentMode === 'hard') { max = 300; } 
+
+        isMysteryRound = (petsAdoptedCount % 3 === 2);
+        let isBoss = (petsAdoptedCount === 9);
+
+        if (isMysteryRound && !isBoss) {
+            renderTargetPet('egg');
+        } else {
+            const type = availablePets[Math.floor(Math.random() * availablePets.length)];
+            renderTargetPet(type);
+        }
+
+        if (isBoss) {
+             if(currentMode === 'easy') currentPrice = 25;
+             else if(currentMode === 'medium') currentPrice = 100;
+             else currentPrice = 300;
+        } else {
+             let r = Math.random();
+             if (r < 0.6) {
+                 currentPrice = Math.floor((Math.random() * (max - min) + min) / 5) * 5;
+             } else {
+                 currentPrice = Math.floor(Math.random() * (max - min + 1)) + min;
+             }
+        }
+        if(currentPrice < 5) currentPrice = 5;
+
+        let displayPrice = currentPrice + '¢';
+        if (currentPrice >= 100) {
+            let dollars = Math.floor(currentPrice / 100);
+            let cents = currentPrice % 100;
+            let centsStr = cents < 10 ? '0' + cents : cents;
+            displayPrice = '$' + dollars + '.' + centsStr;
+        }
+
+        document.getElementById('target-price').innerText = displayPrice;
+        document.getElementById('target-price').style.background = "#ffecb3";
+        document.getElementById('target-price').style.color = "#d32f2f";
+        document.getElementById('target-price').style.borderColor = "#ffca28";
+    }
+
+    function addToTray(val, cssClass, text) {
+        currentTotal += val;
+        playSound('coin');
+        document.getElementById('tray-hint').style.display = 'none';
+        hideHint();
+
+        let coin = document.createElement('div');
+        coin.className = `coin ${cssClass}`;
+        coin.dataset.value = val;
+        // Mark pennies for checking logic
+        if(cssClass.includes('penny')) coin.dataset.type = 'penny';
+        
+        const tray = document.getElementById('tray');
+        const maxX = tray.clientWidth - 70; 
+        const maxY = tray.clientHeight - 70;
+        
+        const randX = Math.floor(Math.random() * maxX);
+        const randY = Math.floor(Math.random() * maxY);
+        const randRot = Math.floor(Math.random() * 360);
+        
+        coin.style.left = randX + 'px';
+        coin.style.top = randY + 'px';
+        coin.style.transform = `rotate(${randRot}deg)`;
+        
+        coin.onclick = function() {
+            currentTotal -= parseInt(this.dataset.value);
+            this.remove();
+            playSound('remove');
+            hideHint();
+            if (tray.children.length <= 2) document.getElementById('tray-hint').style.display = 'block';
+        };
+        
+        tray.appendChild(coin);
+
+        // Check Penny Efficiency
+        let pennies = 0;
+        tray.childNodes.forEach(c => {
+            if(c.dataset && c.dataset.type === 'penny') pennies++;
+        });
+        if(pennies >= 10) {
+            setOwl('confused');
+            showHint("That's a lot of pennies! Try a Dime?");
+        }
+    }
+
+    function undoCoin() {
+        const tray = document.getElementById('tray');
+        const coins = Array.from(tray.querySelectorAll('.coin'));
+        if (coins.length > 0) {
+            const lastCoin = coins[coins.length - 1]; 
+            currentTotal -= parseInt(lastCoin.dataset.value);
+            animateFlyBack(lastCoin);
+        }
+    }
+    
+    function clearTray() {
+        currentTotal = 0;
+        const tray = document.getElementById('tray');
+        const coins = tray.querySelectorAll('.coin');
+        
+        coins.forEach((c, index) => {
+            setTimeout(() => animateFlyBack(c), index * 50);
+        });
+        
+        if(coins.length > 0) playSound('zip');
+        
+        document.getElementById('tray-hint').style.display = 'block';
+        hideHint();
+    }
+    
+    function animateFlyBack(element) {
+        const bank = document.getElementById('bank-coins');
+        const bankRect = bank.getBoundingClientRect();
+        const elemRect = element.getBoundingClientRect();
+        
+        const deltaX = bankRect.left + (bankRect.width/2) - elemRect.left;
+        const deltaY = bankRect.top + (bankRect.height/2) - elemRect.top;
+        
+        element.style.transition = "transform 0.3s ease-in, opacity 0.3s";
+        element.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.5)`;
+        element.style.opacity = "0";
+        
+        setTimeout(() => element.remove(), 300);
+    }
+
+    function showHint(msg) {
+        const b = document.getElementById('hint-bubble');
+        b.innerText = msg;
+        b.classList.add('show');
+    }
+
+    function hideHint() {
+        document.getElementById('hint-bubble').classList.remove('show');
+    }
+
+    function createConfetti() {
+        for(let i=0; i<40; i++) {
+            let c = document.createElement('div');
+            c.className = 'confetti';
+            c.style.left = Math.random() * 100 + 'vw';
+            c.style.animationDuration = (Math.random() * 2 + 1) + 's';
+            let colors = ['#f44336', '#2196F3', '#FFEB3B', '#4CAF50', '#9C27B0'];
+            c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            document.body.appendChild(c);
+            setTimeout(() => c.remove(), 3000);
+        }
+    }
+
+    function checkWin() {
+        if (currentTotal === currentPrice) {
+            // Correct - REGISTER ANIMATION
+            playSound('register');
+            document.getElementById('tray').classList.add('closed');
+            
+            setTimeout(() => {
+                // Inside closed drawer
+                createConfetti();
+                setOwl('happy');
+                
+                let finalPetType = currentPetType;
+                if (isMysteryRound && currentPetType === 'egg') {
+                    // Pick rare
+                    finalPetType = rarePets[Math.floor(Math.random() * rarePets.length)];
+                    renderTargetPet(finalPetType);
+                    
+                    const displayPet = document.getElementById('target-pet');
+                    displayPet.classList.add('hatch');
+                    playPetSound(finalPetType);
+                } else {
+                     playPetSound(finalPetType);
+                }
+                
+                // Add to collection (SVG)
+                let collected = document.createElement('div');
+                collected.className = 'collected-pet-item';
+                collected.innerHTML = getPetSVG(finalPetType);
+                document.getElementById('collection').appendChild(collected);
+                
+                petsAdoptedCount++;
+                document.getElementById('pet-count').innerText = petsAdoptedCount;
+
+                const pt = document.getElementById('target-price');
+                pt.innerText = "ADOPTED!";
+                pt.style.background = "#4CAF50";
+                pt.style.color = "white";
+                pt.style.borderColor = "#2E7D32";
+                
+                // Open Drawer Empty
+                document.getElementById('tray').innerHTML = ''; // clear coins
+                currentTotal = 0;
+                
+                // Slide open
+                setTimeout(() => {
+                    document.getElementById('tray').classList.remove('closed');
+                    setTimeout(() => nextRound(), 1000);
+                }, 500);
+
+            }, 800); // Wait for close anim
+            
+        } else {
+            playSound('error');
+            setOwl('confused');
+            const screen = document.getElementById('game-screen');
+            screen.classList.remove('shake');
+            void screen.offsetWidth;
+            screen.classList.add('shake');
+            
+            let formattedPrice = currentPrice + '¢';
+            if(currentPrice >= 100) {
+                 let d = Math.floor(currentPrice / 100);
+                 let c = currentPrice % 100;
+                 formattedPrice = '$' + d + '.' + (c < 10 ? '0'+c : c);
+            }
+
+            if (!trickyPrices.includes(formattedPrice)) {
+                trickyPrices.push(formattedPrice);
+            }
+
+            mistakeCount++;
+            if (mistakeCount >= 2) {
+                if (currentTotal < currentPrice) {
+                    showHint("Try adding more coins!");
+                } else {
+                    showHint("You have too much!");
+                }
+            }
+        }
+    }
+
+    function showCertificate() {
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('certificate-screen').style.display = 'flex';
+        
+        const finalColl = document.getElementById('final-collection');
+        finalColl.innerHTML = document.getElementById('collection').innerHTML;
+        
+        if (trickyPrices.length > 0) {
+            document.getElementById('report-card').classList.remove('hidden');
+            document.getElementById('tricky-list').innerText = trickyPrices.join(', ');
+        } else {
+            document.getElementById('report-card').classList.add('hidden');
+        }
+        
+        playSound('win');
+    }
+</script>
+</body>
+</html>

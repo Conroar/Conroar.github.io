@@ -1,302 +1,1000 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-    <title>Connor Boyer Personal Portfolio</title>
-    <link rel="icon" href="img/fav.png" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connor Boyer | Creative Portfolio</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* === CARD STYLES === */
+        /* These make the project cards look organized with the Year and Description */
+        
+        .project-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 300px; /* Ensures all cards are roughly the same height */
+            text-align: left; /* Better readability for descriptions */
+            padding: 25px;
+        }
 
-    <!-- Bootstrap -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
-    <link href="ionicons/css/ionicons.min.css" rel="stylesheet">
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
 
-    <!-- main css -->
-    <link href="css/style.css" rel="stylesheet">
+        .card-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
 
+        .year-badge {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #aaa;
+            font-weight: bold;
+            font-family: monospace;
+        }
 
-    <!-- modernizr -->
-    <script src="js/modernizr.js"></script>
+        .card-desc {
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            flex-grow: 1; /* Pushes the footer to the bottom */
+        }
 
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-    <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 15px;
+        }
+
+        /* Ensures the icon text (e.g., "HTML") aligns nicely */
+        .tech-tag {
+            font-size: 0.85rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin: 0;
+        }
+    </style>
 </head>
-
 <body>
 
-    <!-- Preloader -->
-    <div id="preloader">
-        <div class="pre-container">
-            <div class="spinner">
-                <div class="double-bounce1"></div>
-                <div class="double-bounce2"></div>
-            </div>
+    <nav>
+        <a href="#" class="logo" onclick="showSection('home')">Conroar</a>
+        <div class="nav-links">
+            <button class="nav-btn active" onclick="showSection('home')" data-lang-key="nav_home">Home</button>
+            <button class="nav-btn" onclick="showSection('projects')" data-lang-key="nav_projects">Projects</button>
+            <button class="nav-btn" onclick="showSection('art')" data-lang-key="nav_art">Art</button>
+            <button class="nav-btn" onclick="showSection('photography')" data-lang-key="nav_photo">Photography</button>
+            <button class="nav-btn" onclick="showSection('videos')" data-lang-key="nav_video">Video</button>
+            <button class="nav-btn" onclick="showSection('about')" data-lang-key="nav_about">About</button>
+            <button class="nav-btn" onclick="showSection('resume')" data-lang-key="nav_resume">Resume</button>
         </div>
+    </nav>
+
+    <div class="container" id="main-container">
+
+        <section id="home" class="content-section active-section">
+            <header style="text-align: center; padding: 60px 0;">
+                <div class="typewriter-container">
+                    <h1 class="typewriter-text">Connor Boyer</h1>
+                </div>
+                <p style="font-size: 1.2rem; letter-spacing: 2px; color: #aaa; margin-top: 10px;" data-lang-key="hero_sub">
+                    GAMING • PHOTOGRAPHY • PROGRAMMING • 3D ART
+                </p>
+                <br>
+                <div class="tilt-card setup-trigger" onclick="showSection('gear')" style="border:none; background:transparent; cursor: pointer; position: relative;">
+    <div class="holo-sheen"></div>
+    <img src="images/setup.jpg" alt="Setup" style="border: 2px solid var(--neon-blue); max-width:100%; border-radius:10px;">
+    
+    <div class="setup-overlay">
+        <span style="background: #000; padding: 5px 10px; border: 1px solid var(--neon-blue); color: var(--neon-blue); font-family: monospace;">
+            <i class="fas fa-search"></i> INSPECT GEAR
+        </span>
     </div>
-    <!-- end Preloader -->
-
-    <div class="container-fluid">
-        <!-- box header -->
-        <header class="box-header">
-            <div class="box-logo">
-                <a href="index.html"><img src="img/logo.png" width="80" alt="Logo"></a>
+</div>
+            </header>
+            
+            <div class="grid">
+                <div class="tilt-card">
+                    <div class="holo-sheen"></div>
+                    <h2 data-lang-key="home_journey_title">Creative Journey</h2>
+                    <p data-lang-key="home_journey_text">My journey is fueled by a passion for technology and visual arts. I blend innovative ideas with artistic expression across gaming, photography, and code.</p>
+                </div>
+                <div class="tilt-card">
+                    <div class="holo-sheen"></div>
+                    <h2 data-lang-key="home_game_title">Game Design</h2>
+                    <p data-lang-key="home_game_text">Prioritizing Efficiency and Quality. I create compelling narratives through immersive visuals and sound design.</p>
+                    <button class="btn" onclick="showSection('projects')">View Projects</button>
+                </div>
             </div>
-            <!-- box-nav -->
-            <a class="box-primary-nav-trigger" href="#0">
-                <span class="box-menu-text">Menu</span><span class="box-menu-icon"></span>
-            </a>
-            <!-- box-primary-nav-trigger -->
-        </header>
-        <!-- end box header -->
-
-        <!-- nav -->
-        <nav>
-            <ul class="box-primary-nav">
-                <li class="box-label">About me</li>
-
-                <li><a href="index.html">Intro</a> <i class="ion-ios-circle-filled color"></i></li>
-                <li><a href="about.html">About me</a></li>
-                <li><a href="services.html">services</a></li>
-                <li><a href="portfolio.html">portfolio</a></li>
-                <li><a href="contact.html">contact me</a></li>
-
-
-
-                <li class="box-label">Follow Me</li>
-
-                <li class="box-social"><a href="https://www.facebook.com/conroar.boyer"><i class="ion-social-facebook"></i></a></li>
-                <li class="box-social"><a href="https://www.instagram.com/conroarb/"><i class="ion-social-instagram-outline"></i></a></li>
-                <li class="box-social"><a href="https://twitter.com/Conroar_boyer?lang=en"><i class="ion-social-twitter"></i></a></li>
-                <li class="box-social"><a href="https://www.youtube.com/channel/UCtMwn-rAbhT4pN7s-iy4zlQ?view_as=subscriber"><i class="ion-social-youtube"></i></a></li>
-            </ul>
-        </nav>
-        <!-- end nav -->
-
-        <!-- box-intro -->
-        <section class="box-intro">
-            <div class="table-cell">
-                <h1 class="box-headline letters rotate-2">
-                    <span class="box-words-wrapper">
-                        <b class="is-visible">Art.</b>
-                        <b>Coding.</b>
-                        <b>Computers.</b>
-						<!--Remove if error and add coding: &nbsp; --> 
-						<b>3DDesign.</b>
-						<b>Gaming.</b>
-                    </span>
-		        </h1>
-                <h5>Welcome to Connor Boyer's Portfolio</h5>
-            </div>
-
-            <div class="mouse">
-                <div class="scroll"></div>
+            
+            <div style="text-align: center; margin-top: 80px; border-top: 1px solid #333; padding-top: 20px;">
+                <p style="color:#666; font-size: 0.9rem;">Select Language / 选择语言</p>
+                <button class="lang-btn" onclick="setLanguage('en')">English</button>
+                <button class="lang-btn" onclick="setLanguage('zh')">中文 (Chinese)</button>
             </div>
         </section>
-        <!-- end box-intro -->
-    </div>
+		
+		
+		<section id="gear" class="content-section">
+    <button class="btn" onclick="showSection('home')" style="margin-bottom: 20px;">
+        <i class="fas fa-arrow-left"></i> Return to Base
+    </button>
 
-    <!-- portfolio div -->
-    <div class="portfolio-div">
-        <div class="portfolio">
-            <div class="no-padding portfolio_container">
-                <!-- single work -->
-                <div class="col-md-3 col-sm-6  fashion logo">
-                    <a href="single-project.html" class="portfolio_item">
-                        <img src="http://placehold.it/1000x1000" alt="image" class="img-responsive" />
-                        <div class="portfolio_item_hover">
-                            <div class="portfolio-border clearfix">
-                                <div class="item_info">
-                                    <span>Mockups in seconds</span>
-                                    <em>Fashion / Logo</em>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <!-- end single work -->
+    <h1 data-lang-key="nav_gear">Equipment Loadout</h1>
 
-                <!-- single work -->
-                <div class="col-md-3 col-sm-6 ads graphics">
-                    <a href="single-project.html" class="portfolio_item">
-                        <img src="http://placehold.it/1000x1000" alt="image" class="img-responsive" />
-                        <div class="portfolio_item_hover">
-                            <div class="portfolio-border clearfix">
-                                <div class="item_info">
-                                    <span>Floating mockups</span>
-                                    <em>Ads / Graphics</em>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <!-- end single work -->
-
-                <!-- single work -->
-                <div class="col-md-6 col-sm-12 photography">
-                    <a href="single-project.html" class="portfolio_item">
-                        <img src="http://placehold.it/1000x1000" alt="image" class="img-responsive" />
-                        <div class="portfolio_item_hover">
-                            <div class="portfolio-border clearfix">
-                                <div class="item_info">
-                                    <span>Photorealistic smartwatch</span>
-                                    <em>Photography</em>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <!-- end single work -->
-
-                <!-- single work -->
-                <div class="col-md-3 col-sm-6 fashion ads">
-                    <a href="single-project.html" class="portfolio_item">
-                        <img src="http://placehold.it/1000x1000" alt="image" class="img-responsive" />
-                        <div class="portfolio_item_hover">
-                            <div class="portfolio-border clearfix">
-                                <div class="item_info">
-                                    <span>Held by hands</span>
-                                    <em>Fashion / Ads</em>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <!-- end single work -->
-
-                <!-- single work -->
-                <div class="col-md-3 col-sm-6 graphics ads">
-                    <a href="single-project.html" class="portfolio_item">
-                        <img src="http://placehold.it/1000x1000" alt="image" class="img-responsive" />
-                        <div class="portfolio_item_hover">
-                            <div class="portfolio-border clearfix">
-                                <div class="item_info">
-                                    <span>Mobile devices</span>
-                                    <em>Graphics / Ads</em>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <!-- end single work -->
-
-                <!-- single work -->
-                <div class="col-md-6 col-sm-12 photography">
-                    <a href="single-project.html" class="portfolio_item">
-                        <img src="http://placehold.it/1000x1000" alt="image" class="img-responsive" />
-                        <div class="portfolio_item_hover">
-                            <div class="portfolio-border clearfix">
-                                <div class="item_info">
-                                    <span>Photorealistic smartwatch</span>
-                                    <em>Photography</em>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <!-- end single work -->
-
-                <!-- single work -->
-                <div class="col-md-3 col-sm-6 graphics ads">
-                    <a href="single-project.html" class="portfolio_item">
-                        <img src="http://placehold.it/1000x1000" alt="image" class="img-responsive" />
-                        <div class="portfolio_item_hover">
-                            <div class="portfolio-border clearfix">
-                                <div class="item_info">
-                                    <span>Mobile devices</span>
-                                    <em>Graphics / Ads</em>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <!-- end single work -->
-
-                <!-- single work -->
-                <div class="col-md-3 col-sm-6 graphics ads">
-                    <a href="single-project.html" class="portfolio_item">
-                        <img src="http://placehold.it/1000x1000" alt="image" class="img-responsive" />
-                        <div class="portfolio_item_hover">
-                            <div class="portfolio-border clearfix">
-                                <div class="item_info">
-                                    <span>Mobile devices</span>
-                                    <em>Graphics / Ads</em>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <!-- end single work -->
-
-                <!-- single work -->
-                <div class="col-md-3 col-sm-6 graphics ads">
-                    <a href="single-project.html" class="portfolio_item">
-                        <img src="http://placehold.it/1000x1000" alt="image" class="img-responsive" />
-                        <div class="portfolio_item_hover">
-                            <div class="portfolio-border clearfix">
-                                <div class="item_info">
-                                    <span>Mobile devices</span>
-                                    <em>Graphics / Ads</em>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <!-- end single work -->
-
-                <!-- single work -->
-                <div class="col-md-3 col-sm-6 graphics ads">
-                    <a href="single-project.html" class="portfolio_item">
-                        <img src="http://placehold.it/1000x1000" alt="image" class="img-responsive" />
-                        <div class="portfolio_item_hover">
-                            <div class="portfolio-border clearfix">
-                                <div class="item_info">
-                                    <span>Mobile devices</span>
-                                    <em>Graphics / Ads</em>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <!-- end single work -->
+    <div class="grid" style="grid-template-columns: 1.5fr 1fr;">
+        
+        <div class="tilt-card" style="padding: 0;">
+            <div class="holo-sheen"></div>
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-bottom: 1px solid #333;">
+                <h3 style="margin:0; color: var(--neon-blue);"><i class="fas fa-desktop"></i> Main Battlestation</h3>
             </div>
-            <!-- end portfolio_container -->
+            <div style="padding: 20px;">
+                <ul class="spec-list">
+                    <li><span class="spec-label">CPU</span> <span class="spec-val">AMD Ryzen 7 2700X</span></li>
+                    <li><span class="spec-label">GPU</span> <span class="spec-val">NVIDIA GeForce RTX 2060 SUPER</span></li>
+                    <li><span class="spec-label">RAM</span> <span class="spec-val">Corsair Vengeance 16 GB DDR4</span></li>
+					<li><span class="spec-label">PSU</span> <span class="spec-val">RVGA SuperNOVA 750W 80+ Gold</span></li>
+                    <li><span class="spec-label">Motherboard</span> <span class="spec-val">ASUS Prime X470-Pro</span></li>
+                    <li><span class="spec-label">Storage</span> <span class="spec-val">Samsung 500GB NVMe M.2 SSD</span></li>
+					<li><span class="spec-label">Storage</span> <span class="spec-val">Seagate BarraCuda 2TB HDD</span></li>
+                    <li><span class="spec-label">Case</span> <span class="spec-val">Corsair Carbide 200R</span></li>
+                    <li><span class="spec-label">Cooling</span> <span class="spec-val">be quiet! Dark Rock Pro 4</span></li>
+                </ul>
+            </div>
         </div>
-        <!-- portfolio -->
+		
+		<div style="display: flex; flex-direction: column; gap: 20px;">
+		
+		<div class="tilt-card" style="padding: 0;">
+            <div class="holo-sheen"></div>
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-bottom: 1px solid #333;">
+                <h3 style="margin:0; color: var(--neon-blue);"><i class="fas fa-desktop"></i> Support Station</h3>
+            </div>
+            <div style="padding: 20px;">
+                <ul class="spec-list">
+                    <li><span class="spec-label">Computer</span> <span class="spec-val">Dell G7 15 White Edition</span></li>
+                </ul>
+            </div>
+        </div>
+		
+		
+		
+		<div class="tilt-card" style="padding: 0;">
+            <div class="holo-sheen"></div>
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-bottom: 1px solid #333;">
+                <h3 style="margin:0; color: var(--neon-blue);"><i class="fas fa-camera"></i> Camera Kit</h3>
+            </div>
+            <div style="padding: 20px;">
+                <ul class="spec-list">
+                    <li><span class="spec-label">Camera</span> <span class="spec-val">Sony ZVE-10</span></li>
+					<li><span class="spec-label">Main Lens</span> <span class="spec-val">DJI Mic</span></li>
+					<li><span class="spec-label">Bag</span> <span class="spec-val">Temba 7</span></li>
+					<li><span class="spec-label">Mic</span> <span class="spec-val">DJI Mic</span></li>
+                </ul>
+            </div>
+        </div>
+
+        
+            
+            <div class="tilt-card">
+                <div class="holo-sheen"></div>
+                <h3 style="color: #bd00ff; margin-top: 0;"><i class="fas fa-headset"></i> Peripherals</h3>
+                <ul class="spec-list compact-list">
+                    <li><span class="spec-label">Mouse</span> <span>zeromouse</span></li>
+					<li><span class="spec-label">Monitor</span> <span>LG 24 3840x2160 60Hz</span></li>
+					<li><span class="spec-label">Backup Mouse</span> <span>Glorious Model O- Wireless</span></li>
+                    <li><span class="spec-label">Keyboard</span> <span>Zoom65</span></li>
+                    <li><span class="spec-label">Headset</span> <span>Corsair Void Pro RGB</span></li>
+					<li><span class="spec-label">Headphones</span> <span>Audio-Technica ATH-M50x Ice Blue</span></li>
+					<li><span class="spec-label">Wireless Headphones</span> <span>Sony WH-1000XM4</span></li>
+					<li><span class="spec-label">IEMs</span> <span>HiBy Music YUME 500</span></li>
+					<li><span class="spec-label">IEMs</span> <span>Moondrop Chu II</span></li>
+                    <li><span class="spec-label">Mic</span> <span>Audio-Technica AT2020</span></li>
+					<li><span class="spec-label">Speakers</span> <span>Logitech G560</span></li>
+                </ul>
+            </div>
+
+            <div class="tilt-card">
+                <div class="holo-sheen"></div>
+                <h3 style="color: #00ff9d; margin-top: 0;"><i class="fas fa-gamepad"></i> Consoles</h3>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <span class="console-badge"><i class="fas fa-gamepad"></i> Switch</span>
+					<span class="console-badge"><i class="fas fa-gamepad"></i> Switch 2</span>
+					<span class="console-badge"><i class="fas fa-gamepad"></i> Steam Deck</span>
+                    <span class="console-badge"><i class="fab fa-xbox"></i> Xbox One</span>
+                    <span class="console-badge"><i class="fas fa-vr-cardboard"></i> Valve Index</span>
+					<span class="console-badge"><i class="fas fa-vr-cardboard"></i> Oculus Rift S</span>
+					<span class="console-badge"><i class="fas fa-gamepad"></i> NES</span>
+					<span class="console-badge"><i class="fa-brands fa-playstation"></i> PlayStation 1</span>
+					<span class="console-badge"><i class="fas fa-gamepad"></i> Wii</span>
+					<span class="console-badge"><i class="fas fa-gamepad"></i> Wii U</span>
+					<span class="console-badge"><i class="fas fa-gamepad"></i> Atari 2600</span>
+                </div>
+            </div>
+
+        </div>
     </div>
-    <!-- end portfolio div -->
+</section>
 
-    <!-- footer -->
-    <footer>
-        <div class="container-fluid">
-            <p class="copyright">Boyer 2019</p>
-        </div>
-    </footer>
-    <!-- end footer -->
+        <section id="projects" class="content-section">
+            <h1 data-lang-key="nav_projects">Development Projects</h1>
+            
+            <h3 style="border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px; color: var(--neon-blue);">Software & Apps</h3>
+            
+            <div class="grid">
+                
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Portfolio Site</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">The responsive portfolio site you are viewing right now. Built to be lightweight, fast, and purely HTML/CSS.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: tomato;"><i class="fab fa-html5"></i> HTML</p>
+                        <a href="https://github.com/Conroar" class="btn" target="_blank">View Code</a>
+                    </div>
+                </div>
 
-    <!-- back to top -->
-    <a href="#0" class="cd-top"><i class="ion-android-arrow-up"></i></a>
-    <!-- end back to top -->
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Sapphire-Dawn</h3>
+                        <span class="year-badge">2016</span>
+                    </div>
+                    <p class="card-desc">A 2D Action RPG focused on fluid combat, custom physics, and dynamic lighting systems.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: #00e5ff;"><i class="fas fa-gamepad"></i> Unity</p>
+                        <a href="https://github.com/Conroar/Sapphire-Dawn" class="btn" target="_blank">View Repo</a>
+                    </div>
+                </div>
 
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>PKHeX.Mobile</h3>
+                        <span class="year-badge">2019</span>
+                    </div>
+                    <p class="card-desc">A mobile port of the popular save editor, featuring a touch-optimized UI and file management.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: limegreen;"><i class="fas fa-code"></i> C#</p>
+                        <a href="https://github.com/Conroar/PKHeX.Mobile" class="btn" target="_blank">View Repo</a>
+                    </div>
+                </div>
 
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Node-Chat</h3>
+                        <span class="year-badge">2020</span>
+                    </div>
+                    <p class="card-desc">Real-time chat application supporting multiple rooms and private messaging using Socket.io.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: gold;"><i class="fab fa-js"></i> JS</p>
+                        <a href="https://github.com/Conroar/node-chat" class="btn" target="_blank">View Repo</a>
+                    </div>
+                </div>
 
-    <!-- jQuery -->
-    <script src="js/jquery-2.1.1.js"></script>
-    <!--  plugins -->
-    <script src="js/bootstrap.min.js"></script>
-    <script src="js/menu.js"></script>
-    <script src="js/animated-headline.js"></script>
-    <script src="js/isotope.pkgd.min.js"></script>
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Conroar-GitHub</h3>
+                        <span class="year-badge">2016</span>
+                    </div>
+                    <p class="card-desc">Connor's Official Github page.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: #61dafb;"><i class="fab fa-html5"></i> HTML</p>
+                        <a href="https://github.com/Conroar/Conroar" class="btn" target="_blank">View Page</a>
+                    </div>
+                </div>
 
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Jekyll-Darkness</h3>
+                        <span class="year-badge">2021</span>
+                    </div>
+                    <p class="card-desc">A visualization tool for the A* pathfinding algorithm with custom obstacle placement.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: #306998;"><i class="fab fa-ruby-3.2.2"></i> Ruby</p>
+                        <a href="https://github.com/Conroar/jekyll-darkness" class="btn" target="_blank">View Repo</a>
+                    </div>
+                </div>
 
-    <!--  custom script -->
-    <script src="js/custom.js"></script>
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Shields</h3>
+                        <span class="year-badge">2020</span>
+                    </div>
+                    <p class="card-desc">Server moderation bot with music playback, economy features, and user management.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: #7289da;"><i class="fab fa-js"></i> JS</p>
+                        <a href="https://github.com/Conroar/shields" class="btn" target="_blank">Invite</a>
+                    </div>
+                </div>
 
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Digital-Media-Movement</h3>
+                        <span class="year-badge">2019</span>
+                    </div>
+                    <p class="card-desc">Custom graphics engine built from scratch to render .OBJ files with dynamic lighting.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: #b00058;"><i class="fas fa-cube"></i> C++</p>
+                        <a href="https://students.csbsju.edu/CBOYER001/index.html" class="btn" target="_blank">View Project</a>
+                    </div>
+                </div>
+
+            </div>
+
+            <h3 style="border-bottom: 1px solid #333; padding-bottom: 10px; margin: 40px 0 20px 0; color: #ff0055;">HTML Games</h3>
+            <div class="grid">
+                
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>River Run: Math Regatta</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">A math based speed racing game.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game1.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Ginger Bread Games</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">A counting, matching, and ordering game for kids.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game2.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Factor Rockets</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">A speed game based on multiplication and division.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game3.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Fraction Rush: Ultimate</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">An endless runner.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game4.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+
+                <div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>PV Factory: Ultimate</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">A Ones and Tens base game.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game5.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+				
+				<div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Zoo Designer</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">Design Exhibits for animals using area.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game6.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+				
+				<div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Canyon Cross</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">A Ones and Tens game.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game7.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+				
+				<div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Loot Drop: Ultimate</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">An RPG to test your math skills.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game8.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+				
+				<div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Pet Shop: Math Game</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">Adopt pets using small coins.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game9.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+				
+				<div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Bridges Racer</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">A car racing game that uses simple addition/subtraction.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game10.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+				
+				<div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Kingdom of Math</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">A wave survival game using math curriculum.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game11.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+				
+				<div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Pizza Chef</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">Fractions to build pizzas.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game12.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+				
+				<div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Potion Master</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">A time guessing game to help create magical potions.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game13.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+				
+				<div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Hedge Maze Math</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">A 10 more and 10 less game in the third ddimension.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game14.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+				
+				<div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Zoo Tycoon: Area Designer</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">A remake of the Zoo Area game that allows for more complex shapes.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game15.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+				
+				<div class="tilt-card project-card">
+                    <div class="holo-sheen"></div>
+                    <div class="card-header">
+                        <h3>Lemonade Stand</h3>
+                        <span class="year-badge">2026</span>
+                    </div>
+                    <p class="card-desc">Test your skills and run a lemonade stand.</p>
+                    <div class="card-footer">
+                        <p class="tech-tag" style="color: orange;"><i class="fab fa-html5"></i> HTML5</p>
+                        <a href="game16.html" class="btn">Play Game</a>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="art" class="content-section art-container">
+            <div style="text-align:center; margin-bottom: 20px;">
+                <h1 data-lang-key="nav_art">Art Portfolio</h1>
+            </div>
+
+            <div class="sub-nav">
+                <button class="sub-nav-btn active" onclick="showArtSub('art-gallery')">Digital Gallery</button>
+                <button class="sub-nav-btn" onclick="showArtSub('art-exhibit')">Exhibited Works</button>
+                <button class="sub-nav-btn" onclick="showArtSub('art-inktober')">Inktober Series</button>
+            </div>
+
+            <div id="art-gallery" class="art-subsection active-subsection">
+                <div class="masonry-grid big-gallery">
+                    <div class="masonry-item"><img src="digital-art/arcubabs.png" class="lightbox-trigger"></div>
+                    <div class="masonry-item"><img src="digital-art/aRelic.png" class="lightbox-trigger"></div>
+                    <div class="masonry-item"><img src="digital-art/BirdoTran.png" class="lightbox-trigger"></div>
+                    <div class="masonry-item"><img src="digital-art/botwZeldacomfy.png" class="lightbox-trigger"></div>
+                    <div class="masonry-item"><img src="digital-art/Crystis.png" class="lightbox-trigger"></div>
+                    <div class="masonry-item"><img src="digital-art/export-0001.png" class="lightbox-trigger"></div>
+                    <div class="masonry-item"><img src="digital-art/mono.png" class="lightbox-trigger"></div>
+                    <div class="masonry-item"><img src="digital-art/ohgate.png" class="lightbox-trigger"></div>
+                    <div class="masonry-item"><img src="digital-art/rwilk.png" class="lightbox-trigger"></div>
+                    <div class="masonry-item"><img src="digital-art/ZeldaPlant.png" class="lightbox-trigger"></div>
+                    <div class="masonry-item"><img src="digital-art/minikiti.png" class="lightbox-trigger"></div>
+                    <div class="masonry-item"><img src="digital-art/minCact.png" class="lightbox-trigger"></div>
+					<div class="masonry-item"><img src="digital-art/tiny.png" class="lightbox-trigger"></div>
+					<div class="masonry-item"><img src="digital-art/minikiti.png" class="lightbox-trigger"></div>
+					<div class="masonry-item"><img src="digital-art/minCact.png" class="lightbox-trigger"></div>
+					<div class="masonry-item"><img src="digital-art/pipay.png" class="lightbox-trigger"></div>
+					<div class="masonry-item"><img src="digital-art/ohgate.png" class="lightbox-trigger"></div>
+					<div class="masonry-item"><img src="digital-art/edelgard.png" class="lightbox-trigger"></div>
+					
+					
+					
+                </div>
+            </div>
+            
+            <div id="art-exhibit" class="art-subsection">
+                <div class="exhibitions-grid">
+                    <div class="exhibit-card">
+                        <div class="exhibit-img-wrapper">
+                            <img src="digital-art/Illustration.png" alt="Exhibit Piece" class="lightbox-trigger">
+                        </div>
+                        <div class="exhibit-details">
+                            <h3>The Golden Watcher</h3>
+                            <div class="exhibit-meta">
+                                <p><strong>Medium:</strong> Digital Illustration</p>
+                                <p><strong>Year:</strong> 2024</p>
+                                <p><strong>Size:</strong> 24" x 36"</p>
+                                <p style="color: var(--neon-blue);"><strong>Location:</strong> Main Hall Gallery</p>
+                            </div>
+                            <p class="exhibit-notes"><strong>Notes:</strong> Displayed at the Saint John's Senior Art Showcase. Limited print run.</p>
+                        </div>
+                    </div>
+					
+					<div class="exhibit-card">
+                        <div class="six-pane-wrapper">
+				<img src="exhibition/ohgate.png" class="lightbox-trigger window-img">
+				<img src="exhibition/walk.png" class="lightbox-trigger window-img">
+				<img src="exhibition/tiny.png" class="lightbox-trigger window-img">
+				<img src="exhibition/grasser.png" class="lightbox-trigger window-img">
+				<img src="exhibition/mono.png" class="lightbox-trigger window-img">
+				<img src="exhibition/bill.png" class="lightbox-trigger window-img">
+			</div>
+                        <div class="exhibit-details">
+                            <h3>Nature Cutout</h3>
+                            <div class="exhibit-meta">
+                                <p><strong>Medium:</strong> Digital / Print</p>
+                                <p><strong>Year:</strong> 2019</p>
+                                <p><strong>Size:</strong> 10" x 12" (Each)</p>
+                                <p style="color: var(--neon-blue);"><strong>Location:</strong> Benedicta Art Gallery</p>
+                            </div>
+                            <p class="exhibit-notes"><strong>Notes:</strong> A collection of nature elements exploring color theory.</p>
+                        </div>
+                    </div>
+					
+                    <div class="exhibit-card">
+                        <div class="window-pane-wrapper">
+                            <img src="exhibition/2d-1.png" class="lightbox-trigger window-img">
+                            <img src="exhibition/2d-2.png" class="lightbox-trigger window-img">
+                            <img src="exhibition/2d-3.png" class="lightbox-trigger window-img">
+                            <img src="exhibition/2d-4.png" class="lightbox-trigger window-img">
+                        </div>
+                        <div class="exhibit-details">
+                            <h3>Ferrisland</h3>
+                            <div class="exhibit-meta">
+                                <p><strong>Medium:</strong> Digital / Print</p>
+                                <p><strong>Year:</strong> 2019</p>
+                                <p><strong>Size:</strong> 10" x 12" (Each)</p>
+                                <p style="color: var(--neon-blue);"><strong>Location:</strong> Advanced Computer Art</p>
+                            </div>
+                            <p class="exhibit-notes"><strong>Notes:</strong> A collection of character concepts exploring color theory.</p>
+                        </div>
+                    </div>
+               
+			
+			<div class="exhibit-card">
+                        <div class="window-pane-wrapper" style="display: block; width: 100%;">
+			
+							<img src="exhibition/BoyerConnor4-1Clouds.jpg" 
+								 class="lightbox-trigger window-img" 
+								 style="display: block; width: 50%; margin-bottom: 20px; height: auto;">
+								 
+							<img src="exhibition/BoyerConnor4-2Mountains.jpg" 
+								 class="lightbox-trigger window-img" 
+								 style="display: block; width: 50%; margin-bottom: 20px; height: auto;">
+								 
+							<img src="exhibition/BoyerConnor4-3Trees.jpg" 
+								 class="lightbox-trigger window-img" 
+								 style="display: block; width: 50%; margin-bottom: 20px; height: auto;">
+								 
+							<img src="exhibition/BoyerConnor4-4Grass.jpg" 
+								 class="lightbox-trigger window-img" 
+								 style="display: block; width: 50%; height: auto;">
+								 
+						</div>
+						
+                        <div class="exhibit-details">
+                            <h3>Air</h3>
+                            <div class="exhibit-meta">
+                                <p><strong>Medium:</strong> Digital / Print</p>
+                                <p><strong>Year:</strong> 2019</p>
+                                <p><strong>Size:</strong> 124pxl x 816pxl (Each)</p>
+                                <p style="color: var(--neon-blue);"><strong>Location:</strong> Introduction to Computer Art</p>
+                            </div>
+                            <p class="exhibit-notes"><strong>Notes:</strong> A collection of landscapes exploring color theory.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="art-inktober" class="art-subsection">
+                <h3 class="calendar-month-title">October 2018</h3>
+                <div class="calendar-wrapper">
+                    <div class="calendar-header">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div class="inktober-calendar">
+						<div class="ink-day empty-day"></div>
+                        <div class="ink-day"><img src="inktober/2018/1-Poisonous.jpg" class="lightbox-trigger"><span class="day-num">1</span></div>
+                        <div class="ink-day"><img src="inktober/2018/2-Tranquil.jpg" class="lightbox-trigger"><span class="day-num">2</span></div>
+                        <div class="ink-day"><img src="inktober/2018/3-Roasted.jpg" class="lightbox-trigger"><span class="day-num">3</span></div>
+                        <div class="ink-day"><img src="inktober/2018/4-Spell.jpg" class="lightbox-trigger"><span class="day-num">4</span></div>
+						<div class="ink-day"><img src="inktober/2018/5-Chicken.jpg" class="lightbox-trigger"><span class="day-num">5</span></div>
+						<div class="ink-day"><img src="inktober/2018/6-Drooling.jpg" class="lightbox-trigger"><span class="day-num">6</span></div>
+						<div class="ink-day"><img src="inktober/2018/7-Exhausted.jpg" class="lightbox-trigger"><span class="day-num">7</span></div>
+						<div class="ink-day"><img src="inktober/2018/8-Star.jpg" class="lightbox-trigger"><span class="day-num">8</span></div>
+						<div class="ink-day"><img src="inktober/2018/9-Precious.jpg" class="lightbox-trigger"><span class="day-num">9</span></div>
+						<div class="ink-day"><img src="inktober/2018/10-Flowing.jpg" class="lightbox-trigger"><span class="day-num">10</span></div>
+						<div class="ink-day"><img src="inktober/2018/11-Cruel.jpg" class="lightbox-trigger"><span class="day-num">11</span></div>
+						<div class="ink-day"><img src="inktober/2018/12-Whale.jpg" class="lightbox-trigger"><span class="day-num">12</span></div>
+						<div class="ink-day"><img src="inktober/2018/13-Guarded.jpg" class="lightbox-trigger"><span class="day-num">13</span></div>
+						<div class="ink-day"><img src="inktober/2018/14-Clock.jpg" class="lightbox-trigger"><span class="day-num">14</span></div>
+						<div class="ink-day"><img src="inktober/2018/15-Weak.jpg" class="lightbox-trigger"><span class="day-num">15</span></div>
+						<div class="ink-day"><img src="inktober/2018/16-Angular.jpg" class="lightbox-trigger"><span class="day-num">16</span></div>
+						<div class="ink-day"><img src="inktober/2018/17-Swollen.jpg" class="lightbox-trigger"><span class="day-num">17</span></div>
+						<div class="ink-day"><img src="inktober/2018/18-Bottle.jpg" class="lightbox-trigger"><span class="day-num">18</span></div>
+						<div class="ink-day"><img src="inktober/2018/19-Scorched.jpg" class="lightbox-trigger"><span class="day-num">19</span></div>
+						<div class="ink-day"><img src="inktober/2018/20-Breakable.jpg" class="lightbox-trigger"><span class="day-num">20</span></div>
+						<div class="ink-day"><img src="inktober/2018/21-Drain.jpg" class="lightbox-trigger"><span class="day-num">21</span></div>
+						<div class="ink-day"><img src="inktober/2018/22-Precious.jpg" class="lightbox-trigger"><span class="day-num">22</span></div>
+						<div class="ink-day"><img src="inktober/2018/23-Muddy.jpg" class="lightbox-trigger"><span class="day-num">23</span></div>
+						<div class="ink-day"><img src="inktober/2018/24-Chop.jpg" class="lightbox-trigger"><span class="day-num">24</span></div>
+						<div class="ink-day"><img src="inktober/2018/25-Prickly.jpg" class="lightbox-trigger"><span class="day-num">25</span></div>
+						<div class="ink-day"><img src="inktober/2018/26-Stretch.jpg" class="lightbox-trigger"><span class="day-num">26</span></div>
+						<div class="ink-day"><img src="inktober/2018/27-Thunder.jpg" class="lightbox-trigger"><span class="day-num">27</span></div>
+						<div class="ink-day"><img src="inktober/2018/28-Gift.jpg" class="lightbox-trigger"><span class="day-num">28</span></div>
+						<div class="ink-day"><img src="inktober/2018/29-Double.jpg" class="lightbox-trigger"><span class="day-num">29</span></div>
+						<div class="ink-day"><img src="inktober/2018/30-Jolt.jpg" class="lightbox-trigger"><span class="day-num">30</span></div>
+						<div class="ink-day"><img src="inktober/2018/31-Slice.jpg" class="lightbox-trigger"><span class="day-num">31</span></div>
+                        <div class="ink-day empty-day"></div>
+                    </div>
+                </div>
+                <hr style="border-color: #333; margin: 60px 0;">
+                <h3 class="calendar-month-title">October 2019</h3>
+                <div class="calendar-wrapper">
+                    <div class="calendar-header">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div class="inktober-calendar">
+						<div class="ink-day empty-day"></div>
+						<div class="ink-day empty-day"></div>
+                        <div class="ink-day"><img src="inktober/2019/1-Ring.jpg" class="lightbox-trigger"><span class="day-num">1</span></div>
+						<div class="ink-day"><img src="inktober/2019/2-Mindless.jpg" class="lightbox-trigger"><span class="day-num">2</span></div>
+						<div class="ink-day"><img src="inktober/2019/3-Bait.jpg" class="lightbox-trigger"><span class="day-num">3</span></div>
+						<div class="ink-day"><img src="inktober/2019/4_Freeze.jpg" class="lightbox-trigger"><span class="day-num">4</span></div>
+						<div class="ink-day"><img src="inktober/2019/5-Build.jpg" class="lightbox-trigger"><span class="day-num">5</span></div>
+						<div class="ink-day"><img src="inktober/2019/6-Husky.jpg" class="lightbox-trigger"><span class="day-num">6</span></div>
+						<div class="ink-day"><img src="inktober/2019/7-Enchanted.jpg" class="lightbox-trigger"><span class="day-num">7</span></div>
+						<div class="ink-day"><img src="inktober/2019/8-Frail.jpg" class="lightbox-trigger"><span class="day-num">8</span></div>
+						<div class="ink-day"><img src="inktober/2019/9-Swing.jpg" class="lightbox-trigger"><span class="day-num">9</span></div>
+						<div class="ink-day"><img src="inktober/2019/10-Pattern.jpg" class="lightbox-trigger"><span class="day-num">10</span></div>
+						<div class="ink-day"><img src="inktober/2019/11-Snow.jpg" class="lightbox-trigger"><span class="day-num">11</span></div>
+						<div class="ink-day"><img src="inktober/2019/12-Dragon.jpg" class="lightbox-trigger"><span class="day-num">12</span></div>
+						<div class="ink-day"><img src="inktober/2019/13-Ash.jpg" class="lightbox-trigger"><span class="day-num">13</span></div>
+						<div class="ink-day"><img src="inktober/2019/14-Overgrown.jpg" class="lightbox-trigger"><span class="day-num">14</span></div>
+						<div class="ink-day"><img src="inktober/2019/15-16-Legend-Wild.jpg" class="lightbox-trigger"><span class="day-num">15</span></div>
+						<div class="ink-day"><img src="inktober/2019/15-16-Legend-Wild.jpg" class="lightbox-trigger"><span class="day-num">16</span></div>
+						<div class="ink-day"><img src="inktober/2019/17-Ornament.jpg" class="lightbox-trigger"><span class="day-num">17</span></div>
+						<div class="ink-day"><img src="inktober/2019/18-Misfit.jpg" class="lightbox-trigger"><span class="day-num">18</span></div>
+						<div class="ink-day"><img src="inktober/2019/19-Sling.jpg" class="lightbox-trigger"><span class="day-num">19</span></div>
+						<div class="ink-day"><img src="inktober/2019/20-Tread.jpg" class="lightbox-trigger"><span class="day-num">20</span></div>
+						<div class="ink-day"><img src="inktober/2019/21-Treasure.jpg" class="lightbox-trigger"><span class="day-num">21</span></div>
+						<div class="ink-day"><img src="inktober/2019/22-Ghost.jpg" class="lightbox-trigger"><span class="day-num">22</span></div>
+						<div class="ink-day"><img src="inktober/2019/23-Ancient.jpg" class="lightbox-trigger"><span class="day-num">23</span></div>
+						<div class="ink-day"><img src="inktober/2019/24-Confused.jpg" class="lightbox-trigger"><span class="day-num">24</span></div>
+						<div class="ink-day"><img src="inktober/2019/25-Tasty.jpg" class="lightbox-trigger"><span class="day-num">25</span></div>
+						<div class="ink-day"><img src="" class="lightbox-trigger"><span class="day-num">26</span></div>
+						<div class="ink-day"><img src="inktober/2019/27-Coat.jpg" class="lightbox-trigger"><span class="day-num">27</span></div>
+						<div class="ink-day"><img src="inktober/2019/28-Ride.jpg" class="lightbox-trigger"><span class="day-num">28</span></div>
+						<div class="ink-day"><img src="inktober/2019/29-Injured.jpg" class="lightbox-trigger"><span class="day-num">29</span></div>
+						<div class="ink-day"><img src="inktober/2019/30-Catch.jpg" class="lightbox-trigger"><span class="day-num">30</span></div>
+						<div class="ink-day"><img src="inktober/2019/31-Ripe.jpg" class="lightbox-trigger"><span class="day-num">31</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="photography" class="content-section art-container">
+            <div style="text-align:center; margin-bottom: 30px;">
+                <h1 data-lang-key="nav_photo">Photography</h1>
+            </div>
+            <div class="masonry-grid big-gallery">
+                <div class="masonry-item"><img src="photography/image1.jpg" class="lightbox-trigger"></div>
+                <div class="masonry-item"><img src="photography/image2.jpg" class="lightbox-trigger"></div>
+                <div class="masonry-item"><img src="photography/image3.jpg" class="lightbox-trigger"></div>
+                <div class="masonry-item"><img src="photography/image4.jpg" class="lightbox-trigger"></div>
+                <div class="masonry-item"><img src="photography/image5.jpg" class="lightbox-trigger"></div>
+                <div class="masonry-item"><img src="photography/image6.jpg" class="lightbox-trigger"></div>
+            </div>
+        </section>
+
+        <section id="videos" class="content-section">
+            <h1 data-lang-key="nav_video">Videography</h1>
+            <div class="grid">
+                <div class="tilt-card video-card">
+                    <div class="holo-sheen"></div>
+                    <div class="video-preview-container">
+                        <img class="video-thumb" src="images/video-thumb1.jpg" alt="Reel Thumb">
+                        <video class="video-clip" loop muted playsinline><source src="images/video-clip1.mp4" type="video/mp4"></video>
+                    </div>
+                    <h3>Cinematic Reel</h3>
+                </div>
+                <div class="tilt-card video-card">
+                    <div class="holo-sheen"></div>
+                    <div class="video-preview-container">
+                        <img class="video-thumb" src="images/video-thumb2.jpg" alt="Film Thumb">
+                        <video class="video-clip" loop muted playsinline><source src="images/video-clip2.mp4" type="video/mp4"></video>
+                    </div>
+                    <h3>Short Film</h3>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="content-section">
+            <h1 data-lang-key="nav_about">About Me</h1>
+            <div class="grid" style="grid-template-columns: 1fr;">
+                <div class="tilt-card">
+                    <div class="holo-sheen"></div>
+                    <div class="about-text" data-lang-key="about_bio">
+                        <p>Hello, and welcome to my corner of the internet! My name is Connor Boyer, but you might know me better as Conroar. I recently graduated from the College of Saint Benedict’s and Saint John’s University with a Bachelor of Arts in Computer Science, complemented by a minor in Art. My journey in the digital world has led me to self-teach game design using C++ and GML, while also diving into the realms of art and animation with tools like Clip Studio Paint EX and Krita Studio.</p>
+                        <br>
+                        <p>For my senior capstone project, I explored the intriguing intersection of Human-Computer Interaction and Augmented Reality, delving into how these technologies will reshape societal interactions. My coding adventures primarily involve GML, C++, Java, and Python, but I also have a foundational understanding of Tensorflow, Ruby, C#, and HTML.</p>
+                        <br>
+                        <p>In addition to my tech pursuits, I’m venturing into the world of content creation. I plan to launch a YouTube channel focused on vlogging, start a podcast, and continue my livestreaming endeavors. My passion for gaming is deep-rooted; I coached the Rainbow Six Siege team to two National Championships and led my team in Super Smash Bros Ultimate. My gaming interests are vast, spanning MMORPGs and Simulation games, with favorites like Animal Crossing New Horizons, Genshin Impact, and FFXIV.</p>
+                        <br>
+                        <p>When I’m not engrossed in the digital world, you’ll find me drawing, arranging music, or soaking in new tunes and skills. Whether it’s through games or art, I’m always on the lookout for new adventures and experiences. Thanks for stopping by, and I hope to share more of my journey with you soon!</p>
+                    </div>
+                    <div class="social-links">
+                        <a href="https://www.linkedin.com/in/connorjboyer/"><i class="fab fa-linkedin"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="https://www.youtube.com/channel/UCtMwn-rAbhT4pN7s-iy4zlQ?view_as=subscriber"><i class="fab fa-youtube"></i></a>
+                        <a href=""><i class="fab fa-twitch"></i></a>
+                        <a href="https://github.com/Conroar"><i class="fab fa-github"></i></a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="resume" class="content-section">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 data-lang-key="nav_resume">Resume</h1>
+                <a href="resume/resume.pdf" download class="btn">Download PDF</a>
+            </div>
+            
+            <div class="grid" style="grid-template-columns: 1fr 1.5fr;"> <div>
+                    <h2>Experience Log</h2>
+                    <div class="tilt-card" style="margin-bottom:20px;">
+                        <div class="holo-sheen"></div>
+                        <h3>Technology Paraeducator</h3>
+                        <p style="color:#888;">Andover Elementary | 2022 - Current</p>
+                        <p>Manage 2,400+ devices, fix hardware for 180+ staff.</p>
+                    </div>
+                    <div class="tilt-card" style="margin-bottom:20px;">
+                        <div class="holo-sheen"></div>
+                        <h3>eSports Captain</h3>
+                        <p style="color:#888;">Saint John's University | 2021 - 2022</p>
+                        <p>Coached Rainbow Six Siege team to two National Titles.</p>
+                    </div>
+                    <div class="tilt-card">
+                        <div class="holo-sheen"></div>
+                        <h3>QA Game Tester</h3>
+                        <p style="color:#888;">Activision Blizzard | 2018 - 2019</p>
+                        <p>Found 5 high-priority bugs on AAA titles.</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <h2>Skill Proficiency</h2>
+                    <div class="rpg-skill-tree">
+                        
+                        <div class="rpg-node root-node">
+                            <div class="node-icon"><i class="fas fa-user-astronaut"></i></div>
+                            <div class="node-title">Class: Creative Dev</div>
+                            <p style="font-size:0.8rem; color:#aaa; margin:0;">Level 26</p>
+                        </div>
+
+                        <h4 class="skill-category-title">Code Sorcery</h4>
+                        <div class="rpg-branch-group">
+                            <div class="rpg-node compact">
+                                <div class="node-title">C#</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 90%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">C++</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 75%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">Java</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 80%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">Python</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 85%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">HTML / CSS</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 95%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">GML</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 90%;"></div></div>
+                            </div>
+                        </div>
+
+                        <h4 class="skill-category-title">Engines & Forge</h4>
+                        <div class="rpg-branch-group">
+                            <div class="rpg-node compact">
+                                <div class="node-title">Unity</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 90%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">Unreal</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 70%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">GameMaker</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 95%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">Fusion 360</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 65%;"></div></div>
+                            </div>
+                        </div>
+
+                        <h4 class="skill-category-title">Visual Arts</h4>
+                        <div class="rpg-branch-group">
+                            <div class="rpg-node compact">
+                                <div class="node-title">Photoshop</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 85%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">Illustrator</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 75%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">Figma</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 80%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">Canva</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 95%;"></div></div>
+                            </div>
+                        </div>
+
+                        <h4 class="skill-category-title">Tools & Media</h4>
+                        <div class="rpg-branch-group">
+                            <div class="rpg-node compact">
+                                <div class="node-title">Premiere Pro</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 85%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">Vegas Pro</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 90%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">OBS</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 95%;"></div></div>
+                            </div>
+                            <div class="rpg-node compact">
+                                <div class="node-title">Git / GitHub</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 80%;"></div></div>
+                            </div>
+                             <div class="rpg-node compact">
+                                <div class="node-title">Jira</div>
+                                <div class="xp-bar"><div class="xp-fill" style="width: 75%;"></div></div>
+                            </div>
+                        </div>
+
+                         <h4 class="skill-category-title">Spoken Languages</h4>
+                        <div class="rpg-branch-group">
+                            <div class="rpg-node compact" style="border-color: #bd00ff;">
+                                <div class="node-title">German</div>
+                                <p style="font-size:0.75rem; color:#aaa; margin:0;">Basic Proficiency</p>
+                            </div>
+                            <div class="rpg-node compact" style="border-color: #bd00ff;">
+                                <div class="node-title">Japanese</div>
+                                <p style="font-size:0.75rem; color:#aaa; margin:0;">Basic Proficiency</p>
+                            </div>
+							<div class="rpg-node compact" style="border-color: #bd00ff;">
+                                <div class="node-title">Chinese</div>
+                                <p style="font-size:0.75rem; color:#aaa; margin:0;">Basic Proficiency</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <footer>&copy; 2026 Connor Boyer</footer>
+    <script src="script.js"></script>
 </body>
-
 </html>

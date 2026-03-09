@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Place Value Factory: Ultimate Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;700&family=Roboto:wght@400;700;900&family=vt323&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Base Variables */
+        :root {
+            --bg-color: #f1f5f9;
+            --panel-bg: #ffffff;
+            --text-color: #1e293b;
+            --primary-color: #3b82f6;
+            --secondary-color: #64748b;
+            --accent-color: #f59e0b;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --font-main: 'Roboto', sans-serif;
+            --font-display: 'Chakra Petch', sans-serif;
+            --glow-strength: 0px;
+        }
+
+        /* NANO MODE (DECIMALS) */
+        body.nano-mode {
+            --bg-color: #f3e8ff; /* Light Purple */
+            --primary-color: #9333ea; /* Purple */
+            --accent-color: #06b6d4; /* Cyan */
+            background-image: 
+                linear-gradient(rgba(147, 51, 234, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(147, 51, 234, 0.05) 1px, transparent 1px) !important;
+            background-size: 20px 20px !important;
+        }
+
+        /* NIGHT MODE */
+        body.night-mode {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #e2e8f0;
+            --glow-strength: 15px;
+        }
+        
+        /* TIERS */
+        body.tier-2 {
+            --bg-color: #fffbeb;
+            --panel-bg: #ffffff;
+            --primary-color: #b45309;
+            --secondary-color: #78350f;
+            background-image: radial-gradient(#d97706 1px, transparent 1px) !important;
+            background-size: 30px 30px !important;
+        }
+        body.tier-3 {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #e2e8f0;
+            --primary-color: #06b6d4;
+            --secondary-color: #94a3b8;
+            --accent-color: #d946ef;
+            --glow-strength: 20px;
+            background-image: linear-gradient(0deg, transparent 24%, rgba(6, 182, 212, .3) 25%, rgba(6, 182, 212, .3) 26%, transparent 27%, transparent 74%, rgba(6, 182, 212, .3) 75%, rgba(6, 182, 212, .3) 76%, transparent 77%), linear-gradient(90deg, transparent 24%, rgba(6, 182, 212, .3) 25%, rgba(6, 182, 212, .3) 26%, transparent 27%, transparent 74%, rgba(6, 182, 212, .3) 75%, rgba(6, 182, 212, .3) 76%, transparent 77%) !important;
+            background-size: 50px 50px !important;
+        }
+
+        /* High Contrast */
+        body.high-contrast {
+            --bg-color: #000000;
+            --panel-bg: #000000;
+            --text-color: #ffffff;
+            --primary-color: #ffff00;
+            --secondary-color: #00ffff;
+            --accent-color: #ff00ff;
+            --success-color: #00ff00;
+            --danger-color: #ff0000;
+            background-image: none !important;
+            --glow-strength: 0px !important;
+        }
+
+        /* Left Handed */
+        body.left-handed #main-header { flex-direction: row-reverse; }
+        body.left-handed #game-ui > div:first-child .hud-panel { flex-direction: row-reverse; }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            color: var(--text-color);
+            font-family: var(--font-main);
+            transition: all 1s ease;
+            overflow: hidden;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .tech-font { font-family: var(--font-display); letter-spacing: 0.5px; }
+        .mono-font { font-family: 'Roboto Mono', monospace; }
+
+        .game-btn {
+            background: linear-gradient(to bottom, var(--primary-color), #2563eb);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-bottom: 5px solid rgba(0,0,0,0.3);
+            border-radius: 8px;
+            transition: all 0.1s;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        body.tier-2 .game-btn { background: linear-gradient(to bottom, #d97706, #b45309); }
+        body.tier-3 .game-btn { background: linear-gradient(to bottom, #06b6d4, #0891b2); box-shadow: 0 0 10px var(--primary-color); }
+        body.nano-mode .game-btn { background: linear-gradient(to bottom, #9333ea, #7e22ce); }
+        
+        .game-btn:active { transform: translateY(3px); border-bottom-width: 2px; }
+        .game-btn:disabled { filter: grayscale(100%) opacity(0.5); cursor: not-allowed; transform: none; border-bottom-width: 5px; }
+
+        /* ITEMS */
+        .unit-item {
+            width: 24px; height: 24px;
+            background: #ef4444;
+            border-radius: 4px;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1), inset 3px 3px 0 rgba(255,255,255,0.3), inset -3px -3px 0 rgba(0,0,0,0.1), 0 0 var(--glow-strength) rgba(239, 68, 68, 0.5);
+            display: inline-block; margin: 2px;
+            border: 1px solid #b91c1c;
+            transition: box-shadow 1s;
+        }
+        .unit-item.golden {
+            background: radial-gradient(circle at 30% 30%, #fef08a, #ca8a04);
+            border-color: #a16207;
+            box-shadow: 0 0 10px #eab308;
+            animation: pulseGold 1s infinite alternate;
+        }
+        @keyframes pulseGold { from { box-shadow: 0 0 5px #eab308; } to { box-shadow: 0 0 20px #facc15; } }
+
+        .ten-rod {
+            width: 24px; height: 120px;
+            background: #3b82f6;
+            border-radius: 4px;
+            border: 1px solid #1d4ed8;
+            display: inline-block; margin: 2px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2), 0 0 var(--glow-strength) rgba(59, 130, 246, 0.5);
+            background-image: repeating-linear-gradient(to top, transparent 0px, transparent 10px, rgba(0,0,0,0.2) 10px, rgba(0,0,0,0.2) 12px);
+            background-size: 100% 100%;
+            position: relative;
+            transition: box-shadow 1s;
+        }
+        .ten-rod::after { content: ''; position: absolute; top:0; left:2px; bottom:0; width:4px; background: rgba(255,255,255,0.3); border-radius: 2px; }
+
+        .hundred-crate {
+            width: 100px; height: 100px;
+            background: #f59e0b;
+            border-radius: 6px;
+            border: 4px solid #b45309;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: bold; color: #78350f;
+            margin: 4px;
+            box-shadow: 0 4px 0 #92400e, 0 10px 10px rgba(0,0,0,0.1), 0 0 var(--glow-strength) rgba(245, 158, 11, 0.5);
+            background-image: linear-gradient(45deg, transparent 48%, rgba(180, 83, 9, 0.2) 49%, rgba(180, 83, 9, 0.2) 51%, transparent 52%), linear-gradient(-45deg, transparent 48%, rgba(180, 83, 9, 0.2) 49%, rgba(180, 83, 9, 0.2) 51%, transparent 52%);
+            font-size: 32px; font-family: var(--font-display);
+            transition: box-shadow 1s;
+        }
+
+        /* NANO MODE COLORS */
+        body.nano-mode .unit-item { background: #d946ef; border-color: #a21caf; } /* Pink */
+        body.nano-mode .ten-rod { background: #8b5cf6; border-color: #6d28d9; } /* Violet */
+        body.nano-mode .hundred-crate { background: #0ea5e9; border-color: #0369a1; color: white; } /* Sky */
+
+        /* DROP ZONES - Z-INDEX 5 ensures they cover the bots (z-index 1) */
+        .drop-zone {
+            background-color: var(--panel-bg);
+            border: 3px solid var(--secondary-color);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            z-index: 5;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        body.tier-3 .drop-zone { border-color: var(--primary-color); box-shadow: 0 0 15px rgba(6, 182, 212, 0.2); }
+
+        .conveyor-bg {
+            background-color: #cbd5e1;
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(0,0,0,0.1) 19px, rgba(0,0,0,0.1) 20px);
+            background-size: 100% 20px;
+            animation: scrollBelt var(--belt-speed, 3s) linear infinite;
+        }
+        body.tier-2 .conveyor-bg { background-color: #e7e5e4; }
+        body.tier-3 .conveyor-bg { background-color: #334155; background-image: repeating-linear-gradient(0deg, transparent, transparent 19px, #06b6d4 19px, #06b6d4 20px); }
+        @keyframes scrollBelt { from { background-position: 0 0; } to { background-position: 0 20px; } }
+
+        .piston-btn {
+            background: radial-gradient(circle at 30% 30%, #ff6b6b, #dc2626);
+            border: 4px solid #991b1b;
+            border-bottom-width: 8px;
+            border-radius: 50%;
+            width: 85px; height: 85px;
+            color: white; font-weight: bold;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.2);
+            transition: all 0.05s;
+            position: relative;
+            z-index: 10;
+        }
+        .piston-btn:active, .piston-btn.pressed { transform: translateY(4px); border-bottom-width: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .piston-btn.blue-variant { background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb); border-color: #1e40af; }
+        body.nano-mode .piston-btn { background: radial-gradient(circle at 30% 30%, #e879f9, #c026d3); border-color: #86198f; } /* Pink Piston */
+        body.nano-mode .piston-btn.blue-variant { background: radial-gradient(circle at 30% 30%, #a78bfa, #7c3aed); border-color: #5b21b6; } /* Purple Piston */
+
+        /* Animations */
+        @keyframes dropIn { 0% { transform: translateY(-50px) scale(0.5); opacity: 0; } 60% { transform: translateY(5px) scale(1.1); opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+        .animate-drop-in { animation: dropIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes crushImplode { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.8) rotate(5deg); opacity: 0.8; } 100% { transform: scale(0.1) rotate(180deg); opacity: 0; } }
+        .animate-crush { animation: crushImplode 0.3s ease-in forwards !important; }
+        @keyframes pulseRed { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } }
+        .overflow-warning { animation: pulseRed 1s infinite; background-color: #fee2e2 !important; color: #b91c1c !important; border-color: #ef4444 !important; }
+        @keyframes steamRise { 0% { opacity: 0.8; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-60px) scale(3); } }
+        .steam-particle { position: absolute; width: 15px; height: 15px; background: rgba(255,255,255,0.7); border-radius: 50%; pointer-events: none; animation: steamRise 1s ease-out forwards; z-index: 5; }
+        @keyframes mathFloat { 0% { opacity: 0; transform: translateY(10px) scale(0.8); } 20% { opacity: 1; transform: translateY(0) scale(1.2); } 80% { opacity: 1; transform: translateY(0) scale(1.2); } 100% { opacity: 0; transform: translateY(-20px) scale(1); } }
+        .math-popup { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fbbf24; padding: 8px 16px; border-radius: 20px; font-family: 'Chakra Petch', sans-serif; font-weight: bold; font-size: 1.2rem; white-space: nowrap; pointer-events: none; z-index: 100; animation: mathFloat 1.5s ease-out forwards; border: 2px solid #fbbf24; }
+        
+        .hud-panel { background: white; border: 2px solid var(--secondary-color); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        body.tier-3 .hud-panel { background: rgba(30, 41, 59, 0.9); border-color: var(--primary-color); color: white; }
+        body.night-mode .hud-panel { background: rgba(30, 41, 59, 0.95); border-color: var(--primary-color); color: var(--text-color); }
+
+        .truck-container { position: fixed; bottom: 15%; left: -450px; width: 450px; z-index: 45; pointer-events: none; transition: transform 2.5s ease-in-out; filter: drop-shadow(0 10px 5px rgba(0,0,0,0.2)); }
+        .truck-drive { transform: translateX(150vw); }
+
+        /* Employee Bots */
+        .bot-container { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+        .bot { 
+            position: absolute; width: 24px; height: 24px; 
+            background: var(--text-color); 
+            opacity: 0.3; 
+            clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 100%, 0% 100%, 0% 20%);
+            /* Transition set by JS for variable speed */
+        }
+        .bot::after { content: ''; position: absolute; top: 6px; left: 6px; width: 4px; height: 4px; background: cyan; box-shadow: 8px 0 0 cyan; }
+
+        /* Confetti */
+        @keyframes confettiFall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(360deg); opacity: 0; } }
+        .confetti { position: fixed; width: 10px; height: 10px; top: -10px; z-index: 100; pointer-events: none; }
+
+        /* Tutorial */
+        .tutorial-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999; display: flex; align-items: center; justify-content: center; }
+        .tut-arrow { position: absolute; color: white; font-size: 2rem; font-weight: bold; animation: bounce 1s infinite; text-shadow: 0 0 10px black; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col transition-colors duration-500">
+
+    <div id="aria-announcer" class="sr-only" aria-live="polite"></div>
+
+    <!-- Header -->
+    <header class="p-3 flex justify-between items-center bg-white/90 backdrop-blur border-b border-gray-200 shadow-sm z-20 transition-colors duration-500" id="main-header">
+        <div class="flex items-center gap-4">
+            <button onclick="goHome()" class="game-btn px-3 py-1 bg-slate-500 text-xs border-slate-600" title="End Shift">🏠 HOME</button>
+            <div class="bg-[var(--primary-color)] text-white p-2 rounded-lg shadow-sm">
+                <span class="text-2xl">🏭</span>
+            </div>
+            <div>
+                <h1 class="text-xl tech-font font-bold" style="color: var(--text-color)">PV FACTORY <span class="text-xs align-top opacity-70">ULTIMATE</span></h1>
+                <div class="flex gap-2 text-[10px] font-bold" style="color: var(--secondary-color)">
+                    <span>LEVEL: <span id="factory-level">1</span></span>
+                    <span id="combo-display" class="hidden text-pink-500 ml-2">COMBO x2!</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-full border-2 border-green-200 shadow-inner">
+            <span class="text-green-600 font-bold text-xl">$</span>
+            <span id="money-display" class="text-green-700 font-bold mono-font text-2xl tracking-tight">0</span>
+        </div>
+
+        <div class="flex gap-2">
+            <button onclick="toggleShop()" class="game-btn px-3 py-2 text-sm flex items-center gap-2">🛒 SHOP</button>
+            <button onclick="toggleReport()" class="game-btn px-3 py-2 text-sm flex items-center gap-2 bg-slate-500 border-slate-700">📋 REPORT</button>
+            <button id="accessibility-btn" class="p-2 rounded bg-gray-100 border border-gray-300 text-gray-600" aria-label="Settings">⚙️</button>
+        </div>
+    </header>
+
+    <!-- Main Game -->
+    <main id="game-container" class="flex-grow relative flex flex-col p-4 overflow-hidden max-w-7xl mx-auto w-full">
+        
+        <!-- Background Bots (Lower Layer) -->
+        <div id="bot-layer" class="bot-container"></div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="absolute inset-0 z-40 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm p-8 text-center rounded-xl border-4 border-gray-100 shadow-2xl overflow-y-auto">
+            <h2 class="text-6xl tech-font mb-2 text-gray-800">START SHIFT</h2>
+            <div class="mb-6 flex items-center gap-2">
+                <input type="text" id="class-code" placeholder="Class Code (Optional)" class="border-2 border-gray-300 rounded px-3 py-1 text-sm font-mono uppercase tracking-widest text-center focus:border-blue-500 outline-none">
+                <span id="code-status" class="text-green-500 text-xl hidden">✓</span>
+            </div>
+            
+            <p class="text-sm text-gray-500 mb-6 font-bold uppercase tracking-widest">Select Production Module</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+                <button onclick="initAudio(); startGame(2)" class="game-btn p-6 rounded-xl bg-blue-600 border-blue-400 hover:scale-105 transition-transform">
+                    <span class="text-3xl font-black block mb-2">GRADE 2</span>
+                    <span class="text-sm opacity-80 block bg-black/20 rounded-full px-2 py-1">Tens & Ones</span>
+                </button>
+                <button onclick="initAudio(); startGame(3)" class="game-btn p-6 rounded-xl bg-amber-600 border-amber-400 hover:scale-105 transition-transform">
+                    <span class="text-3xl font-black block mb-2">GRADE 3</span>
+                    <span class="text-sm opacity-80 block bg-black/20 rounded-full px-2 py-1">Hundreds, Tens & Ones</span>
+                </button>
+                <button onclick="initAudio(); startGame(4)" class="game-btn p-6 rounded-xl bg-purple-600 border-purple-400 hover:scale-105 transition-transform relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-500 to-cyan-500 opacity-20"></div>
+                    <span class="text-3xl font-black block mb-2 text-white drop-shadow-md">NANO</span>
+                    <span class="text-sm opacity-90 block bg-black/30 rounded-full px-2 py-1 text-white">Decimals (Gr 4/5)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Game UI -->
+        <div id="game-ui" class="hidden flex flex-col h-full gap-4">
+            <!-- Order Panel -->
+            <div class="flex justify-center shrink-0 z-20">
+                <div class="hud-panel rounded-xl p-4 flex gap-4 items-center min-w-[350px] justify-between border-t-8 border-t-[var(--accent-color)] relative transition-colors duration-500">
+                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--accent-color)] text-white text-[10px] font-bold px-4 py-1 rounded-full uppercase tracking-wider shadow-sm">Current Order</div>
+                    <div class="text-left">
+                        <div class="text-[10px] font-bold uppercase" style="color: var(--secondary-color)">Target</div>
+                        <div class="flex items-center gap-2">
+                            <div id="target-number" class="text-3xl font-black mono-font tracking-wider" style="color: var(--text-color)">000</div>
+                            <button onclick="speakOrder()" class="p-1 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700" title="Read Aloud">🔊</button>
+                        </div>
+                    </div>
+                    <div class="h-12 w-0.5 bg-gray-200"></div>
+                    <div class="text-right">
+                         <div class="text-[10px] font-bold uppercase" style="color: var(--secondary-color)">Current</div>
+                         <div id="current-value" class="text-3xl font-bold mono-font text-gray-400">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Factory Floor -->
+            <div class="flex-grow grid grid-cols-3 gap-6 h-full overflow-hidden pb-24 px-4">
+                <!-- HUNDREDS (or ONES in Nano) -->
+                <div id="zone-hundreds" class="drop-zone conveyor-bg flex flex-col relative group">
+                    <div class="flex justify-between items-center p-3 bg-white/90 border-b border-gray-300 backdrop-blur-sm z-10 shadow-sm">
+                        <span id="lbl-hundreds" class="tech-font font-bold tracking-wider text-lg text-amber-600">HUNDREDS</span>
+                        <div class="flex gap-2 items-center">
+                            <button onclick="removeOne(100)" class="text-gray-400 hover:text-red-500 text-xl transition-transform hover:scale-110">🗑️</button>
+                            <span id="count-hundreds" class="bg-amber-100 border-2 border-amber-300 text-amber-700 px-3 py-1 rounded-lg font-mono font-bold text-lg min-w-[40px] text-center">0</span>
+                        </div>
+                    </div>
+                    <div id="container-hundreds" class="flex-grow p-4 overflow-y-auto flex flex-wrap content-start gap-2 scrollbar-hide"></div>
+                    <button onclick="unpack(100)" class="absolute top-16 right-2 text-xs font-bold bg-white text-red-500 border border-red-200 hover:bg-red-50 px-2 py-1 rounded shadow-sm z-20">UNPACK ⚃</button>
+                </div>
+
+                <!-- TENS (or TENTHS in Nano) -->
+                <div id="zone-tens" class="drop-zone conveyor-bg flex flex-col relative">
+                    <div class="flex justify-between items-center p-3 bg-white/90 border-b border-gray-300 backdrop-blur-sm z-10 shadow-sm">
+                        <span id="lbl-tens" class="tech-font font-bold tracking-wider text-lg text-blue-600">TENS</span>
+                        <div class="flex gap-2 items-center">
+                             <button onclick="removeOne(10)" class="text-gray-400 hover:text-red-500 text-xl transition-transform hover:scale-110">🗑️</button>
+                            <span id="count-tens" class="bg-blue-100 border-2 border-blue-300 text-blue-700 px-3 py-1 rounded-lg font-mono font-bold text-lg min-w-[40px] text-center">0</span>
+                        </div>
+                    </div>
+                    <div id="auto-packer-tens" class="hidden absolute top-16 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-lg border-2 border-white">⚙️ PACKING...</div>
+                    <button id="pack-to-hundred" onclick="pack(100)" class="hidden absolute top-14 left-1/2 -translate-x-1/2 z-30 bg-[var(--accent-color)] hover:brightness-110 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg animate-pulse border-2 border-white ring-2 ring-amber-300">⬅ PACK 10</button>
+                    <div id="container-tens" class="flex-grow p-4 overflow-y-auto flex flex-wrap content-start gap-3 scrollbar-hide"></div>
+                    <button onclick="unpack(10)" class="absolute top-16 right-2 text-xs font-bold bg-white text-red-500 border border-red-200 hover:bg-red-50 px-2 py-1 rounded shadow-sm z-20">UNPACK ⚃</button>
+                    <div id="ten-generator" class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+                        <button id="btn-produce-ten" class="piston-btn blue-variant" aria-label="Hold to produce tens"><span class="text-[10px] text-center leading-tight opacity-90">HOLD<br>TO<br>MAKE</span></button>
+                    </div>
+                </div>
+
+                <!-- ONES (or HUNDREDTHS in Nano) -->
+                <div id="zone-ones" class="drop-zone conveyor-bg flex flex-col relative">
+                    <div class="flex justify-between items-center p-3 bg-white/90 border-b border-gray-300 backdrop-blur-sm z-10 shadow-sm">
+                        <span id="lbl-ones" class="tech-font font-bold tracking-wider text-lg text-red-600">ONES</span>
+                        <div class="flex gap-2 items-center">
+                            <button onclick="removeOne(1)" class="text-gray-400 hover:text-red-500 text-xl transition-transform hover:scale-110">🗑️</button>
+                            <span id="count-ones" class="bg-red-100 border-2 border-red-300 text-red-700 px-3 py-1 rounded-lg font-mono font-bold text-lg min-w-[40px] text-center">0</span>
+                        </div>
+                    </div>
+                    <div id="auto-packer-ones" class="hidden absolute top-16 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-lg border-2 border-white">⚙️ PACKING...</div>
+                    <button id="pack-to-ten" onclick="pack(10)" class="hidden absolute top-14 left-1/2 -translate-x-1/2 z-30 bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg animate-pulse border-2 border-white ring-2 ring-blue-300">⬅ PACK 10</button>
+                    <div id="container-ones" class="flex-grow p-4 overflow-y-auto flex flex-wrap content-start gap-1 scrollbar-hide"></div>
+                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+                        <button id="btn-produce" class="piston-btn" aria-label="Hold to produce ones"><span class="text-[10px] text-center leading-tight opacity-90">HOLD<br>TO<br>MAKE</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ship Button -->
+            <div class="fixed bottom-4 left-4 right-4 max-w-7xl mx-auto z-40">
+                <button id="ship-btn" onclick="checkShipment()" class="w-full h-20 bg-gray-200 text-gray-400 font-black text-3xl rounded-2xl shadow-[0_6px_0_#94a3b8] border-2 border-gray-300 shrink-0 transition-all transform active:translate-y-[4px] active:shadow-none flex items-center justify-center gap-4 group">
+                    <span class="text-4xl group-hover:animate-bounce">🚚</span> 
+                    <span class="tech-font tracking-widest">SHIP ORDER</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- TRUCK -->
+    <div id="truck" class="truck-container">
+        <svg viewBox="0 0 300 120" class="w-full h-full drop-shadow-xl">
+            <circle cx="60" cy="100" r="16" fill="#333" stroke="#111" stroke-width="3"/>
+            <circle cx="240" cy="100" r="16" fill="#333" stroke="#111" stroke-width="3"/>
+            <circle cx="60" cy="100" r="6" fill="#ddd"/>
+            <circle cx="240" cy="100" r="6" fill="#ddd"/>
+            <rect x="10" y="20" width="200" height="80" rx="5" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+            <text x="110" y="65" font-family="Arial Black" font-size="24" fill="#3b82f6" text-anchor="middle">PV-LOGISTICS</text>
+            <rect x="20" y="30" width="180" height="60" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="10 5"/>
+            <path d="M210,100 L210,20 L240,20 L270,50 L270,100 Z" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+            <rect x="270" y="60" width="10" height="20" fill="#f59e0b"/>
+            <path d="M245,25 L265,50 L245,50 Z" fill="#bae6fd"/>
+        </svg>
+    </div>
+
+    <!-- TUTORIAL OVERLAY -->
+    <div id="tutorial-overlay" class="hidden tutorial-overlay" onclick="nextTutorial()">
+        <div class="bg-white p-6 rounded-xl max-w-md text-center pointer-events-none">
+            <h2 class="text-2xl font-bold mb-2">Welcome to your Factory!</h2>
+            <p id="tut-text">Hold the buttons to produce items!</p>
+            <p class="text-xs text-gray-400 mt-4">(Click anywhere to continue)</p>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div id="report-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-xl max-w-lg w-full m-4 shadow-2xl border-4 border-slate-200">
+            <h2 class="text-3xl font-black text-slate-800 mb-6 border-b-2 border-slate-200 pb-2">SHIFT REPORT</h2>
+            <div class="grid grid-cols-2 gap-4 text-lg">
+                <div class="text-slate-500 font-bold">Total Shipped:</div>
+                <div class="text-right font-mono font-bold text-blue-600" id="report-total">0</div>
+                <div class="text-slate-500 font-bold">Orders:</div>
+                <div class="text-right font-mono font-bold text-green-600" id="report-orders">0</div>
+                <div class="text-slate-500 font-bold">Time:</div>
+                <div class="text-right font-mono font-bold text-slate-800" id="report-time">0m</div>
+            </div>
+            <button onclick="toggleReport()" class="mt-4 w-full py-3 bg-slate-800 text-white font-bold rounded">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="shop-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-xl max-w-md w-full m-4 border-4 border-[var(--accent-color)] shadow-2xl relative">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl tech-font font-black text-slate-800">UPGRADES</h2>
+                <div class="text-green-600 font-mono font-bold bg-green-50 px-3 py-1 rounded">Funds: $<span id="shop-money">0</span></div>
+            </div>
+            <div class="space-y-4">
+                <div class="bg-gray-50 p-3 rounded flex justify-between items-center border">
+                    <div><div class="font-bold">⚡ Turbo Pistons</div><div class="text-xs text-gray-500">2x Speed</div></div>
+                    <button id="buy-turbo" onclick="buyUpgrade('turbo', 150)" class="game-btn px-3 py-1 text-sm font-bold">$150</button>
+                </div>
+                <div class="bg-gray-50 p-3 rounded flex justify-between items-center border">
+                    <div><div class="font-bold">🤖 Auto-Packer (Small)</div><div class="text-xs text-gray-500">Auto-packs 10s</div></div>
+                    <button id="buy-auto-ones" onclick="buyUpgrade('autoOnes', 300)" class="game-btn px-3 py-1 text-sm font-bold">$300</button>
+                </div>
+                <div class="bg-gray-50 p-3 rounded flex justify-between items-center border">
+                    <div><div class="font-bold">🏭 Auto-Packer (Large)</div><div class="text-xs text-gray-500">Auto-packs 100s</div></div>
+                    <button id="buy-auto-tens" onclick="buyUpgrade('autoTens', 500)" class="game-btn px-3 py-1 text-sm font-bold">$500</button>
+                </div>
+                <div class="bg-pink-50 p-3 rounded flex justify-between items-center border border-pink-200">
+                    <div><div class="font-bold text-pink-600">🎉 Confetti Cannon</div><div class="text-xs text-pink-400">Celebration Mode</div></div>
+                    <button id="buy-confetti" onclick="buyUpgrade('confetti', 5000)" class="bg-pink-500 text-white px-3 py-1 rounded font-bold hover:bg-pink-600 text-sm">$5,000</button>
+                </div>
+                <div class="bg-yellow-50 p-3 rounded flex justify-between items-center border border-yellow-300">
+                    <div><div class="font-bold text-yellow-800">🏆 Golden Trophy</div><div class="text-xs text-yellow-600">Win Game</div></div>
+                    <button id="buy-trophy" onclick="buyTrophy()" class="bg-yellow-500 text-white px-3 py-1 rounded font-bold hover:bg-yellow-600 text-sm">$10,000</button>
+                </div>
+            </div>
+            <button onclick="toggleShop()" class="mt-6 w-full py-3 bg-gray-200 font-bold rounded hover:bg-gray-300">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="accessibility-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+        <div class="bg-white border-4 border-black p-8 rounded-xl max-w-sm w-full shadow-2xl text-black">
+            <h2 class="text-2xl font-bold mb-6 border-b-2 border-black pb-2">Settings</h2>
+            <div class="space-y-4">
+                <label class="flex justify-between p-3 bg-gray-100 rounded border"><span class="font-bold">Music</span><input type="checkbox" id="toggle-music" class="w-6 h-6"></label>
+                <label class="flex justify-between p-3 bg-gray-100 rounded border"><span class="font-bold">Left-Handed</span><input type="checkbox" id="toggle-left" class="w-6 h-6"></label>
+                <label class="flex justify-between p-3 bg-gray-100 rounded border"><span class="font-bold">High Contrast</span><input type="checkbox" id="toggle-contrast" class="w-6 h-6"></label>
+                <label class="flex justify-between p-3 bg-gray-100 rounded border"><span class="font-bold">Large Text</span><input type="checkbox" id="toggle-text" class="w-6 h-6"></label>
+                <label class="flex justify-between p-3 bg-gray-100 rounded border"><span class="font-bold">Dyslexia Font</span><input type="checkbox" id="toggle-font" class="w-6 h-6"></label>
+                <label class="flex justify-between p-3 bg-gray-100 rounded border"><span class="font-bold">Reduced Motion</span><input type="checkbox" id="toggle-motion" class="w-6 h-6"></label>
+            </div>
+            <button onclick="toggleAccessibilityModal()" class="mt-8 w-full py-3 bg-black text-white font-bold rounded">Close</button>
+        </div>
+    </div>
+
+    <div id="success-overlay" class="hidden fixed inset-0 z-40 pointer-events-none flex items-center justify-center bg-black/20 backdrop-blur-sm">
+        <div class="bg-white text-gray-800 px-12 py-8 rounded-3xl shadow-2xl transform scale-125 flex flex-col items-center animate-bounce border-4 border-green-500">
+            <div class="text-6xl mb-2">✅</div>
+            <h2 class="text-5xl tech-font tracking-widest text-green-600 font-black">SHIPPED!</h2>
+            <p class="text-3xl font-bold mt-2 font-mono text-gray-600">+$<span id="win-amount">0</span></p>
+        </div>
+    </div>
+
+    <div id="confetti-container" class="absolute inset-0 pointer-events-none overflow-hidden fixed"></div>
+
+    <div id="win-modal" class="hidden fixed inset-0 bg-black/80 z-[100] flex items-center justify-center text-center">
+        <div class="bg-white p-10 rounded-3xl max-w-2xl w-full m-4 border-8 border-yellow-400">
+            <div class="text-8xl mb-4 animate-bounce">🏆</div>
+            <h1 class="text-5xl font-black text-yellow-500 mb-4 tech-font">FACTORY MASTER!</h1>
+            <p class="text-xl font-bold">You are a Place Value Expert.</p>
+            <button onclick="location.reload()" class="mt-8 py-4 px-12 bg-yellow-500 hover:bg-yellow-400 text-white font-black text-2xl rounded-full">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Audio Engine ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let musicOscillators = [];
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'produce') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } 
+            else if (type === 'pack') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(100, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(50, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            }
+            else if (type === 'ship') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(440, audioCtx.currentTime); osc.frequency.setValueAtTime(554, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+            }
+            else if (type === 'golden') {
+                // High pitch chime
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(2000, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
+        function toggleMusic(play) {
+            if(play) {
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                // Simple Ambient Drone
+                const createDrone = (freq) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine'; osc.frequency.value = freq;
+                    gain.gain.value = 0.02;
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start();
+                    musicOscillators.push({osc, gain});
+                };
+                createDrone(110); createDrone(164); // A major chordish
+            } else {
+                musicOscillators.forEach(o => o.osc.stop());
+                musicOscillators = [];
+            }
+        }
+        function initAudio() { if(audioCtx.state === 'suspended') audioCtx.resume(); }
+
+        // --- Game State ---
+        const state = {
+            grade: 2,
+            money: 0,
+            tier: 1,
+            inventory: { ones: 0, tens: 0, hundreds: 0 },
+            target: 0,
+            targetDisplay: "0",
+            upgrades: { turbo: false, autoOnes: false, autoTens: false, confetti: false },
+            settings: { highContrast: false, largeText: false, dyslexiaFont: false, reducedMotion: false, leftHanded: false, music: false },
+            stats: { totalShipped: 0, ordersCount: 0, startTime: Date.now() },
+            combo: 0,
+            hasGolden: false,
+            tutorialSeen: false
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            ui: document.getElementById('game-ui'),
+            start: document.getElementById('start-screen'),
+            target: document.getElementById('target-number'),
+            currentVal: document.getElementById('current-value'),
+            money: document.getElementById('money-display'),
+            shopMoney: document.getElementById('shop-money'),
+            shipBtn: document.getElementById('ship-btn'),
+            containers: { ones: document.getElementById('container-ones'), tens: document.getElementById('container-tens'), hundreds: document.getElementById('container-hundreds') },
+            counts: { ones: document.getElementById('count-ones'), tens: document.getElementById('count-tens'), hundreds: document.getElementById('count-hundreds') },
+            btns: { packTen: document.getElementById('pack-to-ten'), packHundred: document.getElementById('pack-to-hundred'), produce: document.getElementById('btn-produce'), produceTen: document.getElementById('btn-produce-ten') },
+            zones: { hundreds: document.getElementById('zone-hundreds') },
+            truck: document.getElementById('truck'),
+            factoryLevel: document.getElementById('factory-level'),
+            comboDisplay: document.getElementById('combo-display'),
+            labels: { ones: document.getElementById('lbl-ones'), tens: document.getElementById('lbl-tens'), hundreds: document.getElementById('lbl-hundreds') },
+            reportModal: document.getElementById('report-modal'),
+            reportTotal: document.getElementById('report-total'),
+            reportOrders: document.getElementById('report-orders'),
+            reportTime: document.getElementById('report-time')
+        };
+
+        // --- SAVE/LOAD ---
+        function saveGame() {
+            localStorage.setItem('pvFactorySave', JSON.stringify({ money: state.money, upgrades: state.upgrades, tier: state.tier, stats: state.stats, tutorialSeen: state.tutorialSeen }));
+        }
+        function loadGame() {
+            const data = JSON.parse(localStorage.getItem('pvFactorySave'));
+            if(data) {
+                state.money = data.money; state.upgrades = data.upgrades; state.tier = data.tier; state.tutorialSeen = data.tutorialSeen;
+                if(data.stats) state.stats = data.stats;
+                document.getElementById('money-display').innerText = state.money;
+                document.getElementById('shop-money').innerText = state.money;
+                checkVisualTier();
+            }
+        }
+
+        // --- Logic ---
+        let autoPackerInterval; // Store interval ID
+
+        function startGame(grade) {
+            loadGame(); 
+            state.grade = grade;
+            els.start.classList.add('hidden');
+            els.ui.classList.remove('hidden');
+            
+            // Check Class Code
+            const code = document.getElementById('class-code').value;
+            if(code.length > 0) {
+                // Simulate connection
+                const notif = document.createElement('div');
+                notif.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50';
+                notif.innerText = `Connected to Class: ${code}`;
+                document.body.appendChild(notif);
+                setTimeout(()=>notif.remove(), 3000);
+            }
+
+            // Restore Upgrades UI
+            if(state.upgrades.autoOnes) document.getElementById('buy-auto-ones').innerText = "INSTALLED";
+            if(state.upgrades.autoTens) document.getElementById('buy-auto-tens').innerText = "INSTALLED";
+            if(state.upgrades.turbo) document.getElementById('buy-turbo').innerText = "INSTALLED";
+            if(state.upgrades.confetti) document.getElementById('buy-confetti').innerText = "INSTALLED";
+
+            // Configure Mode
+            document.body.classList.remove('nano-mode');
+            if(grade === 4) {
+                document.body.classList.add('nano-mode');
+                els.labels.hundreds.innerText = "ONES";
+                els.labels.tens.innerText = "TENTHS";
+                els.labels.ones.innerText = "HUNDREDTHS";
+                els.btns.produce.querySelector('span').innerHTML = "HOLD<br>TO<br>MAKE"; // Generic
+                els.btns.produceTen.querySelector('span').innerHTML = "HOLD<br>FOR<br>TENTHS";
+            } else {
+                els.labels.hundreds.innerText = "HUNDREDS";
+                els.labels.tens.innerText = "TENS";
+                els.labels.ones.innerText = "ONES";
+            }
+
+            // Zone Visibility
+            if(grade === 2) {
+                els.zones.hundreds.style.display = 'none';
+                document.getElementById('zone-tens').parentElement.classList.replace('grid-cols-3', 'grid-cols-2');
+                //document.getElementById('ten-generator').classList.add('hidden');
+                //els.zones.hundreds.style.display = 'flex';
+                //document.getElementById('zone-tens').parentElement.classList.replace('grid-cols-2', 'grid-cols-3');
+                document.getElementById('ten-generator').classList.remove('hidden');
+            } else {
+                els.zones.hundreds.style.display = 'flex';
+                document.getElementById('zone-tens').parentElement.classList.replace('grid-cols-2', 'grid-cols-3');
+                document.getElementById('ten-generator').classList.remove('hidden');
+            }
+
+            // Bots
+            spawnBots();
+
+            generateOrder();
+            
+            // Clear existing interval before starting new one
+            if (autoPackerInterval) clearInterval(autoPackerInterval);
+            autoPackerInterval = setInterval(runAutoPackers, 2000);
+
+            // Tutorial
+            if(!state.tutorialSeen) {
+                document.getElementById('tutorial-overlay').classList.remove('hidden');
+            }
+        }
+
+        function nextTutorial() {
+            document.getElementById('tutorial-overlay').classList.add('hidden');
+            state.tutorialSeen = true;
+            saveGame();
+        }
+
+        function goHome() {
+            saveGame();
+            // Stop game loops
+            if (autoPackerInterval) clearInterval(autoPackerInterval);
+            if (produceInterval) clearInterval(produceInterval);
+            stopProducing(); // Ensure visual state is reset
+            
+            // Switch screens
+            els.ui.classList.add('hidden');
+            els.start.classList.remove('hidden');
+            
+            // Clear bots to prevent buildup
+            document.getElementById('bot-layer').innerHTML = '';
+        }
+
+        function spawnBots() {
+            const container = document.getElementById('bot-layer');
+            container.innerHTML = ''; // Clear existing bots
+            // Randomly wandering bots
+            const totalBots = 8;
+            
+            for(let i=0; i<totalBots; i++) {
+                const bot = document.createElement('div');
+                bot.className = 'bot';
+                
+                // Random Start
+                bot.style.left = Math.random() * 100 + '%';
+                bot.style.top = Math.random() * 100 + '%';
+                
+                container.appendChild(bot);
+                
+                // Start wandering
+                animateBotRandomly(bot);
+            }
+        }
+
+        function animateBotRandomly(bot) {
+            // Pick destination
+            const nextX = Math.random() * 95;
+            const nextY = Math.random() * 90 + 5;
+
+            const currentX = parseFloat(bot.style.left);
+            const currentY = parseFloat(bot.style.top);
+
+            const dx = nextX - currentX;
+            const dy = nextY - currentY;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+
+            // Speed: 2-5% per second
+            const speed = 2 + Math.random() * 3; 
+            const duration = distance / speed; 
+
+            bot.style.transition = `top ${duration}s linear, left ${duration}s linear, transform 0.5s`;
+            
+            requestAnimationFrame(() => {
+                bot.style.left = nextX + '%';
+                bot.style.top = nextY + '%';
+                
+                // Rotation (facing direction)
+                // atan2 returns radians, convert to deg. 
+                // +90 offset because clip-path triangle points up (0 deg is usually right)
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                bot.style.transform = `rotate(${angle + 90}deg)`;
+            });
+
+            setTimeout(() => {
+                animateBotRandomly(bot);
+            }, duration * 1000);
+        }
+
+        function generateOrder() {
+            if(state.stats.ordersCount > 0 && state.stats.ordersCount % 3 === 0) document.body.classList.toggle('night-mode');
+            
+            state.inventory = { ones: 0, tens: 0, hundreds: 0 };
+            state.hasGolden = false;
+            renderInventory(false);
+            
+            let min = 15, max = 500;
+            if(state.grade === 2) { max = 99; }
+            else if(state.grade === 4) { min = 100; max = 999; } // Integers representing decimals
+
+            let num = Math.floor(Math.random() * (max - min + 1)) + min;
+            state.target = num;
+
+            // Display Logic
+            if(state.grade === 4) {
+                state.targetDisplay = (num / 100).toFixed(2); // 125 -> 1.25
+                state.target = (num / 100).toFixed(2); // Use string/float for logic match
+            } else {
+                // Mystery Logic (30% chance)
+                const roll = Math.random();
+                const h = Math.floor(num / 100);
+                const t = Math.floor((num % 100) / 10);
+                const o = num % 10;
+                
+                if (roll < 0.15) { // Expanded
+                    let parts = [];
+                    if(h > 0) parts.push(h * 100);
+                    if(t > 0) parts.push(t * 10);
+                    if(o > 0) parts.push(o);
+                    state.targetDisplay = parts.join(" + ");
+                    els.target.style.fontSize = "1.8rem";
+                } else if (roll < 0.3) { // Word
+                    let parts = [];
+                    if(h > 0) parts.push(h + " Hundreds");
+                    if(t > 0) parts.push(t + " Tens");
+                    if(o > 0) parts.push(o + " Ones");
+                    state.targetDisplay = parts.join(", ");
+                    els.target.style.fontSize = "1.5rem";
+                } else {
+                    state.targetDisplay = num;
+                    els.target.style.fontSize = "3rem";
+                }
+            }
+            els.target.innerText = state.targetDisplay;
+        }
+
+        function speakOrder() {
+            if('speechSynthesis' in window) {
+                const txt = state.targetDisplay.toString().replace('+', 'plus');
+                const utterance = new SpeechSynthesisUtterance("Order for " + txt);
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        // --- Production ---
+        let produceInterval, speed = 200, isProducing = false;
+
+        function startProducing(type) {
+            speed = state.upgrades.turbo ? 100 : 200;
+            const btn = type === 1 ? els.btns.produce : els.btns.produceTen;
+            btn.classList.add('pressed');
+            isProducing = true; updateBeltSpeed();
+
+            let rect = btn.getBoundingClientRect();
+            let startX = rect.left + rect.width/2;
+            let startY = rect.top;
+
+            const make = () => {
+                playSound('produce');
+                // Golden Chance (1/50)
+                let isGolden = false;
+                if(Math.random() < 0.02) { 
+                    isGolden = true; 
+                    state.hasGolden = true;
+                    playSound('golden');
+                }
+
+                if(type === 1) state.inventory.ones++;
+                if(type === 10) state.inventory.tens++;
+                
+                renderInventory(true, isGolden); 
+                spawnSteam(startX, startY);
+                speed = Math.max(30, speed - 20);
+                clearInterval(produceInterval);
+                produceInterval = setInterval(make, speed);
+            };
+            make();
+        }
+        function stopProducing() {
+            clearInterval(produceInterval);
+            els.btns.produce.classList.remove('pressed');
+            els.btns.produceTen.classList.remove('pressed');
+            isProducing = false; updateBeltSpeed();
+        }
+
+        function spawnSteam(x, y) {
+            if(state.settings.reducedMotion) return;
+            const el = document.createElement('div');
+            el.className = 'steam-particle';
+            el.style.left = (x + (Math.random()*20-10)) + 'px';
+            el.style.top = y + 'px';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+        
+        function updateBeltSpeed() {
+            const belts = document.querySelectorAll('.conveyor-bg');
+            const duration = isProducing ? '0.5s' : '3s';
+            belts.forEach(b => b.style.setProperty('--belt-speed', duration));
+        }
+
+        // Bind
+        const bindP = (btn, type) => {
+            btn.addEventListener('mousedown', () => startProducing(type));
+            btn.addEventListener('mouseup', stopProducing);
+            btn.addEventListener('mouseleave', stopProducing);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); startProducing(type); });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); stopProducing(); });
+        };
+        bindP(els.btns.produce, 1);
+        bindP(els.btns.produceTen, 10);
+
+        // --- Packing ---
+        function pack(val) {
+            let container;
+            if(val === 10) { 
+                if(state.inventory.ones < 10) return;
+                state.inventory.ones -= 10;
+                container = els.containers.ones;
+                if(state.grade === 4) showEquation("10 Hundredths = 1 Tenth", "zone-ones");
+                else showEquation("10 Ones = 1 Ten", "zone-ones");
+            } else {
+                if(state.inventory.tens < 10) return;
+                state.inventory.tens -= 10;
+                container = els.containers.tens;
+                if(state.grade === 4) showEquation("10 Tenths = 1 One", "zone-tens");
+                else showEquation("10 Tens = 1 Hundred", "zone-tens");
+            }
+
+            playSound('pack');
+            isProducing = true; updateBeltSpeed();
+            
+            // Blast Confetti if owned
+            if(state.upgrades.confetti) fireConfetti(container.getBoundingClientRect());
+
+            const items = container.querySelectorAll('.unit-item, .ten-rod');
+            for(let i = items.length - 1; i >= items.length - 10; i--) {
+                if(items[i]) items[i].classList.add('animate-crush');
+            }
+
+            setTimeout(() => {
+                if(val === 10) state.inventory.tens++; 
+                else state.inventory.hundreds++; 
+                renderInventory(true);
+                isProducing = false; updateBeltSpeed();
+            }, 300);
+        }
+
+        function fireConfetti(rect) {
+            const container = document.getElementById('confetti-container');
+            for(let i=0; i<20; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = (rect.left + Math.random() * rect.width) + 'px';
+                c.style.top = rect.top + 'px';
+                c.style.backgroundColor = ['#f0f', '#0ff', '#ff0'][Math.floor(Math.random()*3)];
+                c.style.animation = `confettiFall ${1+Math.random()}s linear forwards`;
+                container.appendChild(c);
+                setTimeout(()=>c.remove(), 2000);
+            }
+        }
+
+        function unpack(val) {
+            playSound('produce');
+            if(val === 10 && state.inventory.tens >= 1) { state.inventory.tens--; state.inventory.ones += 10; }
+            else if(val === 100 && state.inventory.hundreds >= 1) { state.inventory.hundreds--; state.inventory.tens += 10; }
+            renderInventory();
+        }
+
+        function removeOne(val) {
+            playSound('error');
+            if(val === 1 && state.inventory.ones > 0) state.inventory.ones--;
+            if(val === 10 && state.inventory.tens > 0) state.inventory.tens--;
+            if(val === 100 && state.inventory.hundreds > 0) state.inventory.hundreds--;
+            renderInventory();
+        }
+
+        function runAutoPackers() {
+            if(state.upgrades.autoOnes && state.inventory.ones >= 10) pack(10);
+            if(state.grade === 3 && state.upgrades.autoTens && state.inventory.tens >= 10) pack(100);
+        }
+
+        function showEquation(text, zoneId) {
+            if(state.settings.reducedMotion) return;
+            const zone = document.getElementById(zoneId);
+            const rect = zone.getBoundingClientRect();
+            const el = document.createElement('div');
+            el.className = 'math-popup';
+            el.innerText = text;
+            el.style.left = (rect.left + rect.width/2) + 'px';
+            el.style.top = (rect.top + rect.height/2) + 'px';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1500);
+        }
+
+        // --- Render ---
+        function checkVisualTier() {
+            let newTier = 1;
+            if(state.money >= 2000) newTier = 3; else if(state.money >= 500) newTier = 2;
+            if(newTier !== state.tier) {
+                state.tier = newTier;
+                document.body.className = document.body.className.replace(/tier-\d/g, '') + ` tier-${newTier}`;
+                if(state.grade===4) document.body.classList.add('nano-mode');
+                playSound('ship'); 
+                els.factoryLevel.innerText = newTier;
+                saveGame();
+            }
+        }
+
+        function renderInventory(animateLast = false, isGolden = false) {
+            els.counts.ones.innerText = state.inventory.ones;
+            els.counts.tens.innerText = state.inventory.tens;
+            els.counts.hundreds.innerText = state.inventory.hundreds;
+
+            // Overflow Warning
+            if(state.inventory.ones >= 10) els.counts.ones.classList.add('overflow-warning'); else els.counts.ones.classList.remove('overflow-warning');
+            if(state.inventory.tens >= 10) els.counts.tens.classList.add('overflow-warning'); else els.counts.tens.classList.remove('overflow-warning');
+
+            // Logic for calculating total based on mode
+            let totalVal = 0;
+            if(state.grade === 4) {
+                // Nano Mode: Hundreds=1, Tens=0.1, Ones=0.01
+                let raw = (state.inventory.hundreds * 1) + (state.inventory.tens * 0.1) + (state.inventory.ones * 0.01);
+                totalVal = raw.toFixed(2); // String comparison for decimals
+            } else {
+                totalVal = (state.inventory.hundreds * 100) + (state.inventory.tens * 10) + state.inventory.ones;
+            }
+            els.currentVal.innerText = totalVal;
+            
+            // Color Logic
+            // Compare as strings for decimals to avoid float epsilon errors, or Numbers for ints
+            const isMatch = (totalVal == state.target); // Loose equality handles string/number match
+            
+            if(isMatch) {
+                els.currentVal.style.color = "var(--success-color)";
+                els.shipBtn.classList.add('bg-[var(--success-color)]', 'text-white');
+                els.shipBtn.classList.remove('bg-gray-200', 'text-gray-400');
+            } else {
+                els.currentVal.style.color = "var(--text-color)";
+                els.shipBtn.classList.remove('bg-[var(--success-color)]', 'text-white');
+                els.shipBtn.classList.add('bg-gray-200', 'text-gray-400');
+            }
+
+            const fill = (container, count, className, animate, makeGolden) => {
+                container.innerHTML = '';
+                const limit = 40;
+                const loop = Math.min(count, limit);
+                for(let i=0; i<loop; i++) {
+                    const d = document.createElement('div');
+                    d.className = className;
+                    // Apply Golden to the LAST item if prompted
+                    if(makeGolden && i === loop - 1) d.classList.add('golden');
+                    
+                    if(animate && i === loop - 1 && !state.settings.reducedMotion) d.classList.add('animate-drop-in');
+                    if(className.includes('hundred')) d.innerText = state.grade === 4 ? '1' : '100';
+                    container.appendChild(d);
+                }
+                if(count > limit) {
+                    const m = document.createElement('div');
+                    m.className = "w-full text-center text-xs text-gray-400 font-bold bg-gray-100 rounded";
+                    m.innerText = `+${count - limit}`;
+                    container.appendChild(m);
+                }
+            };
+
+            fill(els.containers.ones, state.inventory.ones, 'unit-item', animateLast, isGolden);
+            fill(els.containers.tens, state.inventory.tens, 'ten-rod', animateLast, false);
+            fill(els.containers.hundreds, state.inventory.hundreds, 'hundred-crate', animateLast, false);
+
+            els.btns.packTen.classList.toggle('hidden', state.inventory.ones < 10);
+            if(state.grade === 3 || state.grade === 4) els.btns.packHundred.classList.toggle('hidden', state.inventory.tens < 10);
+        }
+
+        function checkShipment() {
+            // Validate based on mode logic
+            let valid = false;
+            if(state.grade === 4) {
+                // Decimal Logic
+                // Target is string "1.25". 
+                // Hundreds(Ones) = 1, Tens(Tenths) = 2, Ones(Hundredths) = 5
+                let targetNum = parseFloat(state.target);
+                let h = Math.floor(targetNum);
+                let rem = Math.round((targetNum - h) * 100);
+                let t = Math.floor(rem / 10);
+                let o = rem % 10;
+                valid = (state.inventory.hundreds === h && state.inventory.tens === t && state.inventory.ones === o);
+            } else {
+                // Integer Logic
+                const h = Math.floor(state.target / 100);
+                const t = Math.floor((state.target % 100) / 10);
+                const o = state.target % 10;
+                valid = (state.inventory.hundreds === h && state.inventory.tens === t && state.inventory.ones === o);
+            }
+
+            if(valid) {
+                playSound('ship');
+                if(!state.settings.reducedMotion) els.truck.classList.add('truck-drive');
+                
+                // COMBO
+                state.combo++;
+                let multiplier = state.combo > 1 ? (state.combo > 5 ? 5 : state.combo) : 1;
+                
+                // GOLDEN BONUS
+                if(state.hasGolden) {
+                    multiplier *= 5;
+                    // Visual flair for gold
+                    const popup = document.createElement('div');
+                    popup.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-6xl font-black text-yellow-400 drop-shadow-lg z-50 animate-bounce';
+                    popup.innerText = "GOLDEN SHIPMENT x5!";
+                    document.body.appendChild(popup);
+                    setTimeout(()=>popup.remove(), 2000);
+                } else if(state.combo > 1) {
+                    els.comboDisplay.innerText = `COMBO x${multiplier}!`;
+                    els.comboDisplay.classList.remove('hidden');
+                }
+
+                // Base Value Calculation (approx 50 + 10% of target)
+                let targetVal = parseFloat(state.target);
+                if(state.grade === 4) targetVal = targetVal * 100; // Scale decimals up for reward calculation
+                const baseReward = 50 + Math.floor(targetVal / 10);
+                
+                const totalReward = baseReward * multiplier;
+                state.money += totalReward;
+                state.stats.totalShipped += totalReward;
+                state.stats.ordersCount += 1;
+                
+                document.getElementById('money-display').innerText = state.money;
+                document.getElementById('shop-money').innerText = state.money;
+                
+                checkVisualTier();
+                saveGame();
+
+                document.getElementById('win-amount').innerText = totalReward;
+                const overlay = document.getElementById('success-overlay');
+                setTimeout(() => overlay.classList.remove('hidden'), 500);
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    if(!state.settings.reducedMotion) els.truck.classList.remove('truck-drive');
+                    generateOrder();
+                }, 2500);
+            } else {
+                playSound('error');
+                state.combo = 0; els.comboDisplay.classList.add('hidden');
+                alert("Incorrect packing! Check your numbers.");
+            }
+        }
+
+        // --- Shop & Utils ---
+        function buyUpgrade(type, cost) {
+            if(state.money >= cost && !state.upgrades[type]) {
+                state.money -= cost;
+                state.upgrades[type] = true;
+                document.getElementById('money-display').innerText = state.money;
+                playSound('ship'); 
+                saveGame(); toggleShop();
+                const btnId = type === 'turbo' ? 'buy-turbo' : (type === 'autoOnes' ? 'buy-auto-ones' : (type === 'autoTens' ? 'buy-auto-tens' : 'buy-confetti'));
+                document.getElementById(btnId).innerText = "INSTALLED";
+            } else { playSound('error'); }
+        }
+
+        function buyTrophy() {
+            if(state.money >= 10000) {
+                state.money -= 10000;
+                document.getElementById('money-display').innerText = state.money;
+                playSound('win'); toggleShop();
+                document.getElementById('win-modal').classList.remove('hidden');
+                const container = document.getElementById('confetti-container');
+                for(let i=0; i<100; i++) {
+                    const c = document.createElement('div'); c.className = 'confetti';
+                    c.style.left = Math.random() * 100 + 'vw';
+                    c.style.backgroundColor = ['#f00', '#0f0', '#00f'][Math.floor(Math.random()*3)];
+                    c.style.animation = `confettiFall ${2+Math.random()*3}s linear infinite`;
+                    container.appendChild(c);
+                }
+            } else { playSound('error'); alert("Need $10,000!"); }
+        }
+
+        function toggleReport() {
+            const m = els.reportModal; m.classList.toggle('hidden');
+            if(!m.classList.contains('hidden')) {
+                els.reportTotal.innerText = "$" + state.stats.totalShipped;
+                els.reportOrders.innerText = state.stats.ordersCount;
+                els.reportTime.innerText = Math.floor((Date.now() - state.stats.startTime) / 60000) + " mins";
+            }
+        }
+        function toggleShop() { document.getElementById('shop-modal').classList.toggle('hidden'); document.getElementById('shop-money').innerText = state.money; }
+        function toggleAccessibilityModal() { document.getElementById('accessibility-modal').classList.toggle('hidden'); }
+        
+        // Add the missing click listener for the Accessibility button
+        document.getElementById('accessibility-btn').addEventListener('click', toggleAccessibilityModal);
+
+        // Settings Listeners
+        document.getElementById('toggle-contrast').addEventListener('change', (e) => document.body.classList.toggle('high-contrast', e.target.checked));
+        document.getElementById('toggle-text').addEventListener('change', (e) => document.body.classList.toggle('large-text', e.target.checked));
+        document.getElementById('toggle-font').addEventListener('change', (e) => document.body.classList.toggle('dyslexia-font', e.target.checked));
+        document.getElementById('toggle-motion').addEventListener('change', (e) => { document.body.classList.toggle('reduced-motion', e.target.checked); state.settings.reducedMotion = e.target.checked; });
+        document.getElementById('toggle-music').addEventListener('change', (e) => toggleMusic(e.target.checked));
+        document.getElementById('toggle-left').addEventListener('change', (e) => document.body.classList.toggle('left-handed', e.target.checked));
+
+    </script>
+</body>
+</html>
+
+

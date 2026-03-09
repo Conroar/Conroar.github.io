@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kingdom of Math: Bridges Defense</title>
+    <style>
+        :root {
+            --bg-color: #2d3436;
+            --ui-bg: rgba(20, 20, 30, 0.9);
+            --accent: #fdcb6e;
+            --danger: #d63031;
+            --energy: #0984e3;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            border-radius: 4px;
+            overflow: hidden;
+            background: #27ae60; /* Fallback */
+            border: 4px solid #2f3542;
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        /* HUD Layer */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .top-bar {
+            background: var(--ui-bg);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            border-bottom: 2px solid #444;
+            backdrop-filter: blur(4px);
+        }
+
+        .stat-box { display: flex; align-items: center; gap: 10px; }
+        .stat-icon { font-size: 20px; }
+        .stat-val { color: var(--accent); font-family: monospace; font-size: 22px; }
+
+        /* Controls Area */
+        .controls-area {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .control-btn {
+            background: #333;
+            border: 1px solid #555;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .control-btn.active { background: var(--energy); border-color: #74b9ff; }
+        .control-btn:hover { background: #444; }
+
+        .nuke-btn {
+            background: var(--danger);
+            border: 2px solid #ff7675;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        /* Build Menu */
+        #build-menu {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+            background: var(--ui-bg);
+            padding: 10px;
+            border-radius: 12px 12px 0 0;
+            border: 1px solid #444;
+            border-bottom: none;
+        }
+
+        .tower-btn {
+            background: #2f3640;
+            border: 1px solid #555;
+            border-radius: 6px;
+            width: 80px;
+            height: 90px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            transition: all 0.1s;
+        }
+
+        .tower-btn:hover { background: #353b48; transform: translateY(-3px); border-color: var(--accent); }
+        .tower-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        .t-icon-preview { width: 30px; height: 30px; margin-bottom: 4px; }
+        .t-name { font-size: 10px; font-weight: bold; text-align: center; color: #ddd; }
+        .t-cost { font-size: 12px; color: var(--accent); font-weight: 800; }
+        .t-skill { font-size: 9px; color: #aaa; font-style: italic; }
+
+        /* Side Panel (Upgrade) */
+        #side-panel {
+            position: absolute;
+            right: 0;
+            top: 100px;
+            width: 220px;
+            background: var(--ui-bg);
+            border-radius: 10px 0 0 10px;
+            padding: 15px;
+            display: none; /* Flex */
+            flex-direction: column;
+            pointer-events: auto;
+            border: 1px solid #444;
+            border-right: none;
+        }
+
+        #side-panel h3 { margin: 0 0 10px 0; color: var(--accent); font-size: 18px; text-align: center; }
+        .panel-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; color: #ccc; }
+        .panel-val { font-weight: bold; color: white; }
+
+        .priority-box {
+            display: flex;
+            gap: 2px;
+            margin: 10px 0;
+            background: #000;
+            padding: 2px;
+            border-radius: 4px;
+        }
+        .prio-btn {
+            flex: 1;
+            background: #333;
+            border: none;
+            color: #888;
+            font-size: 9px;
+            padding: 4px 0;
+            cursor: pointer;
+        }
+        .prio-btn.active { background: var(--energy); color: white; }
+
+        .action-btn {
+            background: var(--energy);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 5px;
+            width: 100%;
+        }
+        .action-btn:disabled { background: #555; }
+        .sell-btn { background: #d63031; margin-top: 10px; }
+
+        /* Modals */
+        .modal-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none; align-items: center; justify-content: center;
+            pointer-events: auto; z-index: 100;
+        }
+
+        .modal-content {
+            background: #f1f2f6; color: #2d3436; padding: 30px;
+            border-radius: 8px; text-align: center; max-width: 500px; width: 90%;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            border: 4px solid var(--energy);
+            position: relative;
+        }
+
+        .math-problem { font-size: 36px; margin: 20px 0; font-weight: 800; font-family: 'Courier New', monospace; }
+        .word-problem { font-size: 18px; margin: 20px 0; font-style: italic; line-height: 1.4; text-align: left; background: #dfe6e9; padding: 15px; border-radius: 4px; border-left: 4px solid var(--danger); }
+
+        input[type="number"] {
+            font-size: 28px; padding: 10px; width: 180px; text-align: center;
+            border: 2px solid #b2bec3; border-radius: 4px; outline: none;
+        }
+        input:focus { border-color: var(--energy); }
+
+        .btn-big {
+            background: var(--energy); color: white; border: none;
+            padding: 12px 40px; font-size: 20px; border-radius: 4px;
+            cursor: pointer; font-weight: bold; margin-top: 20px;
+            box-shadow: 0 4px 0 #00509e;
+        }
+        .btn-big:active { transform: translateY(4px); box-shadow: none; }
+
+        /* Start Screen Layout */
+        .start-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left;
+            margin: 20px 0; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px;
+        }
+
+        /* Cheats Toggle */
+        #sandbox-panel {
+            display: none; /* Hidden by default */
+            border-top: 1px solid #555; padding-top:15px; margin-bottom:15px;
+            background: rgba(0,0,0,0.5); padding: 10px; border-radius: 4px;
+        }
+        .cheat-toggle {
+            margin: 5px 0; display: flex; align-items: center; justify-content: center;
+            gap: 15px; font-size: 14px; color: #bdc3c7; flex-wrap: wrap;
+        }
+        .cheat-toggle input { width: auto; margin-right: 5px; }
+
+        /* Floating Text */
+        .floater {
+            position: absolute; font-weight: bold; font-size: 16px;
+            pointer-events: none; animation: floatUp 1s ease-out forwards;
+            text-shadow: 1px 1px 0 #000; white-space: nowrap;
+        }
+        .f-energy { color: var(--accent); }
+        .f-crit { color: #ff7675; font-size: 20px; }
+        .f-reload { color: #55efc4; }
+        .f-dmg { color: #fab1a0; font-size: 14px; }
+
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-40px) scale(1.2); } }
+        .shake { animation: shake 0.4s; border-color: var(--danger) !important; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        
+        /* Tutorial Hand */
+        #tutorial-hand {
+            position: absolute; width: 40px; height: 40px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="2"><path d="M12 2L15 8L21 9L17 14L18 20L12 17L6 20L7 14L3 9L9 8Z"/></svg>') no-repeat center/contain; /* Placeholder shape */
+            pointer-events: none; z-index: 50; display: none;
+            animation: bounce 1s infinite;
+        }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        /* Encyclopedia Table */
+        .encyclopedia-table {
+            width: 100%; border-collapse: collapse; margin-top: 10px; color: #333; text-align: left;
+        }
+        .encyclopedia-table th { background: var(--energy); color: white; padding: 5px; }
+        .encyclopedia-table td { padding: 5px; border-bottom: 1px solid #ccc; font-size: 14px; }
+        .encyclopedia-icon { width: 20px; height: 20px; border-radius: 50%; display: inline-block; vertical-align: middle; margin-right: 5px; }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="900" height="650"></canvas>
+
+        <div id="ui-layer">
+            <div class="top-bar">
+                <div class="stat-box">❤️ <span id="lives-display" class="stat-val">20</span></div>
+                <div class="stat-box">🌊 <span id="wave-display" class="stat-val">1</span></div>
+                <div class="stat-box">⚡ <span id="energy-display" class="stat-val">60</span></div>
+                <div class="stat-box">🏆 <span id="score-display" class="stat-val">0</span></div>
+            </div>
+
+            <div class="controls-area">
+                <button class="nuke-btn" onclick="triggerNuke()">☢️ DOOM SCROLL</button>
+                <button class="control-btn" id="btn-auto" onclick="toggleAuto()">Auto-Start: OFF</button>
+                <button class="control-btn" id="btn-speed" onclick="toggleSpeed()">⏩ 1x</button>
+            </div>
+
+            <div id="side-panel">
+                <h3 id="p-name">Archer Tower</h3>
+                <div class="panel-row"><span>Level</span><span id="p-level" class="panel-val">1</span></div>
+                <div class="panel-row"><span>Damage</span><span id="p-dmg" class="panel-val">1</span></div>
+                <div class="panel-row"><span>Range</span><span id="p-rng" class="panel-val">100</span></div>
+                <div class="panel-row"><span>Ammo</span><span id="p-ammo" class="panel-val">20/20</span></div>
+                
+                <div id="p-target-box">
+                    <div style="margin-top:5px; font-size:10px; color:#aaa;">TARGETING:</div>
+                    <div class="priority-box">
+                        <button class="prio-btn active" onclick="setPriority('first')">FIRST</button>
+                        <button class="prio-btn" onclick="setPriority('strong')">STRONG</button>
+                        <button class="prio-btn" onclick="setPriority('weak')">WEAK</button>
+                    </div>
+                </div>
+
+                <div id="crit-badge" style="display:none; background:#d63031; color:white; font-size:10px; padding:2px; text-align:center; border-radius:2px; margin-bottom:5px;">CRITICAL STRIKE ACTIVE!</div>
+                <div id="synergy-badge" style="display:none; background:#74b9ff; color:#2d3436; font-size:10px; padding:2px; text-align:center; border-radius:2px; margin-bottom:5px;">❄️ SHATTER LINK ❄️</div>
+
+                <button id="btn-upgrade" class="action-btn" onclick="initiateUpgrade()">UPGRADE ($50)</button>
+                <button class="action-btn sell-btn" onclick="sellSelected()">Sell (+Energy)</button>
+                <button style="background:none; border:none; color:#777; margin-top:5px; cursor:pointer" onclick="deselectTower()">Close</button>
+            </div>
+
+            <div id="build-menu">
+                <!-- Row 1 -->
+                <button class="tower-btn" onclick="tryBuild('archer')">
+                    <div style="font-size:20px;">🏹</div>
+                    <div class="t-name">Archer</div>
+                    <div class="t-cost">15 En</div>
+                    <div class="t-skill">Add (+)</div>
+                </button>
+                <button class="tower-btn" onclick="tryBuild('ballista')">
+                    <div style="font-size:20px;">🦂</div>
+                    <div class="t-name">Ballista</div>
+                    <div class="t-cost">40 En</div>
+                    <div class="t-skill">Place Val</div>
+                </button>
+                <button class="tower-btn" onclick="tryBuild('catapult')">
+                    <div style="font-size:20px;">💣</div>
+                    <div class="t-name">Catapult</div>
+                    <div class="t-cost">100 En</div>
+                    <div class="t-skill">Mult (×)</div>
+                </button>
+                <!-- Row 2 -->
+                <div style="width:1px; background:#444; margin:0 5px;"></div>
+                <button class="tower-btn" onclick="tryBuild('ice')">
+                    <div style="font-size:20px;">❄️</div>
+                    <div class="t-name">Ice Wiz</div>
+                    <div class="t-cost">60 En</div>
+                    <div class="t-skill">Fract (½)</div>
+                </button>
+                <button class="tower-btn" onclick="tryBuild('sniper')">
+                    <div style="font-size:20px;">🎯</div>
+                    <div class="t-name">Longbow</div>
+                    <div class="t-cost">80 En</div>
+                    <div class="t-skill">Meas (ft)</div>
+                </button>
+                <!-- Row 3 -->
+                <button class="tower-btn" onclick="tryBuild('banner')">
+                    <div style="font-size:20px;">🚩</div>
+                    <div class="t-name">Banner</div>
+                    <div class="t-cost">120 En</div>
+                    <div class="t-skill">Geo (Area)</div>
+                </button>
+                <button class="tower-btn" onclick="tryBuild('bank')">
+                    <div style="font-size:20px;">🏛️</div>
+                    <div class="t-name">Bank</div>
+                    <div class="t-cost">150 En</div>
+                    <div class="t-skill">+10% Intr</div>
+                </button>
+            </div>
+
+            <!-- Tutorial Hand -->
+            <div id="tutorial-hand">👉</div>
+        </div>
+
+        <!-- Math Modal -->
+        <div id="math-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h2 id="modal-title" style="color:#2d3436; margin:0;">SOLVE!</h2>
+                
+                <!-- Normal Math -->
+                <div id="math-problem-container">
+                    <div id="math-question" class="math-problem">5 + 3 = ?</div>
+                </div>
+
+                <!-- Word Problem (Nuke) -->
+                <div id="word-problem-container" style="display:none;">
+                    <div id="word-text" class="word-problem">Problem text here...</div>
+                </div>
+
+                <input type="number" id="math-input" placeholder="?" autocomplete="off">
+                <div id="timer-bar" style="height:4px; background:red; width:0%; margin: 10px auto; display:none;"></div>
+                <br>
+                <button class="btn-big" onclick="checkAnswer()">SUBMIT</button>
+                <p id="math-hint" style="font-size: 12px; margin-top: 15px; color: #666;">Fast Answer (< 2s) = CRITICAL HIT BONUS!</p>
+                <button style="background:none; border:none; color:#999; margin-top:10px; cursor:pointer" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Encyclopedia Modal -->
+        <div id="encyclopedia-modal" class="modal-overlay">
+            <div class="modal-content" style="max-width:400px; text-align:left;">
+                <h2 style="color:var(--energy); margin-top:0;">📖 Monster Book</h2>
+                <table class="encyclopedia-table">
+                    <tr><th>Monster</th><th>Type</th><th>Weakness</th></tr>
+                    <tr><td><span class="encyclopedia-icon" style="background:#e74c3c;"></span> Red Slime</td><td>Fast Runner</td><td>Ice Wizard</td></tr>
+                    <tr><td><span class="encyclopedia-icon" style="background:#3498db;"></span> Blue Slime</td><td>Normal</td><td>Any</td></tr>
+                    <tr><td><span class="encyclopedia-icon" style="background:#2ecc71;"></span> Green Slime</td><td>Regenerator</td><td>Focus Fire</td></tr>
+                    <tr><td><span class="encyclopedia-icon" style="background:#8e44ad;"></span> Purple Boss</td><td>Shielded</td><td>Clicking</td></tr>
+                    <tr><td><span class="encyclopedia-icon" style="background:#795548;"></span> Brown Slime</td><td>Growth (+1HP/s)</td><td>High Damage</td></tr>
+                </table>
+                <div style="text-align:center; margin-top:20px;">
+                    <button class="btn-big" onclick="document.getElementById('encyclopedia-modal').style.display='none'">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="modal-overlay" style="display: flex; background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyZDM0MzYiLz48cGF0aCBkPSJNMCAwTDEwMCAxMDAiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSI1Ii8+PC9zdmc+');">
+            <div class="modal-content" style="background: rgba(30, 30, 40, 0.95); color: white; border-color: var(--accent); max-width: 650px;">
+                <h1 style="color:var(--accent); font-size: 48px; text-shadow: 2px 2px #000; margin-bottom: 10px;">KINGDOM OF MATH</h1>
+                <p style="font-size: 18px; color: #ccc;">Defend the castle using the power of mathematics!</p>
+                
+                <div class="start-grid">
+                    <div>
+                        <strong style="color:var(--energy)">Mechanics:</strong>
+                        <ul style="font-size:14px; color:#aaa; padding-left:20px;">
+                            <li>Answer fast (< 2s) for <strong>CRITS</strong></li>
+                            <li><strong>Beware:</strong> Wrong answers <strong>FREEZE</strong> towers!</li>
+                            <li><strong>Synergy:</strong> Place Sniper near Ice Wiz!</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong style="color:var(--danger)">Threats:</strong>
+                        <ul style="font-size:14px; color:#aaa; padding-left:20px;">
+                            <li><strong>Red:</strong> Fast Runners</li>
+                            <li><strong>Brown:</strong> Grows larger over time</li>
+                            <li><strong>Purple:</strong> Have Math Shields</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:15px; border-bottom:1px solid #555; padding-bottom:10px;">
+                    <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">CHALLENGE MODES</div>
+                    <div class="cheat-toggle">
+                        <label><input type="checkbox" id="mode-inflation"> Inflation (Costs 2x)</label>
+                        <label><input type="checkbox" id="mode-time"> Time Crunch (5s Timer)</label>
+                    </div>
+                </div>
+
+                <div id="sandbox-panel">
+                    <div style="margin-bottom:10px; font-weight:bold; color:var(--energy);">SANDBOX / CHEATS</div>
+                    <div class="cheat-toggle">
+                        <label><input type="checkbox" id="cheat-infinite"> Infinite Energy</label>
+                        <label><input type="checkbox" id="cheat-speed"> Hyper Speed (5x)</label>
+                        <label><input type="checkbox" id="cheat-nuke"> Instant Doom</label>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">High Score: <span id="hs-display" style="color:var(--accent)">0</span></div>
+                
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button class="btn-big" onclick="startGame()">ENTER KINGDOM</button>
+                    <button class="btn-big" style="background:#555;" onclick="document.getElementById('encyclopedia-modal').style.display='flex'">📘 Book</button>
+                    <button class="btn-big" style="background:#333; width:50px; font-size:16px;" onclick="unlockSandbox()">🔓</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game Over -->
+        <div id="game-over-screen" class="modal-overlay">
+            <div class="modal-content" style="border-color: var(--danger);">
+                <h2 style="color:var(--danger); font-size:40px;">DEFEAT!</h2>
+                <p>The slimes have breached the castle.</p>
+                <div style="font-size: 24px; margin: 20px 0;">Wave: <span id="final-wave" style="font-weight:bold;">0</span></div>
+                <button class="btn-big" onclick="location.reload()">TRY AGAIN</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    /**
+     * ENGINE & CONSTANTS
+     */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const GRID_SIZE = 50; 
+    
+    // Assets & Config
+    const COLORS = {
+        grass: '#2ecc71', path: '#eebb99', 
+        ui: '#2d3436', accent: '#fdcb6e'
+    };
+    
+    // Path: Starts Left, winds to Right Castle
+    const PATH = [
+        {x:0,y:3}, {x:3,y:3}, {x:3,y:1}, {x:8,y:1}, 
+        {x:8,y:5}, {x:5,y:5}, {x:5,y:8}, {x:12,y:8}, 
+        {x:12,y:4}, {x:15,y:4}, {x:15,y:7}, {x:18,y:7}
+    ];
+
+    /**
+     * AUDIO SYSTEM
+     */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(type) {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'shoot') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        } 
+        else if (type === 'pop') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        }
+        else if (type === 'chime') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(500, now);
+            osc.frequency.setValueAtTime(800, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        }
+        else if (type === 'fanfare') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.setValueAtTime(600, now+0.1);
+            osc.frequency.setValueAtTime(500, now+0.2);
+            osc.frequency.setValueAtTime(800, now+0.3);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.6);
+            osc.start(now); osc.stop(now + 0.6);
+        }
+        else if (type === 'error') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        }
+    }
+
+    /**
+     * LIVELY GRASS
+     */
+    let bgCanvas = document.createElement('canvas');
+    bgCanvas.width = 900; bgCanvas.height = 650;
+    let bgCtx = bgCanvas.getContext('2d');
+    
+    function initBackground() {
+        // Draw varied grass tiles
+        for(let x=0; x<900; x+=GRID_SIZE) {
+            for(let y=0; y<650; y+=GRID_SIZE) {
+                let r = Math.random();
+                bgCtx.fillStyle = r > 0.5 ? '#27ae60' : '#2ecc71';
+                bgCtx.fillRect(x,y,GRID_SIZE,GRID_SIZE);
+                
+                // Add decorations
+                if(Math.random() > 0.7) {
+                    bgCtx.fillStyle = Math.random() > 0.5 ? '#f1c40f' : '#ecf0f1'; // Flowers
+                    let fx = x + Math.random()*GRID_SIZE;
+                    let fy = y + Math.random()*GRID_SIZE;
+                    bgCtx.beginPath(); bgCtx.arc(fx, fy, 2, 0, Math.PI*2); bgCtx.fill();
+                }
+            }
+        }
+    }
+    initBackground();
+
+    // State
+    let state = {
+        active: false, paused: false,
+        wave: 1, lives: 20, energy: 60, score: 0,
+        enemies: [], towers: [], projectiles: [], particles: [],
+        speed: 1, autoStart: false,
+        placing: null, // type of tower being placed
+        selection: null, // selected tower
+        cheats: { infinite: false, hyper: false, nuke: false },
+        modes: { inflation: false, time: false }
+    };
+
+    let inputState = {
+        pendingAction: null, // { type, data }
+        mathStart: 0, 
+        answer: 0,
+        timerId: null
+    };
+
+    // Load High Score
+    let highScore = localStorage.getItem('kingdom_math_hs') || 0;
+    document.getElementById('hs-display').innerText = highScore;
+
+    // Tower Definitions
+    const TOWERS = {
+        archer: { name:"Archer", cost:15, range:150, dmg:1, rate:40, ammo:20, color:'#3498db', type:'add' },
+        ballista: { name:"Ballista", cost:40, range:180, dmg:3, rate:70, ammo:15, color:'#e67e22', type:'pv' },
+        catapult: { name:"Catapult", cost:100, range:200, dmg:10, rate:120, ammo:5, color:'#c0392b', type:'mult' },
+        ice: { name:"Ice Wizard", cost:60, range:130, dmg:0.5, rate:30, ammo:25, color:'#74b9ff', type:'frac', slow:0.5 },
+        sniper: { name:"Longbow", cost:80, range:999, dmg:5, rate:150, ammo:10, color:'#00b894', type:'meas' },
+        banner: { name:"King's Banner", cost:120, range:100, dmg:0, rate:0, ammo:99, color:'#fdcb6e', type:'geo', buff:true },
+        bank: { name:"Royal Bank", cost:100, range:0, dmg:0, rate:0, ammo:99, color:'#f1c40f', type:'bank' }
+    };
+
+    // Enemy Definitions (Slimes)
+    // Red (Fast), Blue (Normal), Green (Regen), Purple (Boss), Brown (Growth)
+    const ENEMIES = {
+        goblin: { hp:3, speed:2.2, color:'#e74c3c', type:'normal', size:22 }, // Red
+        orc: { hp:8, speed:1.1, color:'#3498db', type:'normal', size:26 }, // Blue
+        troll: { hp:20, speed:0.7, color:'#2ecc71', type:'regen', size:30 }, // Green
+        boss: { hp:100, speed:0.4, color:'#9b59b6', type:'boss', size:45 }, // Purple Boss
+        growth: { hp:10, speed:0.9, color:'#795548', type:'growth', size:28 } // Brown Growth
+    };
+
+    /**
+     * CORE LOOP
+     */
+    function startGame() {
+        // Read Settings
+        state.cheats.infinite = document.getElementById('cheat-infinite').checked;
+        state.cheats.hyper = document.getElementById('cheat-speed').checked;
+        state.cheats.nuke = document.getElementById('cheat-nuke').checked;
+        
+        state.modes.inflation = document.getElementById('mode-inflation').checked;
+        state.modes.time = document.getElementById('mode-time').checked;
+
+        if (state.cheats.infinite) state.energy = 9999;
+
+        // Apply Mode Multipliers
+        if(state.modes.inflation) {
+            for(let k in TOWERS) TOWERS[k].cost *= 2;
+        }
+
+        document.getElementById('start-screen').style.display = 'none';
+        state.active = true;
+        
+        // Tutorial Show
+        const hand = document.getElementById('tutorial-hand');
+        hand.style.display = 'block';
+        hand.style.left = (canvas.width/2 - 20) + 'px';
+        hand.style.top = (canvas.height - 150) + 'px';
+        setTimeout(() => hand.style.display = 'none', 5000);
+        
+        loop();
+        startWave();
+    }
+
+    let lastTime = 0;
+    function loop(timestamp) {
+        if(!state.active) return;
+        const dt = timestamp - lastTime;
+        lastTime = timestamp;
+
+        if(!state.paused) {
+            let steps = state.speed === 2 ? 2 : 1;
+            if(state.speed === 5) steps = 5; 
+
+            for(let i=0; i<steps; i++) {
+                updateGame();
+            }
+            
+            drawGame();
+        }
+        requestAnimationFrame(loop);
+    }
+
+    /**
+     * UPDATE LOGIC
+     */
+    function updateGame() {
+        state.towers.forEach(t => t.update());
+
+        for(let i=state.projectiles.length-1; i>=0; i--) {
+            let p = state.projectiles[i];
+            p.update();
+            if(!p.active) state.projectiles.splice(i,1);
+        }
+
+        for(let i=state.enemies.length-1; i>=0; i--) {
+            let e = state.enemies[i];
+            e.update();
+            if(e.dead) {
+                state.score += e.maxHp;
+                state.energy += Math.ceil(e.maxHp/2);
+                spawnParticles(e.x, e.y, e.color, 5);
+                state.enemies.splice(i,1);
+                updateUI();
+                playSound('pop');
+            } else if (e.finished) {
+                state.lives--;
+                shakeScreen(5);
+                state.enemies.splice(i,1);
+                updateUI();
+                if(state.lives <= 0) gameOver();
+            }
+        }
+
+        for(let i=state.particles.length-1; i>=0; i--) {
+            state.particles[i].life--;
+            if(state.particles[i].life <= 0) state.particles.splice(i,1);
+        }
+
+        handleWave();
+        
+        if(screenShake > 0) screenShake *= 0.9;
+        if(screenShake < 0.5) screenShake = 0;
+    }
+
+    /**
+     * DRAWING
+     */
+    let screenShake = 0;
+
+    function drawGame() {
+        ctx.save();
+        if(screenShake > 0) {
+            let dx = (Math.random()-0.5) * screenShake;
+            let dy = (Math.random()-0.5) * screenShake;
+            ctx.translate(dx, dy);
+        }
+
+        // 1. Lively Background
+        ctx.drawImage(bgCanvas, 0, 0);
+        
+        // 2. Path (Stone Road)
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.lineWidth = 40;
+        ctx.strokeStyle = "#95a5a6"; 
+        ctx.beginPath();
+        let p0 = gridToPixel(PATH[0].x, PATH[0].y);
+        ctx.moveTo(p0.x, p0.y);
+        for(let i=1; i<PATH.length; i++) {
+            let p = gridToPixel(PATH[i].x, PATH[i].y);
+            ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+        // Path Border
+        ctx.lineWidth = 44;
+        ctx.strokeStyle = "#7f8c8d";
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.stroke();
+        ctx.globalCompositeOperation = 'source-over';
+
+        // 3. Castle
+        let endP = gridToPixel(PATH[PATH.length-1].x, PATH[PATH.length-1].y);
+        drawCastle(endP.x, endP.y);
+
+        // 4. Entities
+        state.towers.forEach(t => t.draw(ctx));
+        state.enemies.forEach(e => e.draw(ctx));
+        state.projectiles.forEach(p => p.draw(ctx));
+        
+        state.particles.forEach(p => {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, p.size, p.size);
+        });
+
+        // 5. UI Overlay
+        if(state.selection) {
+            ctx.beginPath();
+            ctx.arc(state.selection.x, state.selection.y, state.selection.range, 0, Math.PI*2);
+            ctx.fillStyle = "rgba(255,255,255,0.2)";
+            ctx.fill();
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5,5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Synergy Line
+        state.towers.forEach(t => {
+            if(t.type === 'sniper' && t.synergyTarget) {
+                ctx.strokeStyle = "#74b9ff";
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5,5]);
+                ctx.beginPath();
+                ctx.moveTo(t.x, t.y);
+                ctx.lineTo(t.synergyTarget.x, t.synergyTarget.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        });
+
+        ctx.restore();
+    }
+
+    function drawCastle(x, y) {
+        ctx.fillStyle = "#2c3e50";
+        ctx.fillRect(x-20, y-30, 40, 40);
+        // Battlements
+        ctx.fillRect(x-20, y-35, 10, 5);
+        ctx.fillRect(x-5, y-35, 10, 5);
+        ctx.fillRect(x+10, y-35, 10, 5);
+        // Door
+        ctx.fillStyle = "#34495e";
+        ctx.beginPath(); ctx.arc(x, y+10, 15, Math.PI, 0); ctx.fill();
+    }
+
+    /**
+     * CLASSES
+     */
+    class Tower {
+        constructor(gx, gy, type) {
+            this.gx = gx; this.gy = gy;
+            let p = gridToPixel(gx, gy);
+            this.x = p.x; this.y = p.y;
+            this.type = type;
+            this.config = TOWERS[type];
+            this.level = 1;
+            this.damage = this.config.dmg;
+            this.range = this.config.range;
+            this.rate = this.config.rate;
+            this.maxAmmo = this.config.ammo;
+            this.ammo = this.maxAmmo;
+            this.cooldown = 0;
+            this.angle = 0;
+            this.critActive = false;
+            this.priority = 'first'; 
+            this.recoil = 0;
+            this.stunTimer = 0;
+            
+            this.buffed = false;
+            this.synergyTarget = null; // For Sniper/Ice visual
+        }
+
+        update() {
+            if(this.stunTimer > 0) { this.stunTimer--; return; }
+
+            // Banner Buff
+            let wasBuffed = this.buffed;
+            this.buffed = false;
+            state.towers.forEach(t => {
+                if(t.type === 'banner' && t !== this) {
+                    let d = Math.hypot(t.x - this.x, t.y - this.y);
+                    if(d < t.range) this.buffed = true;
+                }
+            });
+            if(this.buffed && !wasBuffed) this.range *= 1.2;
+            if(!this.buffed && wasBuffed) this.range /= 1.2;
+
+            if(this.type === 'banner' || this.type === 'bank') return;
+            if(this.ammo <= 0) return;
+            if(this.cooldown > 0) this.cooldown--;
+            if(this.recoil > 0) this.recoil--;
+
+            // Sniper Synergy Logic
+            this.synergyTarget = null;
+            if(this.type === 'sniper') {
+                // Find nearest ice tower
+                let ice = state.towers.find(t => t.type === 'ice' && Math.hypot(t.x - this.x, t.y - this.y) < 150);
+                if(ice) this.synergyTarget = ice;
+            }
+
+            // Targeting
+            let targets = state.enemies.filter(e => {
+                let d = Math.hypot(e.x - this.x, e.y - this.y);
+                return d <= this.range && !e.shield; 
+            });
+
+            if(targets.length > 0) {
+                targets.sort((a,b) => {
+                    if(this.priority === 'strong') return b.hp - a.hp;
+                    if(this.priority === 'weak') return a.hp - b.hp;
+                    return 0; 
+                });
+                
+                let target = targets[0];
+                this.angle = Math.atan2(target.y - this.y, target.x - this.x);
+                
+                if(this.cooldown <= 0) {
+                    this.shoot(target);
+                    this.cooldown = this.rate;
+                    if(this.critActive) this.cooldown = Math.floor(this.cooldown * 0.7); 
+                }
+            }
+        }
+
+        shoot(target) {
+            this.ammo--;
+            this.recoil = 5;
+            spawnParticles(this.x + Math.cos(this.angle)*20, this.y + Math.sin(this.angle)*20, '#fff', 3);
+            playSound('shoot');
+
+            let dmg = this.damage;
+            if(this.critActive) dmg *= 2; 
+            
+            // Shatter Bonus
+            let shatter = false;
+            if(this.synergyTarget) shatter = true;
+
+            state.projectiles.push(new Projectile(this.x, this.y, target, this.type, dmg, this.config.slow, shatter));
+        }
+
+        draw(ctx) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            
+            // Base
+            ctx.fillStyle = "#7f8c8d";
+            ctx.fillRect(-20, -20, 40, 40);
+            
+            // Ammo Bar
+            if(this.type !== 'banner' && this.type !== 'bank') {
+                let pct = this.ammo / this.maxAmmo;
+                ctx.fillStyle = "#2d3436";
+                ctx.fillRect(-15, -28, 30, 4);
+                ctx.fillStyle = pct < 0.3 ? "#e74c3c" : "#2ecc71";
+                ctx.fillRect(-15, -28, 30*pct, 4);
+            }
+
+            // Crit Aura
+            if(this.critActive) {
+                ctx.strokeStyle = "#e74c3c"; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(0,0,22,0,Math.PI*2); ctx.stroke();
+            }
+
+            // Banner Visual
+            if(this.type === 'banner') {
+                ctx.fillStyle = this.config.color;
+                ctx.beginPath(); ctx.moveTo(0,-20); ctx.lineTo(15, -5); ctx.lineTo(0, 10); ctx.fill();
+                ctx.strokeStyle = "#8e44ad"; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(-5, -20); ctx.lineTo(-5, 20); ctx.stroke();
+                ctx.restore(); return;
+            }
+            // Bank Visual
+            if(this.type === 'bank') {
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillRect(-15, -15, 30, 30);
+                ctx.fillStyle = "#2c3e50"; // Pillars
+                ctx.fillRect(-12, -15, 4, 30); ctx.fillRect(-2, -15, 4, 30); ctx.fillRect(8, -15, 4, 30);
+                // Roof
+                ctx.beginPath(); ctx.moveTo(-20,-15); ctx.lineTo(0,-30); ctx.lineTo(20,-15); ctx.fill();
+                ctx.restore(); return;
+            }
+
+            // Recoil & Rotate
+            let rx = Math.cos(this.angle) * -this.recoil;
+            let ry = Math.sin(this.angle) * -this.recoil;
+            ctx.translate(rx, ry);
+            ctx.rotate(this.angle);
+
+            // Sprite Drawing
+            if(this.type === 'archer') {
+                ctx.fillStyle = this.ammo > 0 ? this.config.color : "#555";
+                ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = "#d35400"; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(5, 0, 15, -1, 1); ctx.stroke();
+            } else if (this.type === 'ballista') {
+                ctx.fillStyle = "#8e44ad";
+                ctx.fillRect(-10, -5, 20, 10);
+                ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(0, 15); ctx.stroke();
+            } else if (this.type === 'catapult') {
+                ctx.fillStyle = "#c0392b";
+                ctx.fillRect(-15, -10, 30, 20);
+                ctx.fillStyle = "#ecf0f1";
+                ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill();
+            } else if (this.type === 'ice') {
+                ctx.fillStyle = "#74b9ff";
+                ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(10, 10); ctx.lineTo(-10, 10); ctx.fill();
+                ctx.fillStyle = "#0984e3";
+                ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(12, -5); ctx.lineTo(-12, -5); ctx.fill();
+            } else if (this.type === 'sniper') {
+                ctx.fillStyle = "#00b894";
+                ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#2d3436";
+                ctx.fillRect(0, -2, 25, 4);
+            }
+
+            ctx.restore();
+
+            // Out of Ammo
+            if(this.ammo <= 0) {
+                if(Math.floor(Date.now()/500)%2) {
+                    ctx.fillStyle = "#e74c3c";
+                    ctx.font = "bold 20px Arial";
+                    ctx.fillText("⚠️", this.x-10, this.y-30);
+                }
+            }
+            // Stunned
+            if(this.stunTimer > 0) {
+                ctx.fillStyle = "rgba(116, 185, 255, 0.7)"; 
+                ctx.fillRect(this.x-15, this.y-15, 30, 30);
+                ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+                ctx.strokeRect(this.x-15, this.y-15, 30, 30);
+            }
+        }
+    }
+
+    class Enemy {
+        constructor(wave) {
+            let r = Math.random();
+            let typeKey = 'goblin';
+            if(wave > 2 && r < 0.4) typeKey = 'orc';
+            if(wave > 5 && r < 0.2) typeKey = 'troll';
+            if(wave > 8 && r < 0.1) typeKey = 'growth';
+            if(wave % 10 === 0) typeKey = 'boss';
+
+            this.config = ENEMIES[typeKey];
+            this.hp = this.config.hp * (1 + wave*0.15); 
+            this.maxHp = this.hp;
+            this.speed = this.config.speed;
+            this.color = this.config.color;
+            this.type = typeKey;
+            
+            this.pathIndex = 0;
+            this.progress = 0;
+            let start = gridToPixel(PATH[0].x, PATH[0].y);
+            this.x = start.x; this.y = start.y;
+            this.dead = false;
+            this.finished = false;
+            
+            this.regenTimer = 0;
+            this.growthTimer = 0;
+            if(this.type === 'boss') this.shield = true; 
+        }
+
+        update() {
+            if(this.shield) return; 
+
+            // Move
+            let targetGrid = PATH[this.pathIndex + 1];
+            if(!targetGrid) { this.finished = true; return; }
+            let target = gridToPixel(targetGrid.x, targetGrid.y);
+            let dx = target.x - this.x;
+            let dy = target.y - this.y;
+            let dist = Math.hypot(dx, dy);
+
+            if(dist < this.speed) {
+                this.x = target.x; this.y = target.y; this.pathIndex++;
+            } else {
+                this.x += (dx/dist) * this.speed;
+                this.y += (dy/dist) * this.speed;
+            }
+
+            // Regen
+            if(this.type === 'troll') {
+                this.regenTimer++;
+                if(this.regenTimer > 120 && this.hp < this.maxHp) {
+                    this.hp += 0.1; if(this.hp > this.maxHp) this.hp = this.maxHp;
+                }
+            }
+            // Growth
+            if(this.type === 'growth') {
+                this.growthTimer++;
+                if(this.growthTimer > 60) { // Every 1 sec
+                    this.hp++; this.maxHp++; 
+                    this.growthTimer = 0;
+                }
+            }
+        }
+
+        draw(ctx) {
+            let s = this.config.size;
+            if(this.type === 'growth') s += (this.maxHp / 10); // Grows visibly
+
+            // String
+            ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(this.x, this.y + s*0.8);
+            ctx.quadraticCurveTo(this.x - 5, this.y + s + 10, this.x, this.y + s + 20);
+            ctx.stroke();
+
+            // Balloon
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            if(this.type === 'boss') ctx.ellipse(this.x, this.y, s*1.5, s, 0, 0, Math.PI*2);
+            else ctx.ellipse(this.x, this.y - s*0.2, s*0.8, s, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Knot
+            ctx.beginPath(); ctx.moveTo(this.x, this.y + s*0.8);
+            ctx.lineTo(this.x - 4, this.y + s + 4); ctx.lineTo(this.x + 4, this.y + s + 4); ctx.fill();
+
+            // Shine
+            ctx.fillStyle = "rgba(255,255,255,0.3)";
+            ctx.beginPath();
+            ctx.ellipse(this.x - s/3, this.y - s/3, s/4, s/5, Math.PI/4, 0, Math.PI*2);
+            ctx.fill();
+
+            // Text
+            ctx.fillStyle = "white";
+            ctx.font = `bold ${Math.floor(s*0.8)}px Arial`;
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.shadowColor = "black"; ctx.shadowBlur = 4;
+            ctx.fillText(Math.ceil(this.hp), this.x, this.y - s*0.1);
+            ctx.shadowBlur = 0; 
+
+            // Shield
+            if(this.shield) {
+                ctx.strokeStyle = "#0984e3"; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.arc(this.x, this.y, s+15, 0, Math.PI*2); ctx.stroke();
+                ctx.fillStyle = "white"; ctx.font = "bold 14px Arial";
+                ctx.fillText("CLICK ME!", this.x, this.y - s - 20);
+            }
+        }
+
+        hit(dmg) {
+            if(this.shield) return;
+            this.hp -= dmg;
+            this.regenTimer = 0; 
+            showFloat("-" + Math.round(dmg*10)/10, this.x + (Math.random()*20-10), this.y - 30, "f-dmg");
+            if(this.hp <= 0) this.dead = true;
+        }
+    }
+
+    class Projectile {
+        constructor(x, y, target, type, dmg, slow, shatter) {
+            this.x = x; this.y = y; this.target = target;
+            this.type = type; this.dmg = dmg; this.slow = slow;
+            this.shatter = shatter;
+            this.speed = 10; this.active = true;
+        }
+
+        update() {
+            if(!this.target || this.target.dead) { this.active = false; return; }
+            
+            if(this.type === 'sniper') {
+                // Instant Hit Logic
+                let finalDmg = this.dmg;
+                // Check if target is frozen/slowed for Shatter
+                if(this.shatter && this.target.speed < ENEMIES[this.target.type].speed) {
+                    finalDmg *= 2;
+                    showFloat("SHATTER!", this.target.x, this.target.y, "f-crit");
+                }
+                
+                this.target.hit(finalDmg);
+                this.active = false;
+                spawnParticles(this.target.x, this.target.y, '#e74c3c', 3);
+                return;
+            }
+
+            let dx = this.target.x - this.x;
+            let dy = this.target.y - this.y;
+            let dist = Math.hypot(dx, dy);
+
+            if(dist < this.speed) {
+                this.active = false;
+                
+                if(this.type === 'catapult') {
+                    // Area Damage
+                    state.enemies.forEach(e => {
+                        if(Math.hypot(e.x - this.target.x, e.y - this.target.y) < 60) e.hit(this.dmg);
+                    });
+                    screenShake = 3;
+                    spawnParticles(this.target.x, this.target.y, '#d63031', 10);
+                } else {
+                    this.target.hit(this.dmg);
+                    spawnParticles(this.target.x, this.target.y, '#fff', 2);
+                }
+
+                if(this.slow) {
+                    this.target.speed = ENEMIES[this.target.type].speed * this.slow;
+                }
+
+            } else {
+                this.x += (dx/dist) * this.speed;
+                this.y += (dy/dist) * this.speed;
+            }
+        }
+
+        draw(ctx) {
+            if(this.type === 'sniper') return; // Instant
+
+            if(this.type === 'catapult') {
+                ctx.fillStyle = "#2d3436";
+                ctx.beginPath(); ctx.arc(this.x, this.y, 6, 0, Math.PI*2); ctx.fill();
+            } else if (this.type === 'ice') {
+                ctx.fillStyle = "#74b9ff";
+                ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI*2); ctx.fill();
+            } else {
+                ctx.fillStyle = "#000";
+                ctx.fillRect(this.x-2, this.y-2, 4, 4);
+            }
+        }
+    }
+
+    class Particle {
+        constructor(x, y, color) {
+            this.x = x; this.y = y; this.color = color;
+            this.vx = (Math.random()-0.5)*5;
+            this.vy = (Math.random()-0.5)*5;
+            this.life = 20; this.size = Math.random()*4 + 2;
+        }
+    }
+
+    /**
+     * UTILS
+     */
+    function gridToPixel(gx, gy) {
+        return { x: gx*GRID_SIZE + GRID_SIZE/2, y: gy*GRID_SIZE + GRID_SIZE/2 };
+    }
+
+    function spawnParticles(x, y, color, count) {
+        for(let i=0; i<count; i++) state.particles.push(new Particle(x, y, color));
+    }
+
+    function shakeScreen(amount) { screenShake = amount; }
+
+    function updateUI() {
+        document.getElementById('lives-display').innerText = state.lives;
+        if (state.cheats.infinite) document.getElementById('energy-display').innerText = "∞";
+        else document.getElementById('energy-display').innerText = state.energy;
+        document.getElementById('score-display').innerText = state.score;
+        document.getElementById('wave-display').innerText = state.wave;
+
+        if(state.selection) {
+            const t = state.selection;
+            document.getElementById('p-name').innerText = t.config.name;
+            document.getElementById('p-level').innerText = t.level;
+            document.getElementById('p-dmg').innerText = t.damage;
+            document.getElementById('p-rng').innerText = Math.round(t.range);
+            document.getElementById('p-ammo').innerText = `${t.ammo}/${t.maxAmmo}`;
+            document.getElementById('crit-badge').style.display = t.critActive ? 'block' : 'none';
+            document.getElementById('synergy-badge').style.display = t.synergyTarget ? 'block' : 'none';
+            
+            // Hide targeting for Bank/Banner
+            document.getElementById('p-target-box').style.display = (t.type === 'bank' || t.type === 'banner') ? 'none' : 'block';
+        }
+    }
+
+    function unlockSandbox() {
+        let pass = prompt("Enter Sandbox Password:");
+        if(pass === "techpara") {
+            document.getElementById('sandbox-panel').style.display = 'block';
+            alert("Sandbox Mode Unlocked!");
+        } else {
+            alert("Access Denied.");
+        }
+    }
+
+    /**
+     * INPUT & GAMEPLAY
+     */
+    // Wave Logic
+    let spawnCount = 0;
+    let spawnTimer = 0;
+    
+    function startWave() {
+        spawnCount = 4 + Math.floor(state.wave * 1.5);
+        
+        // Bank Interest
+        let banks = state.towers.filter(t => t.type === 'bank');
+        if(banks.length > 0) {
+            let interest = Math.floor(state.energy * 0.1) * banks.length;
+            if(interest > 0) {
+                state.energy += interest;
+                showFloat("+$" + interest, 450, 300, "f-energy");
+                playSound('chime');
+            }
+        }
+    }
+
+    function handleWave() {
+        if(spawnCount > 0) {
+            spawnTimer--;
+            if(spawnTimer <= 0) {
+                state.enemies.push(new Enemy(state.wave));
+                spawnCount--;
+                spawnTimer = 60 / state.speed;
+            }
+        } else if (state.enemies.length === 0) {
+            // Boss Fanfare
+            if(state.wave % 10 === 0 && !state.bossCleared) {
+                playSound('fanfare');
+                for(let k=0; k<20; k++) spawnParticles(Math.random()*900, Math.random()*650, ['#f1c40f','#e74c3c','#3498db'][k%3], 5);
+                state.bossCleared = true;
+            }
+
+            if(state.autoStart || state.wave === 1) { 
+               state.wave++;
+               state.bossCleared = false;
+               startWave();
+            }
+        }
+    }
+
+    // Interaction
+    function tryBuild(type) {
+        if(state.cheats.infinite || state.energy >= TOWERS[type].cost) {
+            state.placing = type;
+            openMathModal(type, 'build');
+            inputState.pendingAction = { type: 'build', data: type };
+        } else {
+            alert("Not enough Energy!");
+        }
+    }
+
+    function initiateUpgrade() {
+        if(!state.selection) return;
+        if(state.cheats.infinite || state.energy >= 50) {
+            openMathModal(state.selection.type, 'upgrade');
+            inputState.pendingAction = { type: 'upgrade', data: state.selection };
+        } else {
+            alert("Need 50 Energy!");
+        }
+    }
+
+    function triggerNuke() {
+        if(state.cheats.nuke) {
+            state.enemies = [];
+            shakeScreen(20);
+            playSound('pop');
+            return;
+        }
+        openMathModal('nuke', 'nuke');
+        inputState.pendingAction = { type: 'nuke' };
+    }
+
+    function handleClick(e) {
+        let rect = canvas.getBoundingClientRect();
+        let gx = Math.floor((e.clientX - rect.left) / GRID_SIZE);
+        let gy = Math.floor((e.clientY - rect.top) / GRID_SIZE);
+
+        let clickedTower = state.towers.find(t => t.gx === gx && t.gy === gy);
+        
+        if(state.placing === 'READY') {
+            if(isValid(gx, gy)) {
+                state.towers.push(new Tower(gx, gy, inputState.pendingAction.data));
+                state.placing = null;
+                canvas.style.cursor = 'crosshair';
+            }
+        } else if (clickedTower) {
+            if(clickedTower.type !== 'bank' && clickedTower.type !== 'banner' && clickedTower.ammo <= 0) {
+                openMathModal(clickedTower.type, 'reload');
+                inputState.pendingAction = { type: 'reload', data: clickedTower };
+            } else {
+                selectTower(clickedTower);
+            }
+        } else {
+            let clickedEnemy = state.enemies.find(en => Math.hypot(en.x - (gx*GRID_SIZE+25), en.y - (gy*GRID_SIZE+25)) < 30);
+            if(clickedEnemy && clickedEnemy.shield) {
+                openMathModal('boss', 'shield');
+                inputState.pendingAction = { type: 'shield', data: clickedEnemy };
+            } else {
+                deselectTower();
+            }
+        }
+    }
+
+    function isValid(gx, gy) {
+        if(gx<0 || gx>17 || gy<0 || gy>12) return false;
+        if(state.towers.find(t => t.gx === gx && t.gy === gy)) return false;
+        return true;
+    }
+
+    /**
+     * MATH GENERATOR
+     */
+    function openMathModal(type, context) {
+        state.paused = true;
+        document.getElementById('math-modal').style.display = 'flex';
+        inputState.mathStart = Date.now();
+        
+        const qEl = document.getElementById('math-question');
+        const wEl = document.getElementById('word-problem-container');
+        const mEl = document.getElementById('math-problem-container');
+        const iEl = document.getElementById('math-input');
+        
+        iEl.value = ''; iEl.focus();
+
+        // Time Crunch Mode
+        if(state.modes.time) {
+            document.getElementById('timer-bar').style.display = 'block';
+            document.getElementById('timer-bar').style.width = '100%';
+            let timeLeft = 5000;
+            if(inputState.timerId) clearInterval(inputState.timerId);
+            
+            inputState.timerId = setInterval(() => {
+                timeLeft -= 100;
+                document.getElementById('timer-bar').style.width = (timeLeft/5000)*100 + '%';
+                if(timeLeft <= 0) {
+                    clearInterval(inputState.timerId);
+                    // Fail
+                    document.getElementById('math-input').value = "999999"; // Force wrong
+                    checkAnswer();
+                }
+            }, 100);
+        } else {
+            document.getElementById('timer-bar').style.display = 'none';
+        }
+
+        let q = "", a = 0;
+        
+        if(type === 'nuke') {
+            mEl.style.display = 'none'; wEl.style.display = 'block';
+            q = "A farmer has 5 cows and 3 chickens. How many legs are there in total?";
+            a = (5*4) + (3*2);
+            document.getElementById('word-text').innerText = q;
+        } else {
+            mEl.style.display = 'block'; wEl.style.display = 'none';
+            if(type === 'archer') { 
+                let n1 = r(10,50), n2 = r(5,20); q = `${n1} + ${n2}`; a = n1+n2;
+            } else if (type === 'ballista') { 
+                let n = r(100, 900); let digit = Math.floor(n/10)%10; q = `Value of tens in ${n}?`; a = digit*10;
+            } else if (type === 'catapult') { 
+                let n1 = r(3,9), n2 = r(3,9); q = `${n1} × ${n2}`; a = n1*n2;
+            } else if (type === 'ice') { 
+                let n = r(2,10)*2; q = `½ of ${n}?`; a = n/2;
+            } else if (type === 'sniper') { 
+                q = "Feet in 2 yards?"; a = 6;
+            } else if (type === 'banner' || type === 'bank') { 
+                q = "Sides on a hexagon?"; a = 6;
+            } else if (type === 'boss') { 
+                let x = r(5,20); q = `? + 10 = ${x+10}`; a = x;
+            }
+            qEl.innerText = `${q} = ?`;
+        }
+        inputState.answer = a;
+    }
+
+    function checkAnswer() {
+        if(inputState.timerId) clearInterval(inputState.timerId);
+        const val = parseInt(document.getElementById('math-input').value);
+        
+        if(val === inputState.answer) {
+            let time = Date.now() - inputState.mathStart;
+            let isCrit = time < 2000;
+            let act = inputState.pendingAction;
+            
+            if(act.type === 'build') {
+                if(!state.cheats.infinite) state.energy -= TOWERS[act.data].cost;
+                state.placing = 'READY'; 
+                showFloat("CLICK TO PLACE", canvas.width/2, canvas.height/2, "f-energy");
+            } else if (act.type === 'reload') {
+                act.data.ammo = act.data.maxAmmo;
+                if(isCrit) {
+                    act.data.critActive = true;
+                    showFloat("CRITICAL RELOAD!", act.data.x, act.data.y, "f-crit");
+                }
+            } else if (act.type === 'upgrade') {
+                if(!state.cheats.infinite) state.energy -= 50;
+                act.data.level++;
+                act.data.damage *= 1.5;
+                act.data.ammo = act.data.maxAmmo; 
+            } else if (act.type === 'shield') {
+                act.data.shield = false;
+                showFloat("SHIELD BROKEN!", act.data.x, act.data.y, "f-crit");
+            } else if (act.type === 'nuke') {
+                state.enemies = [];
+                shakeScreen(20);
+            }
+            playSound('chime');
+            closeModal();
+        } else {
+            let act = inputState.pendingAction;
+            if (act.type === 'reload' || act.type === 'upgrade') {
+                act.data.stunTimer = 300; 
+                showFloat("FROZEN!", act.data.x, act.data.y, "f-crit");
+                playSound('error');
+                closeModal();
+            } else {
+                document.getElementById('math-input').classList.add('shake');
+                setTimeout(()=>document.getElementById('math-input').classList.remove('shake'), 400);
+            }
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('math-modal').style.display = 'none';
+        state.paused = false;
+    }
+
+    function selectTower(t) {
+        state.selection = t;
+        document.getElementById('side-panel').style.display = 'flex';
+        updateUI();
+    }
+    function deselectTower() {
+        state.selection = null;
+        document.getElementById('side-panel').style.display = 'none';
+    }
+    function setPriority(p) {
+        if(state.selection) state.selection.priority = p;
+    }
+    function sellSelected() {
+        if(state.selection) {
+            state.energy += Math.floor(state.selection.config.cost/2);
+            state.towers = state.towers.filter(t => t !== state.selection);
+            deselectTower();
+        }
+    }
+    function toggleSpeed() {
+        if (state.speed === 1) state.speed = 2;
+        else if (state.speed === 2 && state.cheats.hyper) state.speed = 5;
+        else state.speed = 1;
+        let label = "⏩ 1x";
+        if(state.speed === 2) label = "⏩ 2x";
+        if(state.speed === 5) label = "⚡ 5x";
+        document.getElementById('btn-speed').innerText = label;
+    }
+    function toggleAuto() {
+        state.autoStart = !state.autoStart;
+        document.getElementById('btn-auto').innerText = state.autoStart ? "Auto: ON" : "Auto: OFF";
+        document.getElementById('btn-auto').classList.toggle('active');
+    }
+    function r(min, max) { return Math.floor(Math.random() * (max - min + 1) ) + min; }
+
+    function showFloat(txt, x, y, cls) {
+        let el = document.createElement('div');
+        el.className = `floater ${cls}`;
+        el.innerText = txt;
+        el.style.left = (x + canvas.offsetLeft) + 'px';
+        el.style.top = (y + canvas.offsetTop) + 'px';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1000);
+    }
+    
+    function gameOver() {
+        state.active = false;
+        document.getElementById('game-over-screen').style.display = 'flex';
+        document.getElementById('final-wave').innerText = state.wave;
+        if(state.score > highScore) localStorage.setItem('kingdom_math_hs', state.score);
+    }
+
+    canvas.addEventListener('mousedown', handleClick);
+    document.getElementById('math-input').addEventListener('keypress', e => {
+        if(e.key === 'Enter') checkAnswer();
+    });
+
+</script>
+</body>
+</html>

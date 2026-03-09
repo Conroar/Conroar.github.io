@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Potion Master: Time Keeper</title>
+    <style>
+        :root {
+            --wall-color: #2c0e37;
+            --shelf-line-color: #4a235a;
+            --table-color: #5d4037;
+            --table-shadow: #3e2723;
+            --text-color: #333;
+            --ui-font: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+            --parchment: #f4e4bc;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--wall-color);
+            color: var(--text-color);
+            font-family: var(--ui-font);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            touch-action: manipulation;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23fff" stroke="%23000" d="M12 2L15 9L22 9L16 14L18 21L12 17L6 21L8 14L2 9L9 9Z"/></svg>') 12 12, auto;
+        }
+
+        /* --- Global Overlays (Vignette & Color Grade) --- */
+        #vignette {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.6) 100%);
+            pointer-events: none; z-index: 900;
+        }
+        #color-grade {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(75, 0, 130, 0.1), rgba(255, 215, 0, 0.05));
+            pointer-events: none; z-index: 901;
+            mix-blend-mode: overlay;
+        }
+        #light-pulse {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; opacity: 0;
+            pointer-events: none; z-index: 902;
+            transition: opacity 0.2s;
+        }
+
+        /* --- Start Overlay --- */
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+            color: white;
+        }
+        .start-btn {
+            padding: 20px 40px; font-size: 2rem; background: #9b59b6;
+            color: white; border: none; border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; /* Hand-drawn look */
+            cursor: pointer; margin-top: 20px; animation: pulse 1.5s infinite;
+            border: 2px solid white;
+        }
+
+        /* --- Stage Area (Wizard & Wall) --- */
+        .stage-area {
+            flex: 1.5; position: relative;
+            background-color: var(--wall-color);
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: flex-end;
+            padding-bottom: 20px;
+        }
+
+        /* Window View (Parallax Layer 0) */
+        #window-layer {
+            position: absolute; top: 20px; right: 10%; width: 120px; height: 120px;
+            background: linear-gradient(to bottom, #000033, #1a0b2e);
+            border-radius: 10px; border: 4px solid #3e2723;
+            box-shadow: inset 0 0 20px black;
+            z-index: 0; overflow: hidden;
+        }
+        .star {
+            position: absolute; background: white; border-radius: 50%;
+            animation: twinkle 3s infinite ease-in-out;
+        }
+
+        /* Shelves (Parallax Layer 1) */
+        .wall-shelves {
+            position: absolute; top: 0; left: 0; width: 120%; height: 100%; left: -10%; /* Oversize for parallax */
+            z-index: 1;
+            /* Resized shelves to be smaller (60px high) */
+            background-image: linear-gradient(to bottom, transparent 56px, var(--shelf-line-color) 56px, var(--shelf-line-color) 60px, transparent 60px);
+            background-size: 100% 60px;
+            display: flex; flex-wrap: wrap; align-content: flex-start;
+            padding: 0 5%; box-sizing: border-box;
+        }
+
+        .collected-potion {
+            width: 24px; 
+            height: 60px; /* Matches shelf background height */
+            padding-top: 32px; /* Pushes SVG down to sit on line */
+            margin-right: 2px;
+            animation: flyToShelf 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        /* Decorations (Herbs & Webs) */
+        .decor-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 5;
+        }
+        .web { opacity: 0.4; transition: transform 0.1s; }
+        .hanging-herb { transform-origin: top center; animation: swayHerb 4s ease-in-out infinite; }
+
+        /* Wizard (Parallax Layer 2) */
+        .wizard-container {
+            /* Shrunk from 220px to 170px */
+            position: relative; width: 170px; height: 170px; z-index: 10;
+            transition: transform 0.3s ease;
+        }
+        .wizard-glow { filter: drop-shadow(0 0 15px gold); animation: magicalGlow 2s infinite alternate; }
+        
+        #hat-group { transform-origin: 50px 60px; animation: swayHat 3s ease-in-out infinite; }
+
+        .speech-bubble {
+            position: absolute; top: -10px; right: -40px;
+            background: white; color: black; padding: 8px 16px;
+            border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; /* Hand drawn border */
+            font-size: 1.5rem; font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 20;
+            animation: float 3s ease-in-out infinite; white-space: nowrap;
+        }
+        .speech-bubble::after {
+            content: ''; position: absolute; bottom: 15px; left: -10px;
+            border-width: 10px 10px 10px 0; border-style: solid;
+            border-color: transparent white transparent transparent;
+        }
+
+        /* Smoke */
+        .smoke-cloud {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            width: 160px; height: 160px;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(150,150,150,0) 70%);
+            border-radius: 50%; z-index: 25; pointer-events: none;
+        }
+        .poof-anim { animation: poof 0.6s ease-out forwards; }
+
+        /* --- Game Area (Table) --- */
+        .game-area {
+            flex: 2; position: relative; z-index: 30;
+            background-color: var(--table-color);
+            border-top: 15px solid var(--table-shadow);
+            box-shadow: inset 0 20px 30px rgba(0,0,0,0.3);
+            padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        /* Wood Grain Texture Overlay */
+        .wood-texture {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 10px);
+            pointer-events: none; opacity: 0.5;
+        }
+
+        /* Magical Runes Container */
+        #rune-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; overflow: hidden;
+        }
+        .rune {
+            position: absolute; font-size: 20px; color: rgba(255, 215, 0, 0.4);
+            animation: runeFade 4s ease-in-out forwards;
+        }
+
+        /* Scroll of Truth */
+        .scroll-container {
+            background-color: var(--parchment);
+            padding: 8px 30px; border-radius: 2px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            margin-bottom: 15px; position: relative;
+            transform: rotate(-1deg); max-width: 80%;
+            height: 0; overflow: hidden; opacity: 0; /* For unfurl anim */
+            animation: unfurl 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards 0.5s;
+        }
+        .scroll-container::before, .scroll-container::after {
+            content: ''; position: absolute; top: -5px; bottom: -5px; width: 20px;
+            background: #d4c59a; border: 1px solid #b3a580; border-radius: 10px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+        }
+        .scroll-container::before { left: -10px; }
+        .scroll-container::after { right: -10px; }
+
+        .instruction {
+            font-size: 1.2rem; font-weight: bold; color: #4e342e; text-align: center;
+            white-space: nowrap;
+        }
+
+        /* Potions Grid */
+        .potions-grid {
+            display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+            gap: 15px; width: 100%; max-width: 450px; height: 100%;
+        }
+
+        .potion-btn {
+            background: none; border: none; cursor: pointer; position: relative;
+            display: flex; justify-content: center; align-items: center;
+            -webkit-tap-highlight-color: transparent;
+            filter: drop-shadow(0 10px 5px rgba(0,0,0,0.4));
+            transition: transform 0.2s;
+        }
+        .potion-btn:active { transform: scale(0.95) translateY(2px); }
+
+        /* Particles & Dust */
+        #dust-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 50;
+        }
+        .dust {
+            position: absolute; background: white; border-radius: 50%;
+            opacity: 0.3; animation: floatParticle 10s linear infinite;
+        }
+        .particle { position: absolute; pointer-events: none; z-index: 100; }
+
+        /* --- Keyframes --- */
+        @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes flyToShelf { 0% { transform: scale(0) translateY(50px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-10px) rotate(-5deg); } 40% { transform: translateX(10px) rotate(5deg); } 60% { transform: translateX(-10px) rotate(-5deg); } 80% { transform: translateX(10px) rotate(5deg); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes poof { 0% { transform: translate(-50%, -50%) scale(0); opacity: 0.8; } 50% { opacity: 0.8; } 100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; } }
+        @keyframes magicalGlow { from { filter: drop-shadow(0 0 5px gold); } to { filter: drop-shadow(0 0 20px gold); } }
+        @keyframes spinHand { from { transform: rotate(-360deg); } }
+        @keyframes flame { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(0.9) skewX(2deg); } }
+        @keyframes bubbleRise { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 50% { opacity: 0.6; } 100% { transform: translateY(-30px) scale(1.2); opacity: 0; } }
+        @keyframes runeFade { 0% { opacity: 0; transform: scale(0.8) rotate(-10deg); } 50% { opacity: 1; transform: scale(1.1) rotate(0deg); } 100% { opacity: 0; transform: scale(1) rotate(10deg); } }
+        @keyframes swayHerb { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+        @keyframes swayHat { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(3deg); } }
+        @keyframes unfurl { 0% { height: 0; opacity: 0; } 100% { height: 40px; opacity: 1; } }
+        @keyframes floatParticle { 0% { transform: translateY(100vh) translateX(0); opacity: 0; } 20% { opacity: 0.4; } 80% { opacity: 0.4; } 100% { transform: translateY(-10vh) translateX(20px); opacity: 0; } }
+
+        /* SVG Classes */
+        .clock-number { font-size: 10px; font-family: Arial, sans-serif; fill: #333; text-anchor: middle; dominant-baseline: middle; font-weight: bold; }
+        .hour-hand { stroke: #333; stroke-width: 4; stroke-linecap: round; transform-origin: 50px 75px; }
+        .minute-hand { stroke: #e74c3c; stroke-width: 3; stroke-linecap: round; transform-origin: 50px 75px; }
+        .center-dot { fill: #e74c3c; }
+        .spin-hands .hour-hand { animation: spinHand 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .spin-hands .minute-hand { animation: spinHand 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.1s; }
+        
+        .hidden { display: none; }
+        .bubble { animation: bubbleRise 3s infinite ease-in; fill: rgba(255,255,255,0.4); }
+
+    </style>
+</head>
+<body>
+
+    <div id="vignette"></div>
+    <div id="color-grade"></div>
+    <div id="light-pulse"></div>
+    <div id="dust-container"></div>
+
+    <div id="start-overlay">
+        <h1>Potion Master</h1>
+        <p>Turn on the magic sound?</p>
+        <button class="start-btn" onclick="startGame()">Start Game</button>
+    </div>
+
+    <div class="stage-area" id="stage">
+        
+        <!-- Window Layer (Back) -->
+        <div id="window-layer">
+            <!-- Stars JS generated -->
+        </div>
+
+        <!-- Shelves (Middle) -->
+        <div class="wall-shelves" id="shelf"></div>
+
+        <!-- Decor Layer -->
+        <div class="decor-layer">
+            <svg width="100%" height="100%">
+                <!-- Hanging Herbs -->
+                <path class="hanging-herb" d="M40,0 Q45,20 35,40 Q45,50 40,60" stroke="#2e7d32" stroke-width="3" fill="none" style="animation-delay: 0s"/>
+                <path class="hanging-herb" d="M38,5 L30,15 M38,15 L45,25 M35,30 L25,40" stroke="#2e7d32" stroke-width="2" />
+                
+                <path class="hanging-herb" d="Mcalc(100% - 40px),0 Qcalc(100% - 45px),20 calc(100% - 35px),40" stroke="#5d4037" stroke-width="3" fill="none" style="animation-delay: 1s"/>
+                <circle cx="calc(100% - 35px)" cy="45" r="5" fill="#c0392b" class="hanging-herb" style="animation-delay: 1s"/>
+
+                <!-- Spiderwebs -->
+                <path class="web" d="M0,0 L100,0 L0,100 Z" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" />
+                <path class="web" d="M100,0 L0,100 M50,0 L25,50 M0,50 L50,25" stroke="rgba(255,255,255,0.1)" fill="none" />
+                
+                <path class="web" d="M100%,0 Lcalc(100% - 100px),0 L100%,100px Z" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" transform="scale(-1, 1) translate(-100%, 0)"/>
+            </svg>
+        </div>
+
+        <div class="wizard-container" id="character-container">
+            <div class="speech-bubble" id="target-time-display">12:00</div>
+            <div id="smoke-effect" class="smoke-cloud"></div>
+
+            <!-- Wizard SVG -->
+            <svg id="wizard-svg" viewBox="0 0 100 100" style="width:100%; height:100%; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));">
+                <!-- Hat Group for Physics -->
+                <g id="hat-group">
+                    <path d="M20,60 L80,60 L50,10 Z" fill="#9b59b6"/>
+                    <ellipse cx="50" cy="60" rx="35" ry="5" fill="#8e44ad"/>
+                    <path d="M50,30 L52,35 L57,35 L53,38 L55,43 L50,40 L45,43 L47,38 L43,35 L48,35 Z" fill="#f1c40f"/>
+                </g>
+
+                <!-- Face -->
+                <g id="wizard-face">
+                    <circle cx="50" cy="65" r="15" fill="#f1c40f"/>
+                    <circle cx="45" cy="63" r="3" fill="white"/>
+                    <circle cx="55" cy="63" r="3" fill="white"/>
+                    <circle id="w-eye-l" cx="45" cy="63" r="1.5" fill="black"/>
+                    <circle id="w-eye-r" cx="55" cy="63" r="1.5" fill="black"/>
+                    
+                    <!-- Eyelids for blinking -->
+                    <path id="w-blink" d="M41,63 Q45,67 49,63 M51,63 Q55,67 59,63" stroke="#f1c40f" stroke-width="4" fill="none" opacity="0"/>
+
+                    <path d="M35,65 Q50,90 65,65" fill="white" opacity="0.8"/>
+                </g>
+                <path d="M25,80 Q50,100 75,80 L75,100 L25,100 Z" fill="#9b59b6"/>
+            </svg>
+
+            <!-- Frog SVG -->
+            <svg id="frog-svg" class="hidden" viewBox="0 0 100 100" style="width:100%; height:100%; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));">
+                <ellipse cx="50" cy="70" rx="30" ry="25" fill="#2ecc71"/>
+                <circle cx="35" cy="50" r="8" fill="#2ecc71"/>
+                <circle cx="65" cy="50" r="8" fill="#2ecc71"/>
+                <circle cx="35" cy="50" r="4" fill="white"/>
+                <circle cx="65" cy="50" r="4" fill="white"/>
+                <circle id="f-eye-l" cx="35" cy="50" r="2" fill="black"/>
+                <circle id="f-eye-r" cx="65" cy="50" r="2" fill="black"/>
+                
+                <!-- Frog Eyelids -->
+                <path id="f-blink" d="M31,50 Q35,54 39,50 M61,50 Q65,54 69,50" stroke="#2ecc71" stroke-width="5" fill="none" opacity="0"/>
+
+                <path d="M20,80 Q10,70 20,60" stroke="#27ae60" stroke-width="5" fill="none"/>
+                <path d="M80,80 Q90,70 80,60" stroke="#27ae60" stroke-width="5" fill="none"/>
+                <path d="M40,75 Q50,80 60,75" stroke="black" stroke-width="2" fill="none"/>
+            </svg>
+        </div>
+    </div>
+
+    <div class="game-area">
+        <div class="wood-texture"></div>
+        <div id="rune-layer"></div>
+
+        <!-- Candle -->
+        <div class="desk-item" onclick="toggleCandle(this)" style="position:absolute; bottom:20px; left:20px; width:60px; height:80px; z-index:35; cursor:pointer;">
+            <svg viewBox="0 0 60 80">
+                <rect x="15" y="40" width="30" height="40" fill="#e74c3c" rx="2"/>
+                <rect x="28" y="30" width="4" height="10" fill="#333"/>
+                <path id="candle-flame" d="M30,30 Q35,20 30,10 Q25,20 30,30" fill="#f1c40f" style="animation: flame 0.5s infinite;"/>
+                <ellipse cx="30" cy="78" rx="20" ry="5" fill="rgba(0,0,0,0.3)"/> <!-- Shadow -->
+            </svg>
+        </div>
+
+        <div class="scroll-container">
+            <div class="instruction" id="instruction-text">The Wizard needs a potion for...</div>
+        </div>
+        <div class="potions-grid" id="options-grid"></div>
+    </div>
+
+    <script>
+        const state = {
+            targetHour: 12, targetMinute: 0,
+            isFrog: false, score: 0, streak: 0,
+            audioEnabled: false, mouseX: 0
+        };
+
+        const elements = {
+            display: document.getElementById('target-time-display'),
+            grid: document.getElementById('options-grid'),
+            wizard: document.getElementById('wizard-svg'),
+            frog: document.getElementById('frog-svg'),
+            container: document.getElementById('character-container'),
+            shelf: document.getElementById('shelf'),
+            instruction: document.getElementById('instruction-text'),
+            smoke: document.getElementById('smoke-effect'),
+            startOverlay: document.getElementById('start-overlay'),
+            windowLayer: document.getElementById('window-layer'),
+            runeLayer: document.getElementById('rune-layer'),
+            lightPulse: document.getElementById('light-pulse'),
+            pupils: {
+                wl: document.getElementById('w-eye-l'), wr: document.getElementById('w-eye-r'),
+                fl: document.getElementById('f-eye-l'), fr: document.getElementById('f-eye-r')
+            },
+            eyelids: {
+                w: document.getElementById('w-blink'),
+                f: document.getElementById('f-blink')
+            }
+        };
+
+        // --- Initialization ---
+        function initEnvironment() {
+            // Create Dust Motes
+            const dustContainer = document.getElementById('dust-container');
+            for(let i=0; i<20; i++) {
+                const d = document.createElement('div');
+                d.className = 'dust';
+                const size = Math.random() * 4 + 2;
+                d.style.width = size + 'px'; d.style.height = size + 'px';
+                d.style.left = Math.random() * 100 + '%';
+                d.style.top = Math.random() * 100 + '%';
+                d.style.animationDelay = -Math.random() * 10 + 's';
+                d.style.animationDuration = (8 + Math.random() * 10) + 's';
+                dustContainer.appendChild(d);
+            }
+
+            // Create Stars
+            for(let i=0; i<30; i++) {
+                const s = document.createElement('div');
+                s.className = 'star';
+                const size = Math.random() * 2 + 1;
+                s.style.width = size + 'px'; s.style.height = size + 'px';
+                s.style.left = Math.random() * 100 + '%';
+                s.style.top = Math.random() * 100 + '%';
+                s.style.animationDelay = Math.random() * 3 + 's';
+                elements.windowLayer.appendChild(s);
+            }
+
+            // Start ambient loops
+            setInterval(blinkCharacter, 4000);
+            setInterval(spawnRune, 2000);
+        }
+
+        function blinkCharacter() {
+            const target = state.isFrog ? elements.eyelids.f : elements.eyelids.w;
+            target.style.opacity = 1;
+            setTimeout(() => target.style.opacity = 0, 150);
+        }
+
+        function spawnRune() {
+            const runes = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚹ', 'ᛋ', 'ᛗ'];
+            const r = document.createElement('div');
+            r.className = 'rune';
+            r.innerText = runes[Math.floor(Math.random() * runes.length)];
+            r.style.left = Math.random() * 90 + '%';
+            r.style.top = Math.random() * 90 + '%';
+            elements.runeLayer.appendChild(r);
+            setTimeout(() => r.remove(), 4000);
+        }
+
+        // --- Audio System ---
+        let audioCtx;
+        function initAudio() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            state.audioEnabled = true;
+            playAmbient();
+        }
+        function playAmbient() {
+            if(!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+        }
+        function playTone(freq, type='sine', duration=0.2) {
+            if (!state.audioEnabled) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+        function playSuccess(streakLevel) {
+            const notes = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25];
+            const noteIndex = state.score % notes.length;
+            playTone(notes[noteIndex], 'triangle', 0.3);
+            if (streakLevel >= 3) setTimeout(() => playTone(notes[noteIndex] * 1.5, 'sine', 0.4), 100);
+        }
+        function playPop() { playTone(400, 'square', 0.1); }
+        function playFrogSound() {
+            if (!state.audioEnabled) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        function startGame() {
+            elements.startOverlay.style.display = 'none';
+            initAudio();
+            initEnvironment();
+            startRound();
+        }
+
+        // --- Interaction & Parallax ---
+        function updateParallax(x) {
+            const width = window.innerWidth;
+            const moveX = (x / width) - 0.5;
+            
+            // Layer 0: Window (Slowest)
+            elements.windowLayer.style.transform = `translateX(${moveX * 10}px)`;
+            // Layer 1: Shelves (Mid)
+            elements.shelf.style.transform = `translateX(${moveX * 30}px)`;
+            // Layer 2: Wizard (Fast)
+            elements.container.style.transform = `translateX(${moveX * 50}px)`;
+            
+            // Liquid Tilt
+            document.documentElement.style.setProperty('--liquid-tilt', (moveX * 20) + 'deg');
+        }
+
+        function updateEyes(x, y) {
+            const rect = elements.container.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const angle = Math.atan2(y - centerY, x - centerX);
+            const distance = Math.min(3, Math.hypot(x - centerX, y - centerY) / 20);
+            const offsetX = Math.cos(angle) * distance;
+            const offsetY = Math.sin(angle) * distance;
+            Object.values(elements.pupils).forEach(pupil => {
+                if(pupil) pupil.setAttribute('transform', `translate(${offsetX}, ${offsetY})`);
+            });
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            state.mouseX = e.clientX;
+            updateEyes(e.clientX, e.clientY);
+            updateParallax(e.clientX);
+        });
+        document.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            updateEyes(touch.clientX, touch.clientY);
+            updateParallax(touch.clientX);
+        });
+
+        function toggleCandle(el) {
+            const flame = el.querySelector('#candle-flame');
+            flame.style.display = flame.style.display === 'none' ? 'block' : 'none';
+            playTone(200, 'noise', 0.1);
+        }
+
+        function spawnParticles(x, y) {
+            const colors = ['#f1c40f', '#e74c3c', '#3498db', '#fff'];
+            for(let i=0; i<10; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random() * 8 + 4;
+                p.style.width = size + 'px'; p.style.height = size + 'px';
+                p.style.background = colors[Math.floor(Math.random() * colors.length)];
+                p.style.borderRadius = '50%';
+                p.style.left = x + 'px'; p.style.top = y + 'px';
+                document.body.appendChild(p);
+                const destX = (Math.random() - 0.5) * 100;
+                const destY = (Math.random() - 0.5) * 100;
+                const anim = p.animate([
+                    { transform: 'translate(0,0) scale(1)', opacity: 1 },
+                    { transform: `translate(${destX}px, ${destY}px) scale(0)`, opacity: 0 }
+                ], { duration: 600 + Math.random() * 400, easing: 'ease-out' });
+                anim.onfinish = () => p.remove();
+            }
+        }
+
+        // --- Game Logic ---
+        function startRound() {
+            if (state.isFrog) return;
+            
+            // Light Pulse Effect
+            elements.lightPulse.style.opacity = 0.5;
+            setTimeout(() => elements.lightPulse.style.opacity = 0, 200);
+
+            const time = getRandomTime();
+            state.targetHour = time.hour;
+            state.targetMinute = time.minute;
+            elements.display.innerText = formatDigitalTime(state.targetHour, state.targetMinute);
+            elements.display.style.color = 'black';
+            elements.instruction.innerText = "Find the potion for this time!";
+            
+            const options = generateOptions(state.targetHour, state.targetMinute);
+            elements.grid.innerHTML = '';
+            
+            options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'potion-btn spin-hands';
+                btn.innerHTML = createPotionSVG(opt.h, opt.m, opt.correct, index);
+                setTimeout(() => btn.classList.remove('spin-hands'), 1100);
+                btn.onclick = (e) => handleGuess(opt.correct, btn, index, e);
+                elements.grid.appendChild(btn);
+            });
+        }
+
+        function getRandomTime() {
+            return { hour: Math.floor(Math.random() * 12) + 1, minute: Math.random() < 0.5 ? 0 : 30 };
+        }
+        function formatDigitalTime(h, m) { return `${h}:${m === 0 ? "00" : "30"}`; }
+
+        function generateOptions(targetH, targetM) {
+            const options = [];
+            options.push({ h: targetH, m: targetM, correct: true });
+            while (options.length < 4) {
+                const distractor = getRandomTime();
+                if (!options.some(opt => opt.h === distractor.hour && opt.m === distractor.minute)) {
+                    options.push({ h: distractor.hour, m: distractor.minute, correct: false });
+                }
+            }
+            return options.sort(() => Math.random() - 0.5);
+        }
+
+        function createPotionSVG(h, m, isCorrect, index) {
+            const mDeg = (m / 60) * 360;
+            const hDeg = ((h % 12) * 30) + (m * 0.5);
+            const colors = ['#e74c3c', '#3498db', '#9b59b6', '#f1c40f'];
+            const liquidColor = colors[index % colors.length];
+
+            // 3 Different Bottle Shapes
+            const shapes = [
+                // Round
+                { bottle: "M30,10 L70,10 L70,30 Q95,35 95,75 Q95,115 50,115 Q5,115 5,75 Q5,35 30,30 Z", cork: "x=35 y=0 width=30 height=10" },
+                // Square/Flask
+                { bottle: "M30,10 L70,10 L70,30 L85,35 L85,110 Q85,115 80,115 L20,115 Q15,115 15,110 L15,35 L30,30 Z", cork: "x=35 y=0 width=30 height=10" },
+                // Erlenmeyer (Triangle)
+                { bottle: "M30,10 L70,10 L70,30 L90,110 Q95,115 85,115 L15,115 Q5,115 10,110 L30,30 Z", cork: "x=35 y=0 width=30 height=10" }
+            ];
+            const shape = shapes[index % 3];
+
+            // Droplets for condensation (randomly shown)
+            const droplets = Math.random() > 0.5 ? `<circle cx="40" cy="90" r="2" fill="rgba(255,255,255,0.4)"/><circle cx="70" cy="100" r="1.5" fill="rgba(255,255,255,0.4)"/>` : '';
+
+            let numbersSVG = '';
+            for(let i=1; i<=12; i++) {
+                const angle = (i * 30 - 90) * (Math.PI / 180);
+                numbersSVG += `<text x="${50 + 26 * Math.cos(angle)}" y="${75 + 26 * Math.sin(angle)}" class="clock-number">${i}</text>`;
+            }
+
+            return `
+            <svg viewBox="0 0 100 120" width="100%" height="100%">
+                <defs>
+                    <linearGradient id="liquidGradient-${index}" x1="0%" y1="0%" x2="100%" y2="0%" gradientTransform="rotate(90)">
+                        <stop offset="0%" style="stop-color:${liquidColor};stop-opacity:0.8" />
+                        <stop offset="100%" style="stop-color:${liquidColor};stop-opacity:0.1" />
+                        <animateTransform attributeName="gradientTransform" type="rotate" from="90 0.5 0.5" to="100 0.5 0.5" dur="3s" repeatCount="indefinite" values="80 0.5 0.5; 100 0.5 0.5; 80 0.5 0.5" />
+                    </linearGradient>
+                </defs>
+                
+                <!-- Bottle Shape -->
+                <path d="${shape.bottle}" fill="${liquidColor}22" stroke="${liquidColor}" stroke-width="3"/>
+                <path d="${shape.bottle}" fill="url(#liquidGradient-${index})"/>
+                
+                <!-- Bubbles inside liquid -->
+                <clipPath id="bottleClip-${index}"><path d="${shape.bottle}"/></clipPath>
+                <g clip-path="url(#bottleClip-${index})">
+                    <circle cx="40" cy="110" r="2" class="bubble" style="animation-delay: 0s"/>
+                    <circle cx="60" cy="110" r="3" class="bubble" style="animation-delay: 1s"/>
+                    <circle cx="50" cy="110" r="1" class="bubble" style="animation-delay: 2s"/>
+                </g>
+
+                <!-- Condensation -->
+                ${droplets}
+
+                <!-- Glare/Reflection -->
+                <path d="M75,40 Q80,60 75,80" stroke="rgba(255,255,255,0.3)" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+                <!-- Cork -->
+                <rect ${shape.cork} fill="#d35400" rx="2"/>
+
+                <!-- Label / Clock Face -->
+                <circle cx="50" cy="75" r="32" fill="white" stroke="#333" stroke-width="2" />
+                ${numbersSVG}
+                <line x1="50" y1="75" x2="50" y2="55" class="hour-hand" style="transform: rotate(${hDeg}deg)" />
+                <line x1="50" y1="75" x2="50" y2="48" class="minute-hand" style="transform: rotate(${mDeg}deg)" />
+                <circle cx="50" cy="75" r="3" class="center-dot" />
+            </svg>
+            `;
+        }
+
+        function handleGuess(isCorrect, btnElement, index, event) {
+            if (state.isFrog) return;
+            if (isCorrect) {
+                playPop(); state.score++; state.streak++;
+                playSuccess(state.streak);
+                const rect = btnElement.getBoundingClientRect();
+                spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2);
+                successEffect(btnElement);
+                addToShelf(index);
+                if(state.streak >= 3) {
+                    elements.container.classList.add('wizard-glow');
+                    elements.display.innerText = "COMBO!";
+                }
+                setTimeout(startRound, 1000);
+            } else {
+                state.streak = 0;
+                elements.container.classList.remove('wizard-glow');
+                turnToFrog();
+            }
+        }
+
+        function addToShelf(index) {
+            const colors = ['#e74c3c', '#3498db', '#9b59b6', '#f1c40f'];
+            const color = colors[index % colors.length];
+            const mini = document.createElement('div');
+            mini.className = 'collected-potion';
+            mini.innerHTML = `<svg viewBox="0 0 100 120" width="100%" height="100%"><path d="M30,10 L70,10 L70,30 Q95,35 95,75 Q95,115 50,115 Q5,115 5,75 Q5,35 30,30 Z" fill="${color}" stroke="white" stroke-width="2"/><rect x="35" y="0" width="30" height="10" fill="#d35400" rx="2"/></svg>`;
+            elements.shelf.appendChild(mini);
+        }
+
+        function successEffect(btn) {
+            btn.style.transform = "scale(1.2)";
+            setTimeout(() => btn.style.transform = "scale(1)", 200);
+            if(state.streak < 3) {
+                elements.display.innerText = "YAY!";
+                elements.display.style.color = "#9b59b6";
+            }
+        }
+
+        function turnToFrog() {
+            state.isFrog = true;
+            playFrogSound();
+            
+            // Web Shake
+            document.querySelectorAll('.web').forEach(w => w.classList.add('shake'));
+            setTimeout(() => document.querySelectorAll('.web').forEach(w => w.classList.remove('shake')), 500);
+
+            elements.smoke.classList.remove('poof-anim');
+            void elements.smoke.offsetWidth; 
+            elements.smoke.classList.add('poof-anim');
+
+            setTimeout(() => {
+                elements.wizard.classList.add('hidden');
+                elements.frog.classList.remove('hidden');
+            }, 100);
+
+            setTimeout(() => elements.smoke.classList.remove('poof-anim'), 600);
+
+            elements.display.innerText = "RIBBIT!";
+            elements.display.style.color = "green";
+            elements.container.classList.add('shake');
+            
+            setTimeout(() => {
+                state.isFrog = false;
+                elements.smoke.classList.remove('poof-anim');
+                void elements.smoke.offsetWidth; 
+                elements.smoke.classList.add('poof-anim'); 
+
+                setTimeout(() => {
+                    elements.wizard.classList.remove('hidden');
+                    elements.frog.classList.add('hidden');
+                    elements.display.innerText = formatDigitalTime(state.targetHour, state.targetMinute);
+                    elements.display.style.color = "black";
+                    elements.container.classList.remove('shake');
+                }, 100);
+                setTimeout(() => elements.smoke.classList.remove('poof-anim'), 600);
+            }, 2000); 
+        }
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,414 @@
+:root {
+    --bg-color: #0d0d12;
+    --card-bg: #1a1a24;
+    --text-main: #e0e0e0;
+    --neon-blue: #00e5ff;
+    --neon-glow: 0 0 15px rgba(0, 229, 255, 0.4);
+    --font-main: 'Montserrat', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color); color: var(--text-main); font-family: var(--font-main);
+    margin: 0; padding: 0; overflow-x: hidden;
+}
+
+nav {
+    display: flex; justify-content: space-between; align-items: center; padding: 20px 5%;
+    background: rgba(13, 13, 18, 0.95); border-bottom: 2px solid var(--neon-blue);
+    position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(5px);
+}
+.logo { font-size: 1.5rem; font-weight: 800; color: var(--neon-blue); text-decoration: none; text-transform: uppercase; }
+.nav-links { display: flex; gap: 10px; flex-wrap: wrap; }
+.nav-btn {
+    background: none; border: none; color: #fff; font-family: var(--font-main); font-size: 0.9rem;
+    font-weight: 500; cursor: pointer; transition: 0.3s; padding: 5px 10px;
+}
+.nav-btn:hover, .nav-btn.active { color: var(--neon-blue); text-shadow: var(--neon-glow); }
+
+/* Containers */
+.container { max-width: 1200px; margin: 40px auto; padding: 0 20px; min-height: 80vh; }
+
+/* === FULL WIDTH ART CONTAINER (98%) === */
+.art-container {
+    max-width: 98% !important; 
+    width: 98% !important;
+    padding: 0 1% !important; 
+    margin: 40px auto !important;
+}
+
+/* Transitions */
+.content-section { display: none; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease; }
+.active-section { display: block; animation: fadeIn 0.6s forwards; }
+@keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+/* BUTTON STYLES (Used for Resume and Links) */
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    margin-top: 10px;
+    border: 1px solid var(--neon-blue);
+    background: rgba(0, 229, 255, 0.1);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: 0.3s;
+    cursor: pointer;
+    font-family: var(--font-main);
+    font-size: 0.9rem;
+    text-align: center;
+}
+.btn:hover {
+    background: var(--neon-blue);
+    color: #000;
+    box-shadow: var(--neon-glow);
+}
+
+/* === BIG GALLERY (KAN.IO STYLE) === */
+.big-gallery {
+    column-count: 3;
+    column-gap: 15px; 
+    padding: 0;
+    width: 100%;
+}
+.big-gallery .masonry-item {
+    margin-bottom: 15px; 
+    border: none;
+    border-radius: 0;
+}
+.big-gallery .masonry-item img {
+    width: 100%; display: block; cursor: zoom-in;
+    transition: transform 0.2s;
+}
+.big-gallery .masonry-item:hover img { transform: scale(1.02); z-index: 2; position: relative; }
+
+/* Responsive Big Gallery */
+@media (max-width: 1000px) { .big-gallery { column-count: 2; } }
+@media (max-width: 600px) { .big-gallery { column-count: 1; } }
+
+
+/* === EXHIBIT WINDOW PANE (ROBUST FIX) === */
+/* === EXHIBIT WINDOW PANE (Fixed for High-Res Portrait Images) === */
+/* === EXHIBIT WINDOW PANE (The "Massive Image" Fix) === */
+/* === EXHIBIT WINDOW PANE (SEAMLESS VERSION) === */
+
+/* === EXHIBITIONS TAB LAYOUT (2 Columns) === */
+
+.exhibitions-grid {
+    display: grid;
+    /* This creates exactly TWO equal columns */
+    grid-template-columns: 1fr 1fr; 
+    
+    /* Adds space between the cards */
+    gap: 40px; 
+    
+    /* adds some breathing room top/bottom */
+    padding: 40px 0; 
+    
+    width: 100%;
+    margin: 0 auto; /* Centers the grid on the page */
+}
+
+/* Responsive Rule: Stacks them 1-by-1 on mobile phones */
+@media (max-width: 768px) {
+    .exhibitions-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+
+
+/* === 6-PANE EXHIBIT WINDOW === */
+.six-pane-wrapper {
+    display: grid;
+    /* 2 Columns side-by-side */
+    grid-template-columns: 1fr 1fr;
+    
+    /* 3 Rows (The 'minmax' trick prevents squishing) */
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    
+    /* TALLER HEIGHT: Since we have 3 rows now, we need more height.
+       If 2 rows was 500px, 3 rows needs to be roughly 750px. */
+    height: 750px;
+    
+    /* Keep them touching */
+    gap: 0;
+    
+    background: #000;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+}
+
+.window-pane-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    
+    /* Keeps the rows strictly inside the box */
+    grid-template-rows: repeat(2, minmax(0, 1fr)); 
+    
+    height: 825px; 
+    
+    /* CHANGE 1: Set gap to 0 to make them touch */
+    gap: 0; 
+    
+    background: #000;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+}
+
+.window-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; 
+    
+    /* CHANGE 2: Transparent background ensures they blend better */
+    background: transparent; 
+    
+    display: block; 
+}
+
+.window-img:hover {
+    /* Optional: Make the zoom slightly bigger since there is no gap now */
+    transform: scale(1.1); 
+    z-index: 2; 
+}
+
+.exhibit-card {
+    background: var(--card-bg); border: 1px solid #333; border-radius: 12px;
+    overflow: hidden; display: flex; flex-direction: column;
+}
+.exhibit-img-wrapper { width: 100%; cursor: zoom-in; position: relative;}
+.exhibit-img-wrapper img { width: 100%; display: block; }
+.exhibit-details { padding: 20px; }
+.exhibit-meta {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    font-size: 0.9rem; color: #aaa; margin: 15px 0; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 10px 0;
+}
+.exhibit-notes { font-style: italic; color: #fff; line-height: 1.4; }
+
+/* === INKTOBER CALENDAR VIEW === */
+.calendar-wrapper {
+    max-width: 1000px; margin: 0 auto;
+    border: 1px solid #333; background: #111;
+}
+.calendar-month-title {
+    text-align: center; color: var(--neon-blue); margin: 40px 0 10px 0;
+    font-size: 2rem; letter-spacing: 5px;
+}
+.calendar-header {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    background: #222; border-bottom: 1px solid #333;
+    text-align: center; padding: 10px 0; font-weight: bold; color: #888;
+}
+.inktober-calendar {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 1fr;
+    border-left: 1px solid #333;
+}
+.ink-day {
+    position: relative; aspect-ratio: 1;
+    border-right: 1px solid #333; border-bottom: 1px solid #333;
+    overflow: hidden; background: #0d0d12;
+}
+.ink-day img {
+    width: 100%; height: 100%; object-fit: cover;
+    opacity: 0.7; transition: 0.3s;
+}
+.ink-day:hover img { opacity: 1; transform: scale(1.1); }
+.day-num {
+    position: absolute; top: 5px; left: 8px;
+    font-size: 0.9rem; color: #fff; text-shadow: 1px 1px 2px black;
+    pointer-events: none; z-index: 5; font-weight: bold;
+}
+.empty-day { background: #151515; }
+
+/* Responsive Calendar */
+@media (max-width: 800px) { 
+    .calendar-header { display: none; }
+    .inktober-calendar { grid-template-columns: repeat(3, 1fr); }
+    .ink-day { border: 1px solid #333; }
+}
+
+
+/* SUB-NAV */
+.sub-nav { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 20px; margin-top: 20px;}
+.sub-nav-btn {
+    background: transparent; border: 1px solid #333; color: #888; padding: 8px 20px;
+    border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s;
+}
+.sub-nav-btn.active { background: var(--neon-blue); color: #000; border-color: var(--neon-blue); }
+.art-subsection { display: none; }
+.active-subsection { display: block; animation: fadeIn 0.5s; }
+
+/* ABOUT PAGE */
+.about-text { line-height: 1.8; font-size: 1.05rem; padding: 20px; }
+.social-links { margin-top: 30px; text-align: center; border-top: 1px solid #333; padding-top: 20px;}
+.social-links a { font-size: 1.5rem; color: #888; margin: 0 15px; transition: 0.3s; }
+.social-links a:hover { color: var(--neon-blue); text-shadow: var(--neon-glow); }
+
+/* Language Btn */
+.lang-btn {
+    background: #222; border: 1px solid var(--neon-blue); color: #fff;
+    padding: 5px 15px; margin: 5px; cursor: pointer; transition: 0.3s;
+}
+.lang-btn:hover { background: var(--neon-blue); color: #000; }
+
+/* General Standard Grid */
+.tilt-card { background: var(--card-bg); padding: 25px; border: 1px solid #333; border-radius: 12px; }
+.holo-sheen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
+    opacity: 0; transition: 0.3s; pointer-events: none;
+}
+.tilt-card:hover .holo-sheen { opacity: 1; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+.typewriter-text { font-size: 3rem; color: var(--neon-blue); white-space: nowrap; overflow: hidden; width: 0; animation: typing 2s steps(20) forwards; }
+@keyframes typing { to { width: 100%; } }
+
+/* Lightbox & Modal CSS */
+.lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; z-index: 6000; justify-content: center; align-items: center;}
+.lightbox.active { display: flex; }
+.lightbox-content { max-height: 90vh; max-width: 90vw; border: 2px solid var(--neon-blue); }
+
+/* Video */
+.video-preview-container { position: relative; width: 100%; padding-bottom: 56.25%; background: #000; overflow: hidden; border-radius: 8px; margin-bottom: 15px; }
+.video-thumb, .video-clip { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+.video-clip { opacity: 0; transition: opacity 0.3s ease; }
+.video-card:hover .video-clip { opacity: 1; }
+
+/* === UPGRADED RPG SKILL TREE === */
+.rpg-skill-tree {
+    background: #111; border: 2px solid #444; border-radius: 10px;
+    padding: 30px; display: flex; flex-direction: column; align-items: center; gap: 15px;
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
+}
+
+.rpg-node {
+    background: #1a1a24; border: 2px solid #555; 
+    padding: 10px 15px; border-radius: 8px; position: relative; transition: 0.3s;
+    width: 100%;
+}
+
+.rpg-node.root-node {
+    border-color: var(--neon-blue); box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+    text-align: center; margin-bottom: 10px; max-width: 100%;
+}
+
+/* New Compact Node for Grid Layout */
+.rpg-node.compact {
+    max-width: 100%;
+    font-size: 0.9rem;
+    padding: 8px;
+    border-color: #444;
+}
+.rpg-node.compact:hover {
+    border-color: var(--neon-blue);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+/* Categories */
+.skill-category-title {
+    color: #888; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 2px;
+    margin: 15px 0 5px 0; border-bottom: 1px solid #333; width: 100%; text-align: center; padding-bottom: 5px;
+}
+
+.node-title { font-weight: bold; margin-bottom: 5px; display: block; }
+
+.xp-bar {
+    width: 100%; height: 6px; background: #000; border-radius: 3px; overflow: hidden; border: 1px solid #333;
+}
+.xp-fill {
+    height: 100%; background: linear-gradient(90deg, var(--neon-blue), #bd00ff);
+}
+
+/* Grid Layout for branches */
+.rpg-branch-group {
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* Auto-fits items */
+    gap: 10px; 
+    width: 100%;
+    position: relative;
+}
+
+/* Remove the old connecting line because we have categories now */
+.rpg-branch-group::before { display: none; }
+
+/* === MODAL STYLES (For Projects) === */
+.modal {
+    display: none; position: fixed; z-index: 5000; left: 0; top: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+    justify-content: center; align-items: center;
+}
+.modal-content {
+    background-color: #1a1a24; border: 2px solid var(--neon-blue);
+    padding: 30px; border-radius: 10px; width: 90%; max-width: 500px;
+    position: relative; box-shadow: 0 0 30px rgba(0,229,255,0.2);
+    animation: scaleUp 0.3s forwards;
+}
+@keyframes scaleUp { from {transform: scale(0.8); opacity:0;} to {transform: scale(1); opacity:1;} }
+.close-modal {
+    position: absolute; top: 10px; right: 20px; font-size: 2rem; cursor: pointer; color: #aaa;
+}
+.close-modal:hover { color: #fff; }
+
+/* === SETUP / GEAR SECTION STYLES === */
+
+/* The Hover Effect on the Home Page Image */
+.setup-trigger .setup-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex; justify-content: center; align-items: center;
+    opacity: 0; transition: 0.3s;
+    border-radius: 10px;
+}
+.setup-trigger:hover .setup-overlay {
+    opacity: 1;
+}
+
+/* The Spec List Look */
+.spec-list {
+    list-style: none;
+    padding: 0; margin: 0;
+}
+
+.spec-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: monospace;
+    font-size: 1rem;
+}
+
+.spec-list li:last-child { border-bottom: none; }
+
+.spec-label {
+    color: #888;
+    font-weight: bold;
+}
+
+.spec-val {
+    color: #fff;
+    text-align: right;
+}
+
+/* Console Badges */
+.console-badge {
+    background: #222;
+    border: 1px solid #444;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.2s;
+}
+
+.console-badge:hover {
+    border-color: var(--neon-blue);
+    color: var(--neon-blue);
+    transform: translateY(-2px);
+}

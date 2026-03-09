@@ -1,0 +1,1854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lemonade Stand</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
+
+        body {
+            font-family: 'VT323', monospace;
+            background-color: #2c3e50;
+            user-select: none;
+        }
+
+        .game-container {
+            width: 800px;
+            height: 600px;
+            margin: 0 auto;
+            position: relative;
+            background: #f0f0f0;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border-radius: 12px;
+        }
+
+        /* Screen Fade Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .phase { 
+            display: none; 
+            width: 100%; 
+            height: 100%; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+        }
+        
+        .phase.active { 
+            display: block; 
+            animation: fadeIn 0.4s ease-out; /* Smooth transition */
+        }
+
+        /* Retro Button Styles with Enhanced Feedback */
+        .btn {
+            background: #e67e22;
+            border: 4px solid #d35400;
+            color: white;
+            padding: 5px 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.1s;
+            text-transform: uppercase;
+            box-shadow: 0 4px 0 #d35400; /* 3D effect */
+            position: relative;
+        }
+        .btn:hover { filter: brightness(1.1); top: -1px; }
+        .btn:active { 
+            top: 3px; 
+            box-shadow: 0 0 0 #d35400; 
+            transform: scale(0.98);
+        }
+        
+        .btn-green { background: #8cc63f; border-color: #6aa02c; box-shadow: 0 4px 0 #6aa02c; }
+        .btn-green:active { box-shadow: 0 0 0 #6aa02c; }
+        
+        .btn-blue { background: #3498db; border-color: #2980b9; box-shadow: 0 4px 0 #2980b9; }
+        .btn-blue:active { box-shadow: 0 0 0 #2980b9; }
+
+        .btn-red { background: #e74c3c; border-color: #c0392b; box-shadow: 0 4px 0 #c0392b; }
+        .btn-red:active { box-shadow: 0 0 0 #c0392b; }
+        
+        .btn-disabled { background: #95a5a6; border-color: #7f8c8d; cursor: not-allowed; opacity: 0.6; box-shadow: none; }
+
+        /* HUD - Global */
+        .hud-bar {
+            background: #34495e;
+            color: white;
+            padding: 8px 15px;
+            display: none; 
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.4rem;
+            border-bottom: 4px solid #2c3e50;
+            height: 50px;
+        }
+        .hud-bar.active { display: flex; }
+
+        /* Store Items - Compacted to avoid scrolling */
+        .store-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 12px 20px;
+        }
+        .store-card {
+            background: white;
+            border: 4px solid #bdc3c7;
+            padding: 10px;
+            text-align: center;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        }
+        .store-card h3 { font-size: 1.6rem; margin-bottom: 4px; color: #2c3e50; }
+        .price-opt {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 4px 0;
+            background: #ecf0f1;
+            padding: 4px 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            font-size: 1.1rem;
+            transition: background 0.2s;
+        }
+        .price-opt:hover { border-color: #f1c40f; background: #fff; transform: translateX(5px); }
+
+        /* Store Info Header */
+        .store-info {
+            background: #f1f2a2;
+            border-bottom: 4px solid #dcdcdc;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.5rem;
+            color: #2c3e50;
+        }
+
+        /* Recipe Sliders - Compacted */
+        .recipe-row {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 8px 15px;
+            border: 2px solid #bdc3c7;
+        }
+        input[type=range] { width: 50%; }
+
+        /* Simulation Canvas */
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        .weather-icon { font-size: 4rem; margin: 10px 0; }
+
+        /* Intro Specifics */
+        .intro-bg { background-color: #f1f2a2; }
+        .intro-title { color: #c0392b; font-weight: bold; }
+        
+        /* Bankrupt Screen */
+        .bankrupt-bg { background-color: #2c3e50; color: white; }
+        .report-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1.5rem; border-bottom: 1px dotted #555; }
+
+        /* Modals */
+        .modal-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 50;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white;
+            border: 6px solid #e67e22;
+            padding: 20px;
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        /* Modern Sim UI Overlays */
+        .sim-ui-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 2px solid #34495e;
+            padding: 10px;
+            font-family: 'Fredoka', sans-serif;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div class="game-container">
+        
+        <!-- HUD (Global, but hidden in Store/Intro) -->
+        <div id="hud" class="hud-bar">
+            <span>Day: <span id="day-val">1</span>/<span id="max-days-val">30</span></span>
+            <span class="text-green-400">Money: $<span id="money-val">0.00</span></span>
+            <span>Temp: <span id="temp-val">70</span>°F</span>
+            <span id="weather-text">Sunny</span>
+        </div>
+
+        <!-- PHASE 1: TITLE SCREEN / INTRODUCTION -->
+        <div id="screen-title" class="phase active">
+            <div class="w-full h-full intro-bg flex flex-col items-center p-6">
+                <h1 class="text-5xl intro-title mb-4 mt-2">Introduction</h1>
+                
+                <div class="text-lg text-left space-y-3 max-w-2xl text-gray-900 font-medium leading-snug">
+                    <p>
+                        You have 7, 14, or 30 days to make as much money as possible! You’ll have 
+                        complete control over pricing, quality, inventory, and supplies.
+                    </p>
+                    <p>
+                        <span class="font-bold">Recipe:</span> Start with the default recipe, but experiment to find a better one. Make sure 
+                        you buy enough ingredients, or you won’t be able to sell!
+                    </p>
+                    <p>
+                        <span class="font-bold">Weather:</span> This plays a big role in customer demand. Read the weather report every 
+                        day! When the temperature is low, or the weather is bad, don’t 
+                        expect to sell as much. Set your prices higher on hot, muggy 
+                        days to increase profit!
+                    </p>
+                    <p>
+                        <span class="font-bold">Customer Satisfaction:</span> As you sell your lemonade, people will decide how much they 
+                        like or dislike it. If your popularity is low, fewer people will buy. Increase your popularity to do well even when it’s cold!
+                    </p>
+                    <p>
+                        At the end of your timeframe you’ll see how much money you made. Try to beat 
+                        your high score!
+                    </p>
+                </div>
+
+                <div class="mt-6">
+                    <button class="btn btn-green text-3xl px-12 py-2 rounded-lg shadow-lg" onclick="game.showDurationSelect()">OK</button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- PHASE 1.5: DURATION SELECT -->
+        <!--
+        <div id="screen-duration" class="phase">
+            <div class="w-full h-full intro-bg flex flex-col items-center justify-center p-8">
+                <h1 class="text-6xl intro-title mb-12">How long would you like to play?</h1>
+                
+                <div class="flex flex-col gap-6 w-64">
+                    <button class="btn btn-blue py-4" onclick="game.setDuration(7)">7 Days</button>
+                    <button class="btn btn-blue py-4" onclick="game.setDuration(14)">14 Days</button>
+                    <button class="btn btn-blue py-4" onclick="game.setDuration(30)">30 Days</button>
+                </div>
+            </div>
+        </div>
+        -->
+        
+        <!-- PHASE 1: TITLE SCREEN -->
+        <div id="screen-duration" class="phase active-phase items-center justify-center bg-blue-100">
+            <div class="text-center bg-white p-8 rounded-xl border-4 border-blue-400 shadow-xl">
+                <h1 class="text-4xl text-yellow-500 mb-2 drop-shadow-md">LEMONADE</h1>
+                <h1 class="text-4xl text-blue-500 mb-8 drop-shadow-md">STAND</h1>
+                <p class="text-xl mb-6 font-bold text-gray-600">How many days do you want to play?</p>
+                <div class="space-y-4 flex flex-col items-center">
+                    <button class="btn w-48" onclick="game.setDuration(7)">7 Days</button>
+                    <button class="btn w-48" onclick="game.setDuration(14)">14 Days</button>
+                    <button class="btn w-48 bg-yellow-500 border-yellow-700 hover:bg-yellow-600" onclick="game.setDuration(30)">30 Days (Events)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHASE 2: WEATHER FORECAST & PREP -->
+        <div id="screen-prep" class="phase">
+            <div class="w-full h-full bg-blue-100 p-8 text-center flex flex-col items-center justify-center">
+                <h2 class="text-5xl text-blue-800 mb-4">Good Morning!</h2>
+                <div class="bg-white p-6 border-4 border-blue-300 inline-block mb-6 w-full max-w-md">
+                    <div class="text-2xl mb-2">Today's Forecast</div>
+                    <div id="forecast-icon" class="weather-icon">☀️</div>
+                    <div class="text-4xl font-bold mb-2"><span id="forecast-temp">75</span>°F</div>
+                    <div class="text-xl text-gray-600" id="forecast-desc">Clear skies and sunny</div>
+                </div>
+                <div class="flex justify-center gap-4">
+                    <button class="btn" onclick="game.goToStore()">Go to Store</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHASE 3: STORE -->
+        <div id="screen-store" class="phase">
+            <div class="w-full h-full bg-gray-100 flex flex-col">
+                <!-- Custom Store Header as requested -->
+                <div class="store-info">
+                    <div class="font-bold text-3xl">GENERAL STORE</div>
+                    <div class="flex gap-6 text-xl">
+                        <span class="text-green-600 font-bold bg-white px-2 border border-green-500">Money: $<span id="store-money">0.00</span></span>
+                        <span class="bg-white px-2 border border-gray-400"><span id="store-temp">70</span>°F <span id="store-weather">Sunny</span></span>
+                    </div>
+                </div>
+
+                <div class="flex-1">
+                    <div class="store-grid">
+                        <!-- Cups -->
+                        <div class="store-card">
+                            <h3>🥤 Cups</h3>
+                            <div class="text-sm mb-1 text-gray-500">Owned: <span id="inv-cups">0</span></div>
+                            <div class="price-opt" onclick="game.buyItem('cups', 25, 0.98)">
+                                <span>25 Cups</span> <span>$0.98</span>
+                            </div>
+                            <div class="price-opt" onclick="game.buyItem('cups', 50, 1.50)">
+                                <span>50 Cups</span> <span>$1.50</span>
+                            </div>
+                            <div class="price-opt" onclick="game.buyItem('cups', 100, 3.04)">
+                                <span>100 Cups</span> <span>$3.04</span>
+                            </div>
+                        </div>
+
+                        <!-- Lemons -->
+                        <div class="store-card">
+                            <h3>🍋 Lemons</h3>
+                            <div class="text-sm mb-1 text-gray-500">Owned: <span id="inv-lemons">0</span></div>
+                            <div class="price-opt" onclick="game.buyItem('lemons', 10, 0.53)">
+                                <span>10 Lemons</span> <span>$0.53</span>
+                            </div>
+                            <div class="price-opt" onclick="game.buyItem('lemons', 30, 2.38)">
+                                <span>30 Lemons</span> <span>$2.38</span>
+                            </div>
+                            <div class="price-opt" onclick="game.buyItem('lemons', 75, 4.09)">
+                                <span>75 Lemons</span> <span>$4.09</span>
+                            </div>
+                        </div>
+
+                        <!-- Sugar -->
+                        <div class="store-card">
+                            <h3>🧂 Sugar</h3>
+                            <div class="text-sm mb-1 text-gray-500">Owned: <span id="inv-sugar">0</span></div>
+                            <div class="price-opt" onclick="game.buyItem('sugar', 8, 0.62)">
+                                <span>8 Cups</span> <span>$0.62</span>
+                            </div>
+                            <div class="price-opt" onclick="game.buyItem('sugar', 20, 1.68)">
+                                <span>20 Cups</span> <span>$1.68</span>
+                            </div>
+                            <div class="price-opt" onclick="game.buyItem('sugar', 48, 3.25)">
+                                <span>48 Cups</span> <span>$3.25</span>
+                            </div>
+                        </div>
+
+                        <!-- Ice -->
+                        <div class="store-card">
+                            <h3>🧊 Ice Cubes</h3>
+                            <div class="text-sm mb-1 text-gray-500">Owned: <span id="inv-ice">0</span></div>
+                            <div class="price-opt" onclick="game.buyItem('ice', 100, 0.86)">
+                                <span>100 Cubes</span> <span>$0.86</span>
+                            </div>
+                            <div class="price-opt" onclick="game.buyItem('ice', 250, 2.18)">
+                                <span>250 Cubes</span> <span>$2.18</span>
+                            </div>
+                            <div class="price-opt" onclick="game.buyItem('ice', 500, 3.65)">
+                                <span>500 Cubes</span> <span>$3.65</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Buttons -->
+                <div class="p-4 bg-gray-200 border-t-4 border-gray-400 flex justify-between items-center">
+                    <div class="flex gap-4">
+                        <button class="btn btn-blue text-lg" onclick="game.toggleStoreHelp(true)">Help</button>
+                        <button class="btn btn-red text-lg" onclick="game.finishSeason()">Bankrupt!</button>
+                    </div>
+                    <button class="btn btn-green px-8" onclick="game.goToKitchen()">OK</button>
+                </div>
+            </div>
+
+            <!-- Store Help Overlay -->
+            <div id="store-help" class="modal-overlay">
+                <div class="modal-box">
+                    <h2 class="text-4xl text-blue-600 mb-4 font-bold">STORE HELP</h2>
+                    <div class="text-left space-y-4 text-xl">
+                        <p><strong class="text-orange-600">CUPS:</strong> You can't sell lemonade without cups!</p>
+                        <p><strong class="text-yellow-600">LEMONS & SUGAR:</strong> These are the main ingredients. You need them to make each pitcher.</p>
+                        <p><strong class="text-blue-400">ICE:</strong> Ice makes your lemonade tasty on hot days, but it <span class="text-red-600">melts every night</span>!</p>
+                    </div>
+                    <button class="btn btn-green mt-8 px-8" onclick="game.toggleStoreHelp(false)">Back to Store</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHASE 4: KITCHEN / RECIPE -->
+        <div id="screen-kitchen" class="phase">
+            <div class="w-full h-full bg-yellow-50 p-4">
+                <h2 class="text-4xl text-center mb-3 text-yellow-800">The Kitchen</h2>
+                
+                <div class="max-w-4xl mx-auto flex gap-8 justify-center items-center">
+                    
+                    <!-- Recipe Controls -->
+                    <div class="flex-1 max-w-lg">
+                        <div class="bg-white p-3 border-2 border-gray-300 mb-3 text-center">
+                            <p class="text-lg">Inventory Check:</p>
+                            <div class="flex justify-center gap-6 text-xl font-bold text-gray-700">
+                                <span>🍋 <span id="kit-lemons">0</span></span>
+                                <span>🧂 <span id="kit-sugar">0</span></span>
+                                <span>🧊 <span id="kit-ice">0</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Recipe Controls - BUTTONS -->
+                        <div class="recipe-row">
+                            <label class="text-2xl w-1/2">Lemons per Pitcher</label>
+                            <div class="flex items-center gap-4 w-1/2 justify-end">
+                                <button class="btn btn-red text-xl px-3 py-0" onclick="game.adjustRecipe('lemons', -1)">-</button>
+                                <span class="text-3xl w-12 text-center" id="val-lemons">4</span>
+                                <button class="btn btn-green text-xl px-3 py-0" onclick="game.adjustRecipe('lemons', 1)">+</button>
+                            </div>
+                        </div>
+
+                        <div class="recipe-row">
+                            <label class="text-2xl w-1/2">Sugar per Pitcher</label>
+                            <div class="flex items-center gap-4 w-1/2 justify-end">
+                                <button class="btn btn-red text-xl px-3 py-0" onclick="game.adjustRecipe('sugar', -1)">-</button>
+                                <span class="text-3xl w-12 text-center" id="val-sugar">4</span>
+                                <button class="btn btn-green text-xl px-3 py-0" onclick="game.adjustRecipe('sugar', 1)">+</button>
+                            </div>
+                        </div>
+
+                        <div class="recipe-row">
+                            <label class="text-2xl w-1/2">Ice per Cup</label>
+                            <div class="flex items-center gap-4 w-1/2 justify-end">
+                                <button class="btn btn-red text-xl px-3 py-0" onclick="game.adjustRecipe('ice', -1)">-</button>
+                                <span class="text-3xl w-12 text-center" id="val-ice">3</span>
+                                <button class="btn btn-green text-xl px-3 py-0" onclick="game.adjustRecipe('ice', 1)">+</button>
+                            </div>
+                        </div>
+
+                        <div class="recipe-row bg-green-50 border-green-300">
+                            <label class="text-2xl font-bold text-green-800 w-1/2">Price per Cup</label>
+                            <div class="flex items-center gap-4 w-1/2 justify-end">
+                                <button class="btn btn-red text-xl px-3 py-0" onclick="game.adjustRecipe('price', -1)">-</button>
+                                <span class="text-3xl w-24 text-center text-green-700"><span id="val-price">25</span>¢</span>
+                                <button class="btn btn-green text-xl px-3 py-0" onclick="game.adjustRecipe('price', 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Pitcher Preview -->
+                    <div class="w-48 flex flex-col items-center">
+                        <div class="text-xl font-bold mb-2 text-gray-600">Recipe Preview</div>
+                        <canvas id="pitcherPreviewCanvas" width="150" height="250" class="bg-white border-4 border-gray-300 rounded-lg shadow-md"></canvas>
+                        <div class="mt-2 text-center text-sm text-gray-500">
+                            Shows color & ice
+                        </div>
+                    </div>
+
+                </div>
+                
+                <div class="text-center mt-6">
+                    <p id="recipe-warning" class="text-red-500 text-xl mb-3 h-6"></p>
+                    <div class="flex justify-center gap-4">
+                        <button class="btn btn-red" onclick="game.goToStore()">Go Back</button>
+                        <button class="btn btn-blue" onclick="game.startSimulation()">Open for Business!</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHASE 5: SIMULATION -->
+        <div id="screen-sim" class="phase">
+            <canvas id="simCanvas"></canvas>
+            
+            <!-- Modern Stat Panels -->
+            <div class="absolute top-4 left-4 sim-ui-panel text-left w-48">
+                <div class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1 border-b border-gray-300 pb-1">Inventory</div>
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-gray-700">Cups</span>
+                    <span id="sim-cups" class="font-bold text-blue-600">0</span>
+                </div>
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-gray-700">Ice</span>
+                    <span id="sim-ice" class="font-bold text-blue-400">0</span>
+                </div>
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-gray-700">Lemons</span>
+                    <span id="sim-lemons" class="font-bold text-yellow-500">0</span>
+                </div>
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-gray-700">Sugar</span>
+                    <span id="sim-sugar" class="font-bold text-gray-500">0</span>
+                </div>
+                <div class="mt-2 pt-2 border-t border-gray-200">
+                    <div class="text-xs text-gray-500">Pitcher Level</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mt-1">
+                        <div id="sim-pitcher-bar" class="bg-yellow-400 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div class="text-right text-xs mt-1"><span id="sim-pitcher">0</span>/10 Cups</div>
+                </div>
+            </div>
+
+            <div class="absolute top-4 right-4 sim-ui-panel text-right w-56">
+                <div class="text-3xl font-bold text-green-600 mb-1">$<span id="sim-money-live">20.00</span></div>
+                
+                <!-- Weather & Temp Display -->
+                <div class="mb-2 pb-2 border-b border-gray-200">
+                    <div class="text-lg font-bold text-gray-700">
+                        <span id="sim-weather-icon">☀️</span> 
+                        <span id="sim-temp-f">75</span>°F <span class="text-gray-400">/</span> <span id="sim-temp-c">24</span>°C
+                    </div>
+                    <div id="sim-weather-name" class="text-sm font-bold uppercase text-gray-500">Sunny</div>
+                </div>
+
+                <div class="text-sm text-gray-500 font-bold uppercase tracking-wide">Cups Sold: <span id="sim-sold" class="text-black text-lg">0</span></div>
+                
+                <!-- Live Price Control (Updated to Buttons) -->
+                <div class="mt-2 pt-2 border-t border-gray-200">
+                    <div class="text-xs font-bold text-gray-500 uppercase mb-1">Set Price</div>
+                    <div class="flex items-center justify-between bg-gray-200 rounded-lg p-1">
+                        <button class="btn btn-red text-xl px-3 py-0 leading-none" onclick="game.adjustPrice(-1)">-</button>
+                        <div class="font-bold text-lg text-blue-600"><span id="sim-price-display">25</span>¢</div>
+                        <button class="btn btn-green text-xl px-3 py-0 leading-none" onclick="game.adjustPrice(1)">+</button>
+                    </div>
+                </div>
+
+                <div class="text-xl font-bold text-gray-800 mt-3 bg-gray-100 px-3 py-1 rounded inline-block">
+                    🕒 <span id="sim-time">9:00 AM</span>
+                </div>
+            </div>
+
+            <div class="absolute bottom-6 right-6 flex gap-4">
+                 <button id="sim-pause-btn" class="btn btn-green text-lg px-6 py-2 shadow-xl rounded-full" onclick="game.togglePause()">Pause ⏸️</button>
+                 <button class="btn btn-blue text-lg px-6 py-2 shadow-xl rounded-full" onclick="game.toggleFastForward()">Fast Forward ⏩</button>
+            </div>
+            
+            <!-- Feedback Overlay (Dynamic) -->
+            <div id="feedback-container" class="absolute inset-0 pointer-events-none"></div>
+        </div>
+
+        <!-- PHASE 6: REPORT -->
+        <div id="screen-report" class="phase">
+            <div class="w-full h-full bg-white p-10 flex flex-col items-center">
+                <h2 class="text-5xl mb-6 text-gray-800 border-b-4 border-gray-800 pb-2">End of Day Report</h2>
+                
+                <div class="w-full max-w-lg text-2xl space-y-4">
+                    <div class="flex justify-between">
+                        <span>Cups Sold:</span>
+                        <span id="report-sold" class="font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Potential Customers:</span>
+                        <span id="report-customers">0</span>
+                    </div>
+                    <div class="flex justify-between border-t border-gray-300 pt-2">
+                        <span>Income:</span>
+                        <span id="report-income" class="text-green-600">$0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Expenses (Stock Used):</span>
+                        <span id="report-expenses" class="text-red-600">$0.00</span>
+                    </div>
+                    <div class="flex justify-between font-bold text-3xl border-t-2 border-black pt-4">
+                        <span>Daily Profit:</span>
+                        <span id="report-profit">$0.00</span>
+                    </div>
+                    
+                    <div class="mt-8 space-y-2 text-center text-lg">
+                        <p id="spoilage-msg" class="p-3 bg-blue-100 border-2 border-blue-400 text-blue-800 hidden">All leftover ice has melted!</p>
+                        <p id="lemon-spoil-msg" class="p-3 bg-yellow-100 border-2 border-yellow-400 text-yellow-800 hidden">Some lemons have spoiled!</p>
+                    </div>
+                </div>
+
+                <button class="btn btn-green mt-8" onclick="game.nextDay()">Next Day</button>
+            </div>
+        </div>
+
+        <!-- PHASE 7: END SEASON REPORT (Updated) -->
+        <div id="screen-endgame" class="phase">
+            <div class="w-full h-full end-bg flex flex-col items-center justify-center p-10 text-center border-8 border-gray-400">
+                <div class="text-6xl text-yellow-400 font-bold mb-8 tracking-widest border-b-4 border-yellow-400 pb-2">END OF SEASON REPORT</div>
+                
+                <div class="bg-gray-800 p-8 border-4 border-gray-600 w-full max-w-2xl text-left">
+                    <div class="report-line text-green-400">
+                        <span>Total Income:</span>
+                        <span id="end-income">$0.00</span>
+                    </div>
+                    <div class="report-line text-red-400">
+                        <span>Total Expenses:</span>
+                        <span id="end-expenses">$0.00</span>
+                    </div>
+                    <div class="report-line text-blue-300">
+                        <span>Liquidated Inventory:</span>
+                        <span id="end-liquidation">$0.00</span>
+                    </div>
+                    <div class="border-t-2 border-gray-500 my-4"></div>
+                    <div class="report-line font-bold text-yellow-300 text-4xl">
+                        <span>NET PROFIT/LOSS:</span>
+                        <span id="end-net">$0.00</span>
+                    </div>
+                    
+                    <div class="mt-8 text-center text-gray-400 text-xl">
+                        Previous Best: <span id="end-highscore" class="text-white">$0.00</span>
+                    </div>
+                </div>
+                
+                <div class="mt-12">
+                    <button class="btn btn-green px-8 py-2 text-2xl" onclick="window.location.reload()">PLAY AGAIN</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONSTANTS & CONFIG ---
+        const WEATHER_TYPES = [
+            { name: "Sunny", tempBase: 80, tempVar: 15, demandMod: 1.05, icon: "☀️", bg: "#87CEEB" },
+            { name: "Hazy", tempBase: 90, tempVar: 10, demandMod: 1.0, icon: "😶‍🌫️", bg: "#dcdcdc" }, 
+            { name: "Cloudy", tempBase: 70, tempVar: 10, demandMod: 1.0, icon: "☁️", bg: "#bdc3c7" },
+            { name: "Rainy", tempBase: 60, tempVar: 5, demandMod: 0.95, icon: "🌧️", bg: "#7f8c8d" } 
+        ];
+
+        // --- GAME ENGINE ---
+        class Game {
+            constructor() {
+                this.day = 1;
+                this.maxDays = 30; // Default, will be set by selection
+                this.money = 20.00;
+                this.startMoney = 20.00;
+                
+                // Track stats for End of Season Report
+                this.totalIncome = 0;
+                this.totalExpenses = 0;
+                
+                this.inventory = {
+                    cups: 0,
+                    lemons: 0,
+                    sugar: 0,
+                    ice: 0
+                };
+                
+                // Track lemon batches for spoilage: [{amount: 10, day: 1}]
+                this.lemonBatches = [];
+
+                this.recipe = {
+                    lemons: 4,
+                    sugar: 4,
+                    ice: 3,
+                    price: 25
+                };
+
+                this.weather = null;
+                this.pitcher = 0; // Cups remaining in current pitcher
+                this.history = [];
+                this.sim = null;
+                
+                // Binding helper
+                this.updateHUD();
+            }
+
+            // --- NAVIGATION ---
+            showScreen(id) {
+                // Ensure all phases are hidden first
+                document.querySelectorAll('.phase').forEach(el => el.classList.remove('active'));
+                const screen = document.getElementById(id);
+                if (screen) {
+                    screen.classList.add('active');
+                }
+                
+                // Manage HUD visibility
+                // Hidden on Title, Duration, Store, Bankrupt - shown otherwise
+                if(id === 'screen-title' || id === 'screen-duration' || id === 'screen-store' || id === 'screen-endgame') {
+                    document.getElementById('hud').classList.remove('active');
+                } else {
+                    document.getElementById('hud').classList.add('active');
+                }
+
+                this.updateHUD();
+            }
+
+            // --- GAME STARTUP FLOW ---
+            start() {
+                // Show intro first
+                this.showScreen('screen-title');
+            }
+
+            showDurationSelect() {
+                this.showScreen('screen-duration');
+            }
+
+            setDuration(days) {
+                this.maxDays = days;
+                this.day = 1;
+                this.money = 20.00; 
+                this.totalIncome = 0;
+                this.totalExpenses = 0;
+                this.inventory = { cups: 0, lemons: 0, sugar: 0, ice: 0 };
+                this.lemonBatches = [];
+                
+                document.getElementById('max-days-val').textContent = this.maxDays;
+                
+                this.generateWeather();
+                this.showScreen('screen-prep');
+            }
+
+            nextDay() {
+                this.day++;
+                if (this.day > this.maxDays) {
+                    this.finishSeason(); 
+                    return;
+                }
+                
+                this.inventory.ice = 0; // Ice melts
+                this.generateWeather();
+                this.showScreen('screen-prep');
+            }
+
+            finishSeason() {
+                // Calculate Liquidation Value
+                // Estimated cost prices: Cup 0.03, Lemon 0.05, Sugar 0.05
+                const valCups = this.inventory.cups * 0.03;
+                const valLemons = this.inventory.lemons * 0.05;
+                const valSugar = this.inventory.sugar * 0.05;
+                const liquidation = valCups + valLemons + valSugar; // Ice is 0
+                
+                const netProfit = (this.totalIncome + liquidation) - this.totalExpenses;
+                
+                // Update UI
+                document.getElementById('end-income').textContent = "$" + this.totalIncome.toFixed(2);
+                document.getElementById('end-expenses').textContent = "$" + this.totalExpenses.toFixed(2);
+                document.getElementById('end-liquidation').textContent = "$" + liquidation.toFixed(2);
+                
+                const netEl = document.getElementById('end-net');
+                netEl.textContent = "$" + netProfit.toFixed(2);
+                netEl.className = "report-line font-bold text-4xl " + (netProfit >= 0 ? "text-green-400" : "text-red-500");
+
+                // High Score Logic
+                let highScore = parseFloat(localStorage.getItem('ls_highscore') || "-9999");
+                if (netProfit > highScore) {
+                    highScore = netProfit;
+                    localStorage.setItem('ls_highscore', highScore.toFixed(2));
+                }
+                document.getElementById('end-highscore').textContent = "$" + highScore.toFixed(2);
+
+                this.showScreen('screen-endgame');
+            }
+
+            generateWeather() {
+                const rand = Math.random();
+                let type;
+                if(rand < 0.5) type = WEATHER_TYPES[0]; 
+                else if(rand < 0.7) type = WEATHER_TYPES[1]; 
+                else if(rand < 0.9) type = WEATHER_TYPES[2]; 
+                else type = WEATHER_TYPES[3]; 
+
+                const temp = Math.floor(type.tempBase + (Math.random() * type.tempVar * (Math.random() > 0.5 ? 1 : -1)));
+                this.weather = { ...type, actualTemp: temp };
+
+                document.getElementById('forecast-icon').textContent = this.weather.icon;
+                document.getElementById('forecast-temp').textContent = this.weather.actualTemp;
+                document.getElementById('forecast-desc').textContent = this.weather.name;
+                document.getElementById('temp-val').textContent = this.weather.actualTemp;
+                document.getElementById('weather-text').textContent = this.weather.name;
+            }
+
+            // --- STORE LOGIC ---
+            goToStore() {
+                this.updateStoreUI();
+                this.showScreen('screen-store');
+            }
+
+            buyItem(item, amount, cost) {
+                if (this.money >= cost) {
+                    this.money -= cost;
+                    this.totalExpenses += cost; // Track expense
+                    
+                    this.inventory[item] += amount;
+                    
+                    // Add to batch tracking if lemons
+                    if(item === 'lemons') {
+                        this.lemonBatches.push({amount: amount, day: this.day});
+                    }
+                    
+                    this.updateStoreUI();
+                    this.updateHUD();
+                    
+                    const btn = event.currentTarget;
+                    const originalBg = btn.style.background;
+                    btn.style.background = "#2ecc71"; // flash green
+                    setTimeout(() => btn.style.background = originalBg, 200);
+                } else {
+                    alert("Not enough money!");
+                }
+            }
+
+            updateStoreUI() {
+                document.getElementById('store-money').textContent = this.money.toFixed(2);
+                document.getElementById('store-temp').textContent = this.weather.actualTemp;
+                document.getElementById('store-weather').textContent = this.weather.name;
+
+                ['cups', 'lemons', 'sugar', 'ice'].forEach(k => {
+                    document.getElementById(`inv-${k}`).textContent = this.inventory[k];
+                });
+            }
+
+            toggleStoreHelp(show) {
+                const modal = document.getElementById('store-help');
+                if (show) modal.classList.add('active');
+                else modal.classList.remove('active');
+            }
+
+            // --- KITCHEN LOGIC ---
+            goToKitchen() {
+                this.updateRecipeUI();
+                this.showScreen('screen-kitchen');
+            }
+
+            // New method to handle button clicks for recipe
+            adjustRecipe(item, amount) {
+                if (item === 'price') {
+                    this.recipe.price += amount;
+                    if (this.recipe.price < 1) this.recipe.price = 1;
+                    if (this.recipe.price > 200) this.recipe.price = 200;
+                } else {
+                    this.recipe[item] += amount;
+                    if (this.recipe[item] < 0) this.recipe[item] = 0; // standard min
+                    // Specific minimums?
+                    if (item === 'lemons' && this.recipe.lemons < 1) this.recipe.lemons = 1;
+                    if (item === 'sugar' && this.recipe.sugar < 1) this.recipe.sugar = 1;
+                }
+                this.updateRecipeUI();
+            }
+
+            updateRecipeUI() {
+                // Update text displays
+                document.getElementById('val-lemons').textContent = this.recipe.lemons;
+                document.getElementById('val-sugar').textContent = this.recipe.sugar;
+                document.getElementById('val-ice').textContent = this.recipe.ice;
+                document.getElementById('val-price').textContent = this.recipe.price;
+
+                // Sync inventory display
+                ['lemons', 'sugar', 'ice'].forEach(k => {
+                    document.getElementById(`kit-${k}`).textContent = this.inventory[k];
+                });
+
+                // DRAW PITCHER PREVIEW
+                this.drawPitcherPreview();
+
+                const warning = document.getElementById('recipe-warning');
+                if (this.inventory.lemons < this.recipe.lemons || this.inventory.sugar < this.recipe.sugar) {
+                    warning.textContent = "Warning: Not enough ingredients to make a pitcher!";
+                } else {
+                    warning.textContent = "";
+                }
+            }
+
+            drawPitcherPreview() {
+                const canvas = document.getElementById('pitcherPreviewCanvas');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0,0,150,250);
+
+                // Draw Glass
+                ctx.strokeStyle = '#BDC3C7';
+                ctx.lineWidth = 5;
+                ctx.strokeRect(30, 50, 90, 150);
+
+                // Determine Color based on Lemons (More lemons = Darker Yellow)
+                // Base yellow: 60 hue. Less lemons -> lighter/whiter.
+                // Standard is 4 lemons. Range 1-10.
+                // 1 lemon -> very pale (lightness 95%)
+                // 8+ lemons -> deep yellow (lightness 50%)
+                const lightness = Math.max(50, 95 - (this.recipe.lemons * 5)); 
+                ctx.fillStyle = `hsl(50, 100%, ${lightness}%)`;
+
+                // Fill Liquid (Always fill mostly full for preview)
+                ctx.fillRect(35, 70, 80, 125);
+
+                // Draw Ice Cubes
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                ctx.lineWidth = 2;
+                
+                // Draw up to 5 visual cubes if count is high
+                const cubesToDraw = Math.min(this.recipe.ice, 6);
+                for(let i=0; i<cubesToDraw; i++) {
+                    const x = 40 + (i % 2) * 35 + (Math.random()*10);
+                    const y = 160 - (Math.floor(i / 2) * 35) + (Math.random()*10);
+                    ctx.fillRect(x, y, 25, 25);
+                    ctx.strokeRect(x, y, 25, 25);
+                }
+            }
+
+            startSimulation() {
+                this.showScreen('screen-sim');
+                this.sim = new Simulation(this);
+                this.sim.start();
+            }
+
+            toggleFastForward() {
+                if(this.sim) {
+                    this.sim.toggleSpeed();
+                }
+            }
+
+            togglePause() {
+                if(this.sim) {
+                    this.sim.togglePause();
+                }
+            }
+
+            consumeLemons(amount) {
+                let needed = amount;
+                while(needed > 0 && this.lemonBatches.length > 0) {
+                    let batch = this.lemonBatches[0];
+                    if(batch.amount > needed) {
+                        batch.amount -= needed;
+                        needed = 0;
+                    } else {
+                        needed -= batch.amount;
+                        this.lemonBatches.shift(); // Remove empty batch
+                    }
+                }
+                this.inventory.lemons -= amount;
+            }
+
+            checkSpoilage() {
+                let rotten = 0;
+                // Lemons spoil after 7 days
+                const freshBatches = [];
+                this.lemonBatches.forEach(batch => {
+                    if (this.day - batch.day >= 7) {
+                        rotten += batch.amount;
+                    } else {
+                        freshBatches.push(batch);
+                    }
+                });
+                
+                this.lemonBatches = freshBatches;
+                this.inventory.lemons -= rotten;
+                
+                return rotten;
+            }
+
+            endDay(report) {
+                this.money += report.revenue;
+                this.totalIncome += report.revenue; // Track Income
+                
+                // Spoilage Logic
+                const spoiledLemons = this.checkSpoilage();
+                
+                // Update Report UI
+                document.getElementById('report-sold').textContent = report.cupsSold;
+                document.getElementById('report-customers').textContent = report.totalCustomers;
+                document.getElementById('report-income').textContent = `$${report.revenue.toFixed(2)}`;
+                document.getElementById('report-expenses').textContent = "(Stock consumed)";
+                document.getElementById('report-profit').textContent = `$${report.revenue.toFixed(2)}`;
+                
+                // Spoilage Messages
+                const iceMsg = document.getElementById('spoilage-msg');
+                iceMsg.textContent = "All leftover ice has melted!";
+                iceMsg.classList.remove('hidden');
+
+                const lemonMsg = document.getElementById('lemon-spoil-msg');
+                if(spoiledLemons > 0) {
+                    lemonMsg.textContent = `${spoiledLemons} lemons have spoiled!`;
+                    lemonMsg.classList.remove('hidden');
+                } else {
+                    lemonMsg.classList.add('hidden');
+                }
+                
+                this.updateHUD();
+                this.showScreen('screen-report');
+            }
+
+            updateHUD() {
+                document.getElementById('day-val').textContent = this.day;
+                document.getElementById('money-val').textContent = this.money.toFixed(2);
+            }
+
+            // New method for button-based price adjustment
+            adjustPrice(amount) {
+                this.recipe.price += amount;
+                if(this.recipe.price < 1) this.recipe.price = 1;
+                // Cap strictly to maintain UI sanity, though original allowed higher
+                if(this.recipe.price > 200) this.recipe.price = 200; 
+                document.getElementById('sim-price-display').textContent = this.recipe.price;
+            }
+        }
+
+        // --- HIGH QUALITY SIMULATION ENGINE ---
+        class Simulation {
+            constructor(game) {
+                this.game = game;
+                this.canvas = document.getElementById('simCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.width = 800;
+                this.height = 600;
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+
+                this.hour = 9; 
+                this.minute = 0;
+                this.endHour = 17; // 5:00 PM
+                
+                this.tickCount = 0;
+                this.ticksPerMinute = 8; 
+                this.speedMultiplier = 1;
+                this.paused = false;
+
+                this.agents = [];
+                this.floatingTexts = []; // NEW: Array for floating text
+                this.active = false;
+
+                this.sold = 0;
+                this.totalCustomers = 0;
+                this.revenue = 0;
+
+                this.pitcherCups = 0; 
+                
+                // Assets & Visuals
+                this.sunY = 100;
+                this.clouds = [
+                    {x: 100, y: 80, scale: 1, speed: 0.2},
+                    {x: 400, y: 150, scale: 0.8, speed: 0.15},
+                    {x: 700, y: 60, scale: 1.2, speed: 0.25}
+                ];
+
+                // Raindrops Array
+                this.raindrops = [];
+                for(let i=0; i<150; i++) {
+                    this.raindrops.push({
+                        x: Math.random() * this.width,
+                        y: Math.random() * this.height,
+                        speed: 15 + Math.random() * 5,
+                        len: 15 + Math.random() * 10
+                    });
+                }
+            }
+
+            start() {
+                this.active = true;
+                this.sold = 0;
+                this.totalCustomers = 0;
+                this.revenue = 0;
+                
+                // Reset UI
+                document.getElementById('sim-pause-btn').textContent = "Pause ⏸️";
+                this.paused = false;
+
+                this.updateRealTimeStats();
+                this.updateSimWeatherInfo();
+                this.makePitcher();
+                this.loop();
+            }
+
+            toggleSpeed() {
+                if (this.speedMultiplier === 1) {
+                    this.speedMultiplier = 4;
+                } else {
+                    this.speedMultiplier = 1;
+                }
+            }
+
+            togglePause() {
+                this.paused = !this.paused;
+                const btn = document.getElementById('sim-pause-btn');
+                if(this.paused) {
+                    btn.textContent = "Resume ▶️";
+                } else {
+                    btn.textContent = "Pause ⏸️";
+                }
+            }
+            
+            updateRealTimeStats() {
+                document.getElementById('sim-cups').textContent = this.game.inventory.cups;
+                document.getElementById('sim-ice').textContent = this.game.inventory.ice;
+                document.getElementById('sim-lemons').textContent = this.game.inventory.lemons;
+                document.getElementById('sim-sugar').textContent = this.game.inventory.sugar;
+                
+                // Update Progress Bar
+                document.getElementById('sim-pitcher').textContent = this.pitcherCups;
+                const pct = (this.pitcherCups / 10) * 100;
+                document.getElementById('sim-pitcher-bar').style.width = pct + "%";
+                
+                document.getElementById('sim-money-live').textContent = (this.game.money + this.revenue).toFixed(2);
+            }
+
+            updateSimWeatherInfo() {
+                const w = this.game.weather;
+                document.getElementById('sim-weather-icon').textContent = w.icon;
+                document.getElementById('sim-weather-name').textContent = w.name;
+                document.getElementById('sim-temp-f').textContent = w.actualTemp;
+                // Convert F to C: (F - 32) * 5/9
+                document.getElementById('sim-temp-c').textContent = Math.round((w.actualTemp - 32) * 5 / 9);
+                
+                // Init price controls
+                // document.getElementById('sim-price-input').value = this.game.recipe.price; // Removed input
+                document.getElementById('sim-price-display').textContent = this.game.recipe.price;
+            }
+
+            makePitcher() {
+                if (this.game.inventory.lemons >= this.game.recipe.lemons &&
+                    this.game.inventory.sugar >= this.game.recipe.sugar) {
+                    
+                    // Use batch logic for lemons
+                    this.game.consumeLemons(this.game.recipe.lemons);
+                    // Simple logic for sugar (no spoilage)
+                    this.game.inventory.sugar -= this.game.recipe.sugar;
+                    
+                    this.pitcherCups = 10;
+                    this.updateRealTimeStats();
+                    return true;
+                }
+                return false;
+            }
+
+            loop() {
+                if (!this.active) return;
+
+                // Speed Multiplier controls how many Logic Updates happen per Real Frame
+                if (!this.paused) {
+                    const iterations = this.speedMultiplier === 4 ? 4 : 1;
+
+                    for(let k = 0; k < iterations; k++) {
+                        this.updateLogic();
+                        if(!this.active) break;
+                    }
+                }
+                
+                if(this.active) {
+                    this.draw();
+                    requestAnimationFrame(() => this.loop());
+                }
+            }
+
+            updateLogic() {
+                this.tickCount++;
+                
+                if (this.tickCount % 8 === 0) {
+                    this.minute++;
+                    if(this.minute >= 60) {
+                        this.minute = 0;
+                        this.hour++;
+                    }
+                    this.updateTimeUI();
+                    
+                    if (this.hour >= this.endHour) {
+                        this.finish();
+                        return;
+                    }
+                }
+
+                // Cloud movement
+                this.clouds.forEach(c => {
+                    c.x -= c.speed;
+                    if(c.x < -100) c.x = this.width + 100;
+                });
+
+                // Rain movement
+                if(this.game.weather.name === "Rainy") {
+                    this.raindrops.forEach(drop => {
+                        drop.y += drop.speed;
+                        if(drop.y > this.height) {
+                            drop.y = -drop.len;
+                            drop.x = Math.random() * this.width;
+                        }
+                    });
+                }
+
+                if (Math.random() < this.getSpawnRate()) {
+                    this.spawnAgent();
+                }
+
+                this.updateAgents();
+            }
+
+            draw() {
+                this.drawScenery();
+                if(this.game.weather.name === "Rainy") {
+                    this.drawRain();
+                }
+                this.drawAgents();
+                this.drawFloatingTexts(); // Draw floating text on top
+            }
+
+            // --- HIGH QUALITY DRAWING FUNCTIONS ---
+
+            drawScenery() {
+                const ctx = this.ctx;
+                
+                // DYNAMIC SKY GRADIENT
+                // Interpolate colors based on hour (9 to 17)
+                // 9-12: Morning Blue to Day Blue
+                // 12-15: Day Blue to Late Afternoon
+                // 15-17: Late Afternoon to Sunset Orange
+                
+                let colorTop, colorBot;
+                
+                if(this.game.weather.name === "Rainy") {
+                    colorTop = '#5D6D7E'; colorBot = '#AAB7B8';
+                } else if(this.game.weather.name === "Cloudy") {
+                    colorTop = '#85929E'; colorBot = '#D5D8DC';
+                } else {
+                    // Manual interpolation logic simplified
+                    if(this.hour < 12) {
+                        colorTop = '#3498db'; colorBot = '#87CEEB';
+                    } else if (this.hour < 15) {
+                        colorTop = '#00BFFF'; colorBot = '#87CEFA'; // Brighter noon
+                    } else {
+                        // Sunset transition
+                        colorTop = '#34495e'; colorBot = '#F39C12'; // Orange bottom
+                    }
+                }
+
+                let skyGrad = ctx.createLinearGradient(0, 0, 0, this.height * 0.6);
+                skyGrad.addColorStop(0, colorTop);
+                skyGrad.addColorStop(1, colorBot);
+                
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(0, 0, this.width, this.height);
+
+                // 2. Sun (if not rainy)
+                if(this.game.weather.name !== "Rainy") {
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(255, 223, 0, 0.8)';
+                    ctx.shadowBlur = 40;
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    // Sun moves slightly with hours (x: 500 to 750)
+                    // hour 9 -> x=600, hour 17 -> x=760
+                    let sunX = 550 + ((this.hour - 9) * 20);
+                    let sunY = 80 + ((this.hour - 9) * 5); // Sun goes down slightly
+                    ctx.arc(sunX, sunY, 50, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // 3. Clouds
+                if(this.game.weather.name !== "Sunny") {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    this.clouds.forEach(c => this.drawCloud(c.x, c.y, c.scale));
+                }
+
+                // 4. Background Hills / Trees
+                ctx.fillStyle = '#27ae60';
+                ctx.beginPath();
+                ctx.ellipse(200, 400, 300, 150, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(600, 400, 400, 200, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // 5. Ground (Grass Gradient)
+                let grassGrad = ctx.createLinearGradient(0, 400, 0, 600);
+                grassGrad.addColorStop(0, '#2ecc71');
+                grassGrad.addColorStop(1, '#27ae60');
+                ctx.fillStyle = grassGrad;
+                ctx.fillRect(0, 400, this.width, 200);
+
+                // 6. Path
+                ctx.fillStyle = '#95a5a6';
+                ctx.fillRect(0, 460, this.width, 100);
+                // Path Borders
+                ctx.strokeStyle = '#7f8c8d';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(0, 460);
+                ctx.lineTo(this.width, 460);
+                ctx.moveTo(0, 560);
+                ctx.lineTo(this.width, 560);
+                ctx.stroke();
+
+                // 7. Assets
+                this.drawHouse(50, 250);
+                this.drawTree(650, 300);
+                this.drawTree(750, 320);
+                this.drawStand(320, 300);
+
+                // 8. Animals
+                this.drawDog(200, 430);
+                this.drawCat(150, 440);
+            }
+
+            drawCloud(x, y, scale) {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.scale(scale, scale);
+                ctx.beginPath();
+                ctx.arc(0, 0, 30, 0, Math.PI*2);
+                ctx.arc(40, 0, 40, 0, Math.PI*2);
+                ctx.arc(80, 0, 30, 0, Math.PI*2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            drawTree(x, y) {
+                const ctx = this.ctx;
+                ctx.save();
+                // Trunk
+                ctx.fillStyle = '#5D4037';
+                ctx.fillRect(x, y, 20, 100);
+                // Leaves
+                ctx.fillStyle = '#1E8449';
+                ctx.beginPath();
+                ctx.arc(x + 10, y - 20, 50, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#229954';
+                ctx.beginPath();
+                ctx.arc(x + 10, y - 30, 40, 0, Math.PI*2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            drawHouse(x, y) {
+                const ctx = this.ctx;
+                ctx.save();
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(x+60, y+100, 80, 20, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // Main Body
+                ctx.fillStyle = "#F5DEB3";
+                ctx.fillRect(x, y, 120, 100);
+                // Frame
+                ctx.strokeStyle = '#8D6E63';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, 120, 100);
+
+                // Roof
+                ctx.fillStyle = "#A04000";
+                ctx.beginPath();
+                ctx.moveTo(x - 10, y);
+                ctx.lineTo(x + 60, y - 60);
+                ctx.lineTo(x + 130, y);
+                ctx.fill();
+                // Roof outline
+                ctx.strokeStyle = "#6E2C00";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Door
+                ctx.fillStyle = "#6E2C00";
+                ctx.fillRect(x + 45, y + 50, 30, 50);
+                // Knob
+                ctx.fillStyle = "gold";
+                ctx.beginPath();
+                ctx.arc(x + 70, y + 75, 3, 0, Math.PI*2);
+                ctx.fill();
+
+                // Window
+                ctx.fillStyle = "#87CEEB";
+                ctx.fillRect(x + 10, y + 20, 25, 25);
+                ctx.fillRect(x + 85, y + 20, 25, 25);
+                // Window frames
+                ctx.strokeStyle = "white";
+                ctx.lineWidth = 2;
+                ctx.beginPath(); // left window cross
+                ctx.moveTo(x+22.5, y+20); ctx.lineTo(x+22.5, y+45);
+                ctx.moveTo(x+10, y+32.5); ctx.lineTo(x+35, y+32.5);
+                ctx.stroke();
+                ctx.beginPath(); // right window cross
+                ctx.moveTo(x+97.5, y+20); ctx.lineTo(x+97.5, y+45);
+                ctx.moveTo(x+85, y+32.5); ctx.lineTo(x+110, y+32.5);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            drawStand(x, y) {
+                const ctx = this.ctx;
+                
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(x+90, y+130, 100, 20, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // Back Poles
+                ctx.fillStyle = '#BDC3C7';
+                ctx.fillRect(x+10, y-20, 10, 120);
+                ctx.fillRect(x+160, y-20, 10, 120);
+
+                // Table Base (Wood Texture)
+                ctx.fillStyle = '#D35400'; 
+                ctx.fillRect(x, y+80, 180, 80);
+                // Wood grain lines
+                ctx.fillStyle = '#BA4A00';
+                for(let i=0; i<5; i++) {
+                    ctx.fillRect(x, y+90+(i*15), 180, 2);
+                }
+
+                // Table Top
+                ctx.fillStyle = '#873600';
+                ctx.fillRect(x-10, y+70, 200, 15);
+
+                // Awning (Fabric Folds)
+                const segments = 6;
+                const segW = 200 / segments;
+                for(let i=0; i<segments; i++) {
+                    ctx.fillStyle = (i % 2 === 0) ? '#C0392B' : '#ECF0F1';
+                    ctx.beginPath();
+                    ctx.moveTo(x-10 + (i*segW), y-30);
+                    ctx.lineTo(x-10 + ((i+1)*segW), y-30);
+                    // Scalloped bottom
+                    ctx.quadraticCurveTo(x-10 + (i*segW) + (segW/2), y-10, x-10 + (i*segW), y-10); 
+                    // Wait, simple trapezoid first
+                    ctx.lineTo(x-10 + ((i+1)*segW), y+20);
+                    ctx.quadraticCurveTo(x-10 + (i*segW) + (segW/2), y+25, x-10 + (i*segW), y+20);
+                    ctx.fill();
+                }
+
+                // Pitcher (Glass effect)
+                ctx.save();
+                ctx.translate(x+80, y+20);
+                // Liquid
+                let fillH = (this.pitcherCups / 10) * 40;
+                if(fillH > 0) {
+                    ctx.fillStyle = 'rgba(241, 196, 15, 0.9)'; // Lemonade color
+                    ctx.fillRect(5, 50 - fillH, 30, fillH);
+                }
+                // Glass Container
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(5, 10, 30, 40);
+                // Reflection highlight
+                ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                ctx.fillRect(8, 15, 4, 30);
+                ctx.restore();
+
+                // Sign
+                ctx.fillStyle = '#FEF9E7';
+                ctx.strokeStyle = '#795548';
+                ctx.lineWidth = 4;
+                ctx.fillRect(x+30, y+100, 120, 40);
+                ctx.strokeRect(x+30, y+100, 120, 40);
+                ctx.fillStyle = '#2C3E50';
+                ctx.font = 'bold 24px Fredoka';
+                ctx.fillText(`${this.game.recipe.price}¢`, x+75, y+128);
+
+                // SOLD OUT SIGN
+                if (this.game.inventory.cups <= 0 || (this.pitcherCups <= 0 && (this.game.inventory.lemons < this.game.recipe.lemons || this.game.inventory.sugar < this.game.recipe.sugar))) {
+                     ctx.save();
+                     ctx.translate(x+90, y+40);
+                     ctx.rotate(Math.sin(this.frame * 0.05) * 0.1); // Slight swing
+                     ctx.fillStyle = '#c0392b';
+                     ctx.fillRect(-60, 0, 120, 50);
+                     ctx.strokeStyle = 'white';
+                     ctx.lineWidth = 2;
+                     ctx.strokeRect(-60, 0, 120, 50);
+                     
+                     ctx.fillStyle = 'white';
+                     ctx.font = 'bold 24px Fredoka';
+                     ctx.textAlign = 'center';
+                     ctx.fillText("SOLD OUT", 0, 33);
+                     ctx.restore();
+                }
+            }
+
+            drawRain() {
+                const ctx = this.ctx;
+                ctx.strokeStyle = 'rgba(174, 194, 224, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                this.raindrops.forEach(drop => {
+                    ctx.moveTo(drop.x, drop.y);
+                    ctx.lineTo(drop.x, drop.y + drop.len);
+                });
+                ctx.stroke();
+            }
+
+            drawDog(x, y) {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(x, y);
+                // Tail wag
+                let tailWag = Math.sin(this.frame * 0.2) * 5;
+                ctx.strokeStyle = '#D35400';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(-10, 0);
+                ctx.quadraticCurveTo(-20, -10 + tailWag, -25, 0);
+                ctx.stroke();
+
+                // Body
+                ctx.fillStyle = '#E67E22';
+                ctx.beginPath();
+                ctx.ellipse(0, 5, 20, 10, 0, 0, Math.PI*2);
+                ctx.fill();
+                // Head
+                ctx.beginPath();
+                ctx.arc(15, -5, 12, 0, Math.PI*2);
+                ctx.fill();
+                // Ear
+                ctx.beginPath();
+                ctx.ellipse(15, -5, 4, 8, 0.5, 0, Math.PI*2);
+                ctx.fill();
+                // Legs
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#E67E22';
+                ctx.beginPath(); ctx.moveTo(-10, 10); ctx.lineTo(-10, 20); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(10, 10); ctx.lineTo(10, 20); ctx.stroke();
+                ctx.restore();
+            }
+
+            drawCat(x, y) {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(x, y);
+                // Body
+                ctx.fillStyle = '#BDC3C7';
+                ctx.beginPath();
+                ctx.ellipse(0, 5, 15, 8, 0, 0, Math.PI*2);
+                ctx.fill();
+                // Head
+                ctx.beginPath();
+                ctx.arc(12, -2, 9, 0, Math.PI*2);
+                ctx.fill();
+                // Ears
+                ctx.beginPath();
+                ctx.moveTo(8, -8); ctx.lineTo(12, -15); ctx.lineTo(16, -8);
+                ctx.fill();
+                // Tail
+                ctx.strokeStyle = '#BDC3C7';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-15, 5);
+                ctx.quadraticCurveTo(-20, -5, -15, -10);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            drawAgents() {
+                // Simple depth sorting so characters lower on screen draw in front
+                const sortedAgents = [...this.agents].sort((a, b) => a.y - b.y);
+                for (let agent of sortedAgents) {
+                    this.drawAgent(agent);
+                }
+            }
+
+            drawAgent(agent) {
+                const ctx = this.ctx;
+                const x = agent.x;
+                const y = agent.y;
+                
+                ctx.save();
+                
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                ctx.beginPath();
+                ctx.ellipse(x, y+5, 10, 3, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // LEGS
+                let legSwing = Math.sin(agent.walkFrame * 0.2) * 10;
+                if (agent.state === 'buying') legSwing = 0;
+                
+                ctx.strokeStyle = '#2C3E50'; // Dark pants
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                
+                // Left Leg
+                ctx.beginPath();
+                ctx.moveTo(x-3, y-15);
+                ctx.lineTo(x-3 - (legSwing*0.5), y);
+                ctx.stroke();
+                
+                // Right Leg
+                ctx.beginPath();
+                ctx.moveTo(x+3, y-15);
+                ctx.lineTo(x+3 + (legSwing*0.5), y);
+                ctx.stroke();
+
+                // BODY
+                ctx.fillStyle = agent.shirt;
+                ctx.beginPath();
+                ctx.roundRect(x-10, y-40, 20, 28, 5);
+                ctx.fill();
+
+                // ARMS
+                let armSwing = Math.sin(agent.walkFrame * 0.2) * 8;
+                if (agent.state === 'buying') armSwing = 0;
+                
+                ctx.strokeStyle = agent.skin;
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                // Arm
+                ctx.moveTo(x, y-35);
+                ctx.quadraticCurveTo(x + 15, y-25 - armSwing, x + 5 + armSwing, y-15);
+                ctx.stroke();
+
+                // HEAD
+                ctx.fillStyle = agent.skin;
+                ctx.beginPath();
+                ctx.arc(x, y-45, 12, 0, Math.PI*2);
+                ctx.fill();
+
+                // Face
+                ctx.fillStyle = '#333';
+                // Eyes
+                ctx.beginPath(); ctx.arc(x+4, y-48, 1.5, 0, Math.PI*2); ctx.fill();
+                // Smile (if happy/neutral)
+                if(agent.decision !== 'too_expensive') {
+                    ctx.beginPath();
+                    ctx.arc(x+4, y-45, 3, 0, Math.PI, false);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            // --- FLOATING TEXT SYSTEM ---
+            drawFloatingTexts() {
+                const ctx = this.ctx;
+                ctx.font = 'bold 20px Fredoka';
+                ctx.textAlign = 'center';
+                
+                for(let i = this.floatingTexts.length - 1; i >= 0; i--) {
+                    let ft = this.floatingTexts[i];
+                    
+                    ctx.globalAlpha = ft.life;
+                    ctx.fillStyle = ft.color;
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 3;
+                    
+                    ctx.strokeText(ft.text, ft.x, ft.y);
+                    ctx.fillText(ft.text, ft.x, ft.y);
+                    
+                    // Animate
+                    ft.y -= 1;
+                    ft.life -= 0.02;
+                    
+                    if(ft.life <= 0) {
+                        this.floatingTexts.splice(i, 1);
+                    }
+                }
+                ctx.globalAlpha = 1.0;
+            }
+
+            getSpawnRate() {
+                // Tuned based on user data:
+                // Target ~1800 frames total (12 hours * 150 frames)
+                // 52F (Overcast 1.0) -> 90 customers. Rate needed: 0.05
+                // 91F (Overcast 1.0) -> 112 customers. Rate needed: 0.062
+                
+                // Formula: base + (temp * scaling)
+                // Let's use a base rate of 0.055 and scale with temp gently
+                
+                // 50F factor: 0.9
+                // 90F factor: 1.15
+                let tempFactor = 0.6 + (this.game.weather.actualTemp / 100) * 0.6;
+                
+                let weatherFactor = this.game.weather.demandMod;
+                
+                // 0.055 * 0.9 (50F) * 1.0 (Cloudy) * 1800 = ~89 customers. Matches 52F/55F data.
+                // 0.055 * 1.15 (90F) * 1.0 (Cloudy) * 1800 = ~114 customers. Matches 91F data.
+                let baseRate = 0.055;
+                
+                // Adjust for 8 hour day instead of 12 (increase density to keep total count similar)
+                // 12/8 = 1.5x multiplier
+                baseRate *= 1.5; 
+                // Bump again slightly for user feedback "still small"
+                baseRate *= 1.2;
+
+                let rate = baseRate * tempFactor * weatherFactor;
+                
+                // Peak hours boost
+                if (this.hour >= 11 && this.hour <= 13) rate *= 1.3;
+                if (this.hour >= 15 && this.hour <= 17) rate *= 1.2;
+                
+                return rate / this.speedMultiplier; 
+            }
+
+            spawnAgent() {
+                this.totalCustomers++;
+                
+                // Expanded Color Palettes
+                const shirtColors = [
+                    '#e74c3c', '#3498db', '#f1c40f', '#9b59b6', '#2ecc71', // Originals
+                    '#e67e22', '#1abc9c', '#34495e', '#ecf0f1', '#95a5a6', // New: Orange, Teal, Navy, White, Grey
+                    '#e84393', '#fd79a8', '#00cec9', '#6c5ce7', '#d63031'  // New: Pink, Light Pink, Cyan, Purple, Red
+                ];
+                
+                // More realistic skin tones
+                const skinColors = [
+                    '#ffdbac', // Light
+                    '#f1c27d', // Medium Light
+                    '#e0ac69', // Medium
+                    '#c68642', // Tan
+                    '#8d5524', // Dark
+                    '#5e3c23', // Very Dark
+                    '#3b2416'  // Deep Dark
+                ];
+                
+                this.agents.push({
+                    x: -50,
+                    y: 480 + Math.random() * 30, // Adjusted Y for perspective path
+                    baseSpeed: 2 + Math.random() * 1.5,
+                    shirt: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+                    skin: skinColors[Math.floor(Math.random() * skinColors.length)],
+                    state: 'walking',
+                    walkFrame: 0,
+                    waitTime: 0,
+                    decision: null
+                });
+            }
+
+            updateAgents() {
+                for (let i = this.agents.length - 1; i >= 0; i--) {
+                    let agent = this.agents[i];
+                    agent.walkFrame++;
+                    
+                    // Effective speed
+                    let effectiveSpeed = agent.baseSpeed; 
+                    if(agent.x < 0) agent.x += effectiveSpeed; // Entrance walk
+                    else {
+                        if (agent.state === 'walking') {
+                            agent.x += effectiveSpeed;
+                            if (agent.x > 330 && agent.x < 370 && !agent.decision) {
+                                this.processDecision(agent);
+                            }
+                        } 
+                        else if (agent.state === 'buying') {
+                            agent.waitTime++;
+                            if (agent.waitTime > 40) { 
+                                this.completeSale(agent);
+                                agent.state = 'leaving';
+                            }
+                        }
+                        else if (agent.state === 'leaving') {
+                            agent.x += effectiveSpeed;
+                        }
+                    }
+
+                    if (agent.x > this.width + 50) {
+                        this.agents.splice(i, 1);
+                    }
+                }
+            }
+
+            processDecision(agent) {
+                // 1. Can we serve?
+                if (this.game.inventory.cups <= 0 || (this.pitcherCups <= 0 && !this.makePitcher())) {
+                    agent.decision = "ignored"; 
+                    this.showFeedback("Sold Out!", agent.x, agent.y - 80, "#c0392b");
+                    return;
+                }
+
+                // 2. Price Logic
+                let maxPrice = 35; 
+                if (this.game.weather.actualTemp > 90) maxPrice += 15;
+                else if (this.game.weather.actualTemp > 80) maxPrice += 5;
+                else if (this.game.weather.actualTemp < 60) maxPrice -= 10;
+                maxPrice += (Math.random() * 10 - 5);
+
+                if (this.game.recipe.price > maxPrice) {
+                    agent.decision = "too_expensive";
+                    this.showFeedback("Too expensive!", agent.x, agent.y - 80, "#c0392b");
+                } else {
+                    agent.state = 'buying';
+                    agent.decision = 'buying';
+                }
+            }
+
+            completeSale(agent) {
+                if (this.game.inventory.cups > 0) {
+                    if(this.game.recipe.ice > 0 && this.game.inventory.ice < this.game.recipe.ice) {
+                         this.showFeedback("No Ice!", 350, 300, "#3498db");
+                         agent.state = 'leaving';
+                         return;
+                    }
+
+                    this.game.inventory.cups--;
+                    this.game.inventory.ice -= this.game.recipe.ice;
+                    if(this.game.inventory.ice < 0) this.game.inventory.ice = 0;
+
+                    this.pitcherCups--;
+                    this.sold++;
+                    this.revenue += (this.game.recipe.price / 100);
+                    
+                    document.getElementById('sim-sold').textContent = this.sold;
+                    this.updateRealTimeStats();
+                    
+                    // Floating text for sale
+                    this.floatingTexts.push({
+                        x: agent.x, 
+                        y: agent.y - 60,
+                        text: `+${this.game.recipe.price}¢`,
+                        life: 1.0,
+                        color: '#2ecc71'
+                    });
+                    
+                    this.judgeTaste(agent);
+                } else {
+                    this.showFeedback("Sold Out!", agent.x, agent.y - 80, "#c0392b");
+                    agent.state = 'leaving';
+                }
+            }
+
+            judgeTaste(agent) {
+                const r = this.game.recipe;
+                const temp = this.game.weather.actualTemp;
+                
+                let msg = "Yummy!";
+                let color = "#27ae60";
+
+                let idealIce = temp > 90 ? 5 : (temp > 75 ? 3 : 1);
+                if (r.ice < idealIce - 1) { msg = "Warm!"; color = "#e67e22"; }
+                else if (r.ice > idealIce + 2) { msg = "Too cold!"; color = "#3498db"; }
+
+                let ratio = r.sugar / r.lemons;
+                if (ratio < 0.8) { msg = "Sour!"; color = "#d4ac0d"; } 
+                else if (ratio > 1.3) { msg = "Too sweet!"; color = "#e91e63"; }
+
+                if (r.lemons < 3) { msg = "Watery..."; color = "#7f8c8d"; }
+
+                this.showFeedback(msg, agent.x, agent.y - 80, color);
+            }
+
+            showFeedback(text, x, y, color="black") {
+                if(this.speedMultiplier > 1 && Math.random() > 0.25) return;
+
+                // Create Floating Text Object
+                this.floatingTexts.push({
+                    x: x, 
+                    y: y,
+                    text: text,
+                    life: 1.0,
+                    color: color
+                });
+            }
+
+            updateTimeUI() {
+                let displayHour = this.hour;
+                let ampm = "AM";
+                if (displayHour >= 12) {
+                    ampm = "PM";
+                    if (displayHour > 12) displayHour -= 12;
+                }
+                
+                const minStr = String(this.minute).padStart(2, '0');
+                document.getElementById('sim-time').textContent = `${displayHour}:${minStr} ${ampm}`;
+            }
+
+            finish() {
+                this.active = false;
+                this.game.endDay({
+                    revenue: this.revenue,
+                    cupsSold: this.sold,
+                    totalCustomers: this.totalCustomers
+                });
+            }
+        }
+
+        // --- INIT ---
+        const game = new Game();
+
+    </script>
+</body>
+</html>

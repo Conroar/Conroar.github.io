@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fraction Rush: Ultimate</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Orbitron:wght@400;700;900&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            font-family: 'Orbitron', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 100vh;
+            max-height: 900px;
+            background: #000;
+            overflow: hidden;
+            box-shadow: 0 0 80px rgba(0, 191, 255, 0.2);
+            border: 2px solid #333;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* UI Overlays */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        /* Top HUD */
+        #topBar {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            transition: transform 0.1s;
+        }
+
+        #hudStats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .hud-pill {
+            font-family: 'Black Ops One', cursive;
+            font-size: 20px;
+            color: #FFF;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 20px;
+            border-radius: 30px;
+            border: 2px solid #00E5FF;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+            text-shadow: 0 0 5px #00E5FF;
+        }
+
+        #comboContainer {
+            display: none;
+            color: #FFEA00;
+            border-color: #FFEA00;
+            box-shadow: 0 0 15px rgba(255, 234, 0, 0.3);
+            animation: pulse 0.4s infinite alternate;
+        }
+
+        /* Active Powerup Indicator */
+        #powerupIndicator {
+            display: none;
+            color: #FFF;
+            border: 2px solid #FFF;
+            background: rgba(255,255,255,0.2);
+            text-transform: uppercase;
+            font-size: 16px;
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+
+        #questionBox {
+            font-family: 'Black Ops One', cursive;
+            font-size: 56px;
+            color: #FFF;
+            background: linear-gradient(180deg, #2b2b2b 0%, #1a1a1a 100%);
+            padding: 15px 50px;
+            border-radius: 15px;
+            box-shadow: 0 0 0 4px #000, 0 0 0 8px #FF0055, 0 10px 30px rgba(255, 0, 85, 0.4);
+            transform: perspective(500px) rotateX(10deg);
+            text-shadow: 3px 3px 0 rgba(0,0,0,1), 0 0 20px #FF0055;
+            margin-top: 10px;
+            position: relative;
+        }
+        
+        #questionBox::after {
+            content: "MISSION TARGET";
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #FF0055;
+            font-size: 12px;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        /* Accessible Font Override Class */
+        .readable-font #questionBox, 
+        .readable-font .hud-pill, 
+        .readable-font .menu-btn,
+        .readable-font h1,
+        .readable-font #sp-q-text {
+            font-family: Verdana, sans-serif !important;
+            letter-spacing: 1px !important;
+            text-shadow: 2px 2px 0 #000 !important; /* Simplified shadow */
+        }
+
+        #scratchpadBtn {
+            pointer-events: auto;
+            background: linear-gradient(90deg, #FF9800, #FF5722);
+            color: white;
+            border: none;
+            padding: 20px 50px;
+            font-size: 24px;
+            font-weight: 900;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #BF360C, 0 10px 20px rgba(255, 87, 34, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.1s;
+            margin-bottom: 40px;
+            align-self: center;
+            font-family: 'Black Ops One', cursive;
+            border: 2px solid white;
+        }
+        #scratchpadBtn:active { transform: translateY(5px); box-shadow: 0 0 0 #BF360C; }
+
+        /* Screens */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 200;
+            pointer-events: auto;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: opacity 0.3s;
+        }
+
+        h1 { 
+            font-family: 'Black Ops One', cursive;
+            margin: 0; 
+            color: #00E5FF; 
+            font-size: 64px; 
+            text-shadow: 4px 4px 0 #0091EA, 0 0 30px #00E5FF;
+            letter-spacing: 2px;
+            transform: rotate(-3deg);
+            line-height: 0.9;
+        }
+        
+        .panel {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: -50px; left: -50px; width: 100px; height: 100px;
+            background: rgba(0, 229, 255, 0.3);
+            filter: blur(30px);
+        }
+
+        #menuStats {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 10px;
+            font-family: 'Black Ops One';
+            color: #FFD700;
+            font-size: 20px;
+            text-shadow: 0 0 10px #FFD700;
+        }
+
+        /* Tabs */
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .tab-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #555;
+            color: #aaa;
+            padding: 5px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Orbitron';
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .tab-btn.active {
+            background: #00E5FF;
+            color: #000;
+            box-shadow: 0 0 10px #00E5FF;
+            border-color: #00E5FF;
+        }
+
+        .menu-btn {
+            background: linear-gradient(90deg, #00C853, #64DD17);
+            color: #003300;
+            border: none;
+            padding: 20px 60px;
+            font-size: 28px;
+            font-weight: 900;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #00600F, 0 0 20px #64DD17;
+            text-transform: uppercase;
+            font-family: 'Black Ops One', cursive;
+            transition: transform 0.1s;
+            width: 100%;
+            max-width: 320px;
+            margin-top: 10px;
+        }
+        .menu-btn:active { transform: translateY(6px); box-shadow: 0 0 20px #64DD17; }
+        
+        .menu-btn.secondary {
+            background: linear-gradient(90deg, #2979FF, #448AFF);
+            color: white;
+            box-shadow: 0 6px 0 #0D47A1;
+            margin-top: 15px;
+            font-size: 20px;
+            padding: 15px 40px;
+        }
+
+        .menu-btn.revive {
+            background: linear-gradient(90deg, #FFD700, #FFEA00);
+            color: #333;
+            box-shadow: 0 6px 0 #F57F17;
+        }
+
+        /* Character/Trail Select */
+        .char-grid {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .char-card {
+            background: rgba(0,0,0,0.5);
+            border: 2px solid #444;
+            border-radius: 12px;
+            padding: 10px;
+            cursor: pointer;
+            width: 90px;
+            height: 130px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .char-card.selected {
+            border-color: #00E5FF;
+            background: linear-gradient(180deg, rgba(0, 229, 255, 0.1), rgba(0, 229, 255, 0.3));
+            transform: scale(1.15) translateY(-5px);
+            box-shadow: 0 0 20px #00E5FF;
+        }
+        .char-card.locked { opacity: 0.7; border-color: #555; }
+        .char-card.locked .char-preview { filter: grayscale(100%); }
+        .char-preview { width: 40px; height: 40px; margin-bottom: 10px; border-radius: 5px; }
+        
+        .price-tag {
+            font-size: 10px;
+            background: #FFD700;
+            color: black;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+        .lock-icon { font-size: 20px; margin-bottom: 5px; }
+
+        /* Settings/Accessibility Toggles */
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .setting-label { color: #ddd; font-weight: bold; }
+        .setting-toggle {
+            cursor: pointer;
+            width: 50px;
+            height: 24px;
+            background: #444;
+            border-radius: 12px;
+            position: relative;
+            transition: background 0.2s;
+        }
+        .setting-toggle.on { background: #00E676; }
+        .setting-toggle::after {
+            content: '';
+            position: absolute;
+            left: 2px; top: 2px;
+            width: 20px; height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: left 0.2s;
+        }
+        .setting-toggle.on::after { left: 28px; }
+
+        /* Missions */
+        .mission-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+            border-left: 4px solid #555;
+            padding: 8px;
+            margin-bottom: 5px;
+            font-size: 12px;
+            text-align: left;
+        }
+        .mission-row.done { border-left-color: #00E676; opacity: 0.5; text-decoration: line-through; }
+        .mission-desc { flex-grow: 1; color: #ddd; }
+        .mission-reward { color: #FFD700; font-weight: bold; margin-left: 10px; }
+
+        /* Mission Notification */
+        #missionNotify {
+            position: absolute;
+            top: 100px;
+            width: 100%;
+            text-align: center;
+            pointer-events: none;
+            display: none;
+            z-index: 300;
+        }
+        .mission-banner {
+            display: inline-block;
+            background: linear-gradient(90deg, #00C853, #00E676);
+            color: #003300;
+            padding: 10px 30px;
+            font-family: 'Black Ops One';
+            font-size: 24px;
+            border-radius: 50px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            animation: slideDown 0.5s ease-out;
+        }
+        @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Game Over Specifics */
+        .result-box {
+            text-align: left;
+            font-family: 'Roboto', monospace;
+            font-size: 18px;
+            color: #eee;
+            background: rgba(0,0,0,0.6);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 6px solid #F44336;
+        }
+        .math-correct { color: #00E676; font-weight: 900; font-size: 1.2em; }
+        .math-wrong { color: #FF5252; text-decoration: line-through; opacity: 0.8; }
+        
+        .stats-grid { display: flex; justify-content: space-around; margin-bottom: 15px; }
+        .stat-item { text-align: center; }
+        .stat-label { font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
+        .stat-value { font-size: 32px; color: white; font-weight: 900; font-family: 'Black Ops One'; }
+
+        /* Scratchpad */
+        #scratchpadOverlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 100;
+            flex-direction: column;
+            pointer-events: auto;
+        }
+        #scratchpadHeader {
+            padding: 15px;
+            background: #212121;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid #FF9800;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        #sp-q-container { background: #fff; padding: 20px; text-align: center; border-bottom: 1px solid #ccc; }
+        #sp-q-text { font-size: 64px; font-weight: 900; color: #333; font-family: 'Black Ops One', monospace; }
+
+        /* Top Right Settings Button */
+        #settingsBtn {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #fff;
+            color: white;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 300;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <div id="settingsBtn" onclick="openSettings()">⚙️</div>
+    <div id="missionNotify"><div class="mission-banner">MISSION COMPLETE! +100⭐</div></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div class="ui-layer" id="gameHUD" style="display: none;">
+        <div id="topBar">
+            <div id="hudStats">
+                <div class="hud-pill">⭐ <span id="starHUD">0</span></div>
+                <div class="hud-pill">SCORE: <span id="scoreHUD">000000</span></div>
+                <div class="hud-pill" id="comboContainer">COMBO <span id="comboHUD">x1</span></div>
+                <div class="hud-pill" id="powerupIndicator"></div>
+            </div>
+            <div id="questionBox">1/2 &times; 1/4</div>
+        </div>
+        <button id="scratchpadBtn" onclick="toggleScratchpad()">✏️ SCRATCHPAD</button>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="menuScreen" class="screen">
+        <h1>FRACTION<br>RUSH</h1>
+        <div style="font-size: 24px; font-weight:900; color: #FFF; margin-top: 5px; letter-spacing: 5px; text-shadow: 0 0 10px #00E5FF;">ULTIMATE</div>
+        
+        <div class="panel">
+            <div id="menuStats"><span>⭐ <span id="menuTotalStars">0</span></span></div>
+            <div style="color: #00E5FF; font-weight: bold; margin-bottom: 10px; font-size: 14px; letter-spacing: 1px;">ACTIVE MISSIONS</div>
+            <div id="missionList">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <div class="panel" style="margin-top:0;">
+            <div style="color: #00E5FF; font-weight: bold; margin-bottom: 10px; font-size: 14px; letter-spacing: 1px;">GARAGE</div>
+            <div class="tab-container">
+                <div class="tab-btn active" id="tabCars" onclick="switchTab('CARS')">VEHICLES</div>
+                <div class="tab-btn" id="tabTrails" onclick="switchTab('TRAILS')">TRAILS</div>
+            </div>
+            <div class="char-grid" id="charGrid"></div>
+            <div id="buyMessage" style="height: 15px; color: #FFD700; font-size: 10px;"></div>
+        </div>
+
+        <button class="menu-btn" onclick="startGame()">START ENGINE</button>
+        <div style="margin-top: 15px; font-size: 14px; color: #888; font-weight: bold;">BEST RUN: <span id="menuHighScore" style="color:white;">0</span></div>
+    </div>
+
+    <!-- Settings / Accessibility Screen -->
+    <div id="settingsScreen" class="screen" style="display: none;">
+        <h2 style="color: #FFF; margin-bottom: 20px; font-size: 32px;">SETTINGS</h2>
+        <div class="panel" style="width: 300px;">
+            <div class="setting-row">
+                <div class="setting-label">Music</div>
+                <div class="setting-toggle on" id="toggleMusic" onclick="toggleSetting('music')"></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">Sound FX</div>
+                <div class="setting-toggle on" id="toggleSfx" onclick="toggleSetting('sfx')"></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">Reduced Motion</div>
+                <div class="setting-toggle" id="toggleMotion" onclick="toggleSetting('reducedMotion')"></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">Readable Font</div>
+                <div class="setting-toggle" id="toggleFont" onclick="toggleSetting('readableFont')"></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">High Contrast</div>
+                <div class="setting-toggle" id="toggleContrast" onclick="toggleSetting('highContrast')"></div>
+            </div>
+            <!-- Cheat Codes -->
+            <div class="setting-row" style="margin-top:10px; border-top:1px solid rgba(255,255,255,0.2); padding-top:15px; flex-direction:column; align-items:flex-start;">
+                <div class="setting-label" style="margin-bottom:5px;">Secret Code</div>
+                <div style="display:flex; width:100%; gap:5px;">
+                    <input type="text" id="cheatInput" placeholder="Enter Code" style="flex-grow:1; padding:5px; border-radius:4px; border:none; font-family:'Orbitron';">
+                    <button onclick="redeemCode()" style="background:#00E5FF; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">OK</button>
+                </div>
+            </div>
+        </div>
+        <button class="menu-btn secondary" onclick="closeSettings()">BACK</button>
+    </div>
+
+    <!-- Revive Screen -->
+    <div id="reviveScreen" class="screen" style="display: none;">
+        <h1 style="color: #FFEA00; font-size: 48px;">CRITICAL DAMAGE!</h1>
+        <div class="panel" style="background: rgba(50, 0, 0, 0.9);">
+            <div style="color: #ddd; font-size: 18px; margin-bottom: 20px;">Use nanobots to repair?</div>
+            <div style="font-size: 48px; margin-bottom: 20px;">❤️</div>
+            <button class="menu-btn revive" onclick="attemptRevive()">REVIVE (50 ⭐)</button>
+            <button class="menu-btn secondary" onclick="declineRevive()">NO THANKS</button>
+        </div>
+    </div>
+
+    <!-- Game Over -->
+    <div id="gameOverScreen" class="screen" style="display: none;">
+        <h1 style="font-size: 64px; color: #FF1744; text-shadow: 0 0 30px #FF1744;">CRASHED!</h1>
+        
+        <div class="panel" style="background: rgba(30,30,30,0.95);">
+            <div id="newHighScoreLabel" style="color: #00E676; font-weight: 900; font-size: 20px; display: none; margin-bottom: 10px; animation: pulse 0.5s infinite; text-shadow: 0 0 10px #00E676;">🏆 NEW HIGH SCORE! 🏆</div>
+            
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Score</div>
+                    <div id="goScore" class="stat-value" style="color: #FFD700;">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Stars</div>
+                    <div id="goStars" class="stat-value" style="color: #00E5FF;">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Correct</div>
+                    <div id="goCorrectCount" class="stat-value" style="color: #00E676;">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div style="font-weight: 900; color: #fff; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Analyze Mistake</div>
+            <div class="result-box">
+                <div style="margin-bottom: 5px; color: #aaa; font-size: 14px;">The Problem:</div>
+                <div style="font-size: 24px; font-weight: bold;"><span id="goProblem" style="color: white;"></span></div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <div style="flex: 1;">
+                        <div style="font-size: 12px; color: #FF5252;">YOU CHOSE</div>
+                        <div id="goWrong" class="math-wrong" style="font-size: 20px;"></div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 12px; color: #00E676;">CORRECT</div>
+                        <div id="goCorrect" class="math-correct" style="font-size: 20px;"></div>
+                    </div>
+                </div>
+                
+                <hr style="border-color: #444; margin: 15px 0;">
+                <div id="goExplanation" style="font-size: 16px; color: #ddd; line-height: 1.4;"></div>
+            </div>
+        </div>
+
+        <button class="menu-btn" onclick="startGame()">RACE AGAIN</button>
+        <button class="menu-btn secondary" onclick="returnToMenu()">MAIN MENU</button>
+    </div>
+
+    <!-- Scratchpad -->
+    <div id="scratchpadOverlay">
+        <div id="scratchpadHeader">
+            <span style="font-size: 20px; font-weight: 900; color: #FF9800;">⚡ TIME DILATION ACTIVE</span>
+            <div>
+                <button onclick="clearScratchpad()" style="padding: 10px 20px; background: #d32f2f; border:none; color:white; border-radius:6px; cursor:pointer; font-weight:bold; margin-right: 10px;">CLEAR</button>
+                <button onclick="toggleScratchpad()" style="padding: 10px 20px; background: #4CAF50; border:none; color:white; border-radius:6px; cursor:pointer; font-weight:bold;">RESUME RACE</button>
+            </div>
+        </div>
+        <div id="sp-q-container">
+            <div style="font-size: 14px; color: #666; text-transform:uppercase; font-weight: bold; letter-spacing: 1px;">Solve for the answer</div>
+            <div id="sp-q-text"></div>
+        </div>
+        <canvas id="scratchpadCanvas"></canvas>
+    </div>
+</div>
+
+<script>
+    // --- Configuration & Storage ---
+    const CHARACTERS = [
+        { id: 'racer', name: 'TURBO', color: '#F44336', bodyType: 'car', cost: 0 },
+        { id: 'hover', name: 'NEON', color: '#00E5FF', bodyType: 'hover', cost: 500 },
+        { id: 'tank',  name: 'TITAN',  color: '#76FF03', bodyType: 'tank', cost: 1000 }
+    ];
+
+    const TRAILS = [
+        { id: 'smoke', name: 'SMOKE', color: '#aaa', type: 'classic', cost: 0 },
+        { id: 'matrix', name: 'MATRIX', color: '#0f0', type: 'binary', cost: 200 },
+        { id: 'magma', name: 'MAGMA', color: '#f00', type: 'fire', cost: 400 },
+        { id: 'rainbow', name: 'RAINBOW', color: 'rainbow', type: 'rainbow', cost: 600 },
+        { id: 'void', name: 'VOID', color: '#222', type: 'void', cost: 800 }
+    ];
+
+    const MISSION_TYPES = [
+        { id: 'stars', desc: "Collect {N} Stars", target: 20, reward: 50, check: (s) => starsCollected >= s.target },
+        { id: 'score', desc: "Score {N} Points", target: 2000, reward: 100, check: (s) => score >= s.target },
+        { id: 'combo', desc: "Reach {N}x Combo", target: 5, reward: 150, check: (s) => combo >= s.target }
+    ];
+
+    let savedData = JSON.parse(localStorage.getItem('fractionRushSave')) || { 
+        highScore: 0, 
+        totalStars: 0, 
+        unlockedChars: ['racer'],
+        unlockedTrails: ['smoke'],
+        selectedTrail: 'smoke',
+        missions: [],
+        settings: {
+            music: true,
+            sfx: true,
+            reducedMotion: false,
+            readableFont: false,
+            highContrast: false
+        }
+    };
+
+    if(savedData.missions.length === 0) regenerateMissions();
+    if(!savedData.settings) savedData.settings = { music: true, sfx: true, reducedMotion: false, readableFont: false, highContrast: false };
+
+    let selectedCharIndex = 0;
+    let selectedTrailIndex = 0;
+    let currentShopTab = 'CARS';
+
+    // --- Audio & Voice System ---
+    const AudioEngine = {
+        ctx: null, masterGain: null, oscillator: null,
+        init: function() {
+            if (this.ctx) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioContext();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.gain.value = 0.3;
+            this.masterGain.connect(this.ctx.destination);
+        },
+        startEngine: function() {
+            if (!this.ctx || !savedData.settings.sfx) return;
+            this.oscillator = this.ctx.createOscillator();
+            this.oscillator.type = 'sawtooth';
+            this.oscillator.frequency.value = 100;
+            const engineGain = this.ctx.createGain();
+            engineGain.gain.value = 0.1;
+            this.oscillator.connect(engineGain);
+            engineGain.connect(this.masterGain);
+            this.oscillator.start();
+            this.playMusic();
+        },
+        updateEngine: function(speed) {
+            if (this.oscillator && savedData.settings.sfx) {
+                this.oscillator.frequency.setTargetAtTime(100 + (speed * 10), this.ctx.currentTime, 0.1);
+            }
+        },
+        stopEngine: function() {
+            if (this.oscillator) { this.oscillator.stop(); this.oscillator = null; }
+            if (this.musicInterval) { clearInterval(this.musicInterval); this.musicInterval = null; }
+        },
+        playTone: function(freq, type, duration, vol=0.5) {
+            if (!this.ctx || !savedData.settings.sfx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+            osc.start();
+            osc.stop(this.ctx.currentTime + duration);
+        },
+        playCollect: function() { this.playTone(800, 'sine', 0.1); },
+        playPowerup: function() { this.playTone(400, 'square', 0.3); this.playTone(600, 'square', 0.3); },
+        playCrash: function() { this.playTone(100, 'sawtooth', 0.5); this.playTone(80, 'square', 0.5); },
+        playMusic: function() {
+            if(this.musicInterval) clearInterval(this.musicInterval);
+            let beat = 0;
+            this.musicInterval = setInterval(() => {
+                if(!savedData.settings.music || state !== 'PLAY') return;
+                const time = this.ctx.currentTime;
+                if(beat % 4 === 0) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.frequency.setValueAtTime(150, time);
+                    osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+                    gain.gain.setValueAtTime(0.7, time);
+                    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+                    osc.connect(gain); gain.connect(this.masterGain);
+                    osc.start(time); osc.stop(time + 0.5);
+                }
+                if(beat % 2 === 1) { this.playTone(1000, 'triangle', 0.05, 0.1); }
+                beat++;
+            }, 250);
+        },
+        speak: function(text) {
+            if (!savedData.settings.sfx || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.2; utterance.pitch = 1.1; utterance.volume = 1.0;
+            const voices = window.speechSynthesis.getVoices();
+            const robotVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Desktop'));
+            if(robotVoice) utterance.voice = robotVoice;
+            window.speechSynthesis.speak(utterance);
+        }
+    };
+
+    // --- Settings Logic ---
+    let preSettingsState = null;
+
+    function openSettings() {
+        preSettingsState = state; // Save where we came from
+        
+        if(state === 'PLAY') {
+            if(animId) cancelAnimationFrame(animId);
+            AudioEngine.stopEngine();
+            document.getElementById('gameHUD').style.display = 'none';
+        } else if (state === 'MENU') {
+            document.getElementById('menuScreen').style.display = 'none';
+        } else if (state === 'GAMEOVER') {
+            document.getElementById('gameOverScreen').style.display = 'none';
+        } else if (state === 'REVIVE') {
+            document.getElementById('reviveScreen').style.display = 'none';
+        }
+
+        document.getElementById('settingsScreen').style.display = 'flex';
+        updateSettingsUI();
+    }
+
+    function closeSettings() {
+        document.getElementById('settingsScreen').style.display = 'none';
+        applySettings();
+        saveGame();
+
+        // Restore correct screen
+        if(preSettingsState === 'MENU') {
+            document.getElementById('menuScreen').style.display = 'flex';
+            // Update Menu Stats
+            document.getElementById('menuTotalStars').innerText = savedData.totalStars;
+        } else if (preSettingsState === 'PLAY') {
+            document.getElementById('gameHUD').style.display = 'flex';
+            AudioEngine.startEngine();
+            gameLoop();
+        } else if (preSettingsState === 'GAMEOVER') {
+            document.getElementById('gameOverScreen').style.display = 'flex';
+        } else if (preSettingsState === 'REVIVE') {
+            document.getElementById('reviveScreen').style.display = 'flex';
+        }
+    }
+
+    function toggleSetting(key) {
+        savedData.settings[key] = !savedData.settings[key];
+        updateSettingsUI();
+    }
+
+    function updateSettingsUI() {
+        const s = savedData.settings;
+        document.getElementById('toggleMusic').className = 'setting-toggle ' + (s.music ? 'on' : '');
+        document.getElementById('toggleSfx').className = 'setting-toggle ' + (s.sfx ? 'on' : '');
+        document.getElementById('toggleMotion').className = 'setting-toggle ' + (s.reducedMotion ? 'on' : '');
+        document.getElementById('toggleFont').className = 'setting-toggle ' + (s.readableFont ? 'on' : '');
+        document.getElementById('toggleContrast').className = 'setting-toggle ' + (s.highContrast ? 'on' : '');
+    }
+
+    function applySettings() {
+        if(savedData.settings.readableFont) document.body.classList.add('readable-font');
+        else document.body.classList.remove('readable-font');
+    }
+
+    // Cheat Code Logic
+    function redeemCode() {
+        const input = document.getElementById('cheatInput');
+        const code = input.value.trim().toLowerCase();
+        
+        if (code === 'bridges') {
+            savedData.totalStars += 500;
+            alert("CHEAT ACTIVATED: +500 Stars!");
+        } else if (code === 'techpara') {
+            CHARACTERS.forEach(c => {
+                if(!savedData.unlockedChars.includes(c.id)) savedData.unlockedChars.push(c.id);
+            });
+            TRAILS.forEach(t => {
+                if(!savedData.unlockedTrails.includes(t.id)) savedData.unlockedTrails.push(t.id);
+            });
+            alert("CHEAT ACTIVATED: Everything Unlocked!");
+        } else {
+            alert("Invalid Code");
+            return;
+        }
+        
+        saveGame();
+        input.value = "";
+    }
+
+    // --- Biome System ---
+    const BIOMES = [
+        { score: 0, name: "Neon City", skyTop: "#021a40", skyBot: "#0d47a1", floor: "#2a2a2a", line: "#00B0FF" },
+        { score: 2000, name: "Toxic Zone", skyTop: "#1B5E20", skyBot: "#4CAF50", floor: "#1a2e1a", line: "#76FF03" },
+        { score: 5000, name: "Magma Core", skyTop: "#B71C1C", skyBot: "#F44336", floor: "#2e1a1a", line: "#FF3D00" },
+        { score: 10000, name: "Deep Space", skyTop: "#000", skyBot: "#222", floor: "#111", line: "#FFF" }
+    ];
+    // High Contrast Biome
+    const HC_BIOME = { name: "High Contrast", skyTop: "#000", skyBot: "#000", floor: "#111", line: "#FFF" };
+    
+    let currentBiome = BIOMES[0];
+
+    document.getElementById('menuHighScore').innerText = savedData.highScore;
+    document.getElementById('menuTotalStars').innerText = savedData.totalStars;
+    applySettings(); 
+
+    function saveGame() { localStorage.setItem('fractionRushSave', JSON.stringify(savedData)); }
+
+    function regenerateMissions() {
+        savedData.missions = [];
+        for(let i=0; i<3; i++) {
+            const m = MISSION_TYPES[randInt(0, MISSION_TYPES.length-1)];
+            const mission = { ...m, target: m.target + (randInt(0,2) * (m.id==='combo'?1:10)), completed: false };
+            mission.desc = mission.desc.replace('{N}', mission.target);
+            savedData.missions.push(mission);
+        }
+        saveGame();
+    }
+
+    // --- Math Engine ---
+    class Fraction {
+        constructor(n, d) { this.n = n; this.d = d; }
+        multiply(other) { return new Fraction(this.n * other.n, this.d * other.d); }
+        simplify() {
+            const gcd = (a, b) => b ? gcd(b, a % b) : a;
+            const divisor = gcd(this.n, this.d);
+            return new Fraction(this.n / divisor, this.d / divisor);
+        }
+        toString() { return `${this.n}/${this.d}`; }
+    }
+
+    function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function generateProblem(score) {
+        let f1, f2;
+        if (score < 500) { 
+            f1 = new Fraction(1, randInt(2, 5));
+            f2 = new Fraction(1, randInt(2, 5));
+        } else if (score < 1500) { 
+            f1 = new Fraction(randInt(1, 4), randInt(3, 6));
+            f2 = new Fraction(randInt(1, 4), randInt(3, 6));
+        } else { 
+            f1 = new Fraction(randInt(2, 8), randInt(4, 10));
+            f2 = new Fraction(randInt(2, 8), randInt(4, 10));
+        }
+        if (f1.n >= f1.d) f1.d = f1.n + 1;
+        if (f2.n >= f2.d) f2.d = f2.n + 1;
+
+        const correctRaw = f1.multiply(f2);
+        const correct = correctRaw.simplify();
+
+        let distractors = [];
+        let attempts = 0;
+        // Safety Break for infinite loop
+        while (distractors.length < 2 && attempts < 50) {
+            attempts++;
+            let dType = randInt(0, 3);
+            let badF;
+            if (dType === 0) badF = new Fraction(f1.n + f2.n, correct.d);
+            else if (dType === 1) badF = new Fraction(correct.n, correct.d + randInt(1, 5));
+            else badF = new Fraction(correct.n + randInt(-1, 2), correct.d);
+
+            if (badF.n <= 0) badF.n = 1; if (badF.d <= 0) badF.d = 2;
+            badF = badF.simplify();
+            if (badF.toString() !== correct.toString() && !distractors.some(d => d.toString() === badF.toString())) {
+                distractors.push(badF);
+            }
+        }
+        // Emergency Fallback
+        while(distractors.length < 2) {
+             distractors.push(new Fraction(randInt(1,9), randInt(1,9)));
+        }
+
+        const explanation = `
+            <b>1. Multiply Numerators (Tops):</b><br>
+            ${f1.n} × ${f2.n} = ${correctRaw.n}<br><br>
+            <b>2. Multiply Denominators (Bottoms):</b><br>
+            ${f1.d} × ${f2.d} = ${correctRaw.d}<br><br>
+            ${correctRaw.n !== correct.n ? `<b>3. Simplify:</b><br>${correctRaw} ÷ GCD = ${correct}` : ''}
+        `;
+
+        return {
+            qText: `${f1} × ${f2}`,
+            correctObj: correct,
+            answers: shuffle([correct, distractors[0], distractors[1]]),
+            explanation: explanation
+        };
+    }
+
+    // --- Game Engine ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Globals
+    let state = 'MENU';
+    let animId;
+    let cw, ch;
+    const PLAYER_OFFSET_Z = 150; 
+    
+    // Game State
+    let speed = 0;
+    let distance = 0;
+    let score = 0; 
+    let player = { lane: 0, visualLane: 0, tilt: 0 };
+    let gates = [];
+    let stars = [];
+    let powerups = [];
+    let particles = [];
+    let floatingTexts = []; 
+    let speedLines = [];
+    let currentProblem = null;
+    let timeScale = 1.0;
+    let shakeAmt = 0;
+    
+    // Stats & Combo
+    let starsCollected = 0;
+    let correctCount = 0;
+    let combo = 0;
+    let inFeverMode = false;
+    let activePowerup = { type: null, timer: 0 };
+    
+    // Game Over Data Temp
+    let tempCrashData = null;
+
+    // Resize
+    function resize() {
+        cw = canvas.width = canvas.offsetWidth;
+        ch = canvas.height = canvas.offsetHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // --- Menu Logic ---
+    function switchTab(tab) {
+        currentShopTab = tab;
+        document.getElementById('tabCars').className = tab === 'CARS' ? 'tab-btn active' : 'tab-btn';
+        document.getElementById('tabTrails').className = tab === 'TRAILS' ? 'tab-btn active' : 'tab-btn';
+        initMenu();
+    }
+
+    function initMenu() {
+        const grid = document.getElementById('charGrid');
+        grid.innerHTML = '';
+        const items = currentShopTab === 'CARS' ? CHARACTERS : TRAILS;
+        const savedList = currentShopTab === 'CARS' ? savedData.unlockedChars : savedData.unlockedTrails;
+        const currentSel = currentShopTab === 'CARS' ? selectedCharIndex : selectedTrailIndex;
+
+        if(currentShopTab === 'TRAILS') {
+            selectedTrailIndex = TRAILS.findIndex(t => t.id === savedData.selectedTrail);
+            if(selectedTrailIndex === -1) selectedTrailIndex = 0;
+        }
+
+        items.forEach((item, idx) => {
+            const isUnlocked = savedList.includes(item.id);
+            const isSelected = (currentShopTab === 'CARS' ? selectedCharIndex : selectedTrailIndex) === idx;
+            
+            const div = document.createElement('div');
+            div.className = `char-card ${isSelected ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''}`;
+            div.onclick = () => selectItem(idx, item);
+            
+            // Preview
+            const preview = document.createElement('div');
+            preview.className = 'char-preview';
+            
+            if(currentShopTab === 'CARS') {
+                preview.style.background = `linear-gradient(135deg, ${item.color}, #333)`;
+                if(item.bodyType === 'car') preview.style.borderRadius = '4px';
+                else if(item.bodyType === 'hover') preview.style.borderRadius = '50%';
+                else preview.style.border = '2px dashed white';
+            } else {
+                preview.style.backgroundColor = '#000';
+                preview.innerText = item.name.charAt(0);
+                preview.style.color = item.id === 'rainbow' ? 'white' : item.color;
+                preview.style.display = 'flex';
+                preview.style.justifyContent = 'center';
+                preview.style.alignItems = 'center';
+                preview.style.fontWeight = 'bold';
+                preview.style.border = `2px solid ${item.color}`;
+            }
+            
+            div.appendChild(preview);
+            
+            if(isUnlocked) {
+                const name = document.createElement('div'); name.innerText = item.name; name.style.fontSize = '10px'; name.style.fontWeight = 'bold'; name.style.color = '#fff'; div.appendChild(name);
+            } else {
+                const lock = document.createElement('div'); lock.className = 'lock-icon'; lock.innerText = '🔒'; div.appendChild(lock);
+                const price = document.createElement('div'); price.className = 'price-tag'; price.innerText = item.cost + "⭐"; div.appendChild(price);
+            }
+            grid.appendChild(div);
+        });
+        
+        // Missions UI Update
+        const missionList = document.getElementById('missionList');
+        missionList.innerHTML = '';
+        savedData.missions.forEach(m => {
+            const row = document.createElement('div');
+            row.className = 'mission-row' + (m.completed ? ' done' : '');
+            row.innerHTML = `<div class="mission-desc">${m.desc}</div><div class="mission-reward">+${m.reward}⭐</div>`;
+            missionList.appendChild(row);
+        });
+
+        document.getElementById('menuTotalStars').innerText = savedData.totalStars;
+    }
+
+    function selectItem(idx, item) {
+        const list = currentShopTab === 'CARS' ? savedData.unlockedChars : savedData.unlockedTrails;
+        const isUnlocked = list.includes(item.id);
+        const msg = document.getElementById('buyMessage');
+        msg.innerText = "";
+
+        if (isUnlocked) {
+            if(currentShopTab === 'CARS') selectedCharIndex = idx;
+            else {
+                selectedTrailIndex = idx;
+                savedData.selectedTrail = item.id;
+                saveGame();
+            }
+            initMenu(); 
+        } else {
+            if (savedData.totalStars >= item.cost) {
+                if(confirm(`Unlock ${item.name} for ${item.cost} Stars?`)) {
+                    savedData.totalStars -= item.cost;
+                    list.push(item.id);
+                    saveGame();
+                    if(currentShopTab === 'CARS') selectedCharIndex = idx;
+                    else {
+                        selectedTrailIndex = idx;
+                        savedData.selectedTrail = item.id;
+                    }
+                    initMenu();
+                    AudioEngine.playCollect();
+                }
+            } else {
+                msg.innerText = "NOT ENOUGH STARS!";
+                AudioEngine.playCrash();
+            }
+        }
+    }
+
+    function startGame() {
+        AudioEngine.init();
+        AudioEngine.startEngine();
+        AudioEngine.speak("Race Start");
+        
+        state = 'PLAY';
+        document.getElementById('menuScreen').style.display = 'none';
+        document.getElementById('gameOverScreen').style.display = 'none';
+        document.getElementById('reviveScreen').style.display = 'none';
+        document.getElementById('gameHUD').style.display = 'flex';
+        document.getElementById('scratchpadBtn').innerText = "✏️ SCRATCHPAD";
+
+        if(savedData.missions.every(m => m.completed)) regenerateMissions();
+
+        // Reset
+        speed = 10; 
+        distance = 0;
+        score = 0;
+        starsCollected = 0;
+        correctCount = 0;
+        combo = 0;
+        inFeverMode = false;
+        activePowerup = { type: null, timer: 0 };
+        currentBiome = BIOMES[0];
+        
+        player.lane = 0;
+        player.visualLane = 0;
+        player.tilt = 0;
+        gates = [];
+        stars = [];
+        powerups = [];
+        particles = [];
+        floatingTexts = [];
+        speedLines = [];
+        timeScale = 1.0;
+        shakeAmt = 0;
+
+        updateHUD();
+        spawnGate();
+        for(let i=0; i<5; i++) spawnStarPattern(500 + i*300);
+
+        if(animId) cancelAnimationFrame(animId);
+        gameLoop();
+    }
+
+    function returnToMenu() {
+        state = 'MENU';
+        if(animId) cancelAnimationFrame(animId); // Explicitly kill loop
+        AudioEngine.stopEngine();
+        
+        // Force clear canvas
+        ctx.fillStyle = "#050505";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        document.getElementById('gameOverScreen').style.display = 'none';
+        document.getElementById('gameHUD').style.display = 'none';
+        document.getElementById('menuScreen').style.display = 'flex';
+        initMenu(); 
+    }
+
+    function updateHUD() {
+        document.getElementById('starHUD').innerText = starsCollected;
+        document.getElementById('scoreHUD').innerText = score.toString().padStart(6, '0');
+        
+        const comboEl = document.getElementById('comboContainer');
+        const comboVal = document.getElementById('comboHUD');
+        if(combo > 1) {
+            comboEl.style.display = 'block';
+            comboVal.innerText = "x" + combo;
+            comboEl.style.color = inFeverMode ? '#00E676' : '#FFD700';
+        } else {
+            comboEl.style.display = 'none';
+        }
+
+        const puEl = document.getElementById('powerupIndicator');
+        if (activePowerup.type && activePowerup.timer > 0) {
+            puEl.style.display = 'flex';
+            let icon = '';
+            let color = '';
+            if (activePowerup.type === 'MAGNET') { icon = '🧲'; color = '#D500F9'; }
+            if (activePowerup.type === 'SHIELD') { icon = '🛡️'; color = '#00E5FF'; }
+            if (activePowerup.type === 'FREEZE') { icon = '❄️'; color = '#2979FF'; }
+            if (activePowerup.type === 'INVINCIBLE') { icon = '❤️'; color = '#FFD700'; }
+            puEl.style.borderColor = color;
+            puEl.style.color = color;
+            puEl.style.boxShadow = `0 0 10px ${color}`;
+            puEl.innerHTML = `${icon} ${Math.ceil(activePowerup.timer/60)}s`;
+        } else {
+            puEl.style.display = 'none';
+        }
+    }
+
+    function checkMissions() {
+        savedData.missions.forEach(m => {
+            if(!m.completed && m.check({target: m.target})) {
+                m.completed = true;
+                savedData.totalStars += m.reward;
+                starsCollected += m.reward;
+                saveGame();
+                const note = document.getElementById('missionNotify');
+                note.innerHTML = `<div class="mission-banner">${m.desc} COMPLETE! +${m.reward}⭐</div>`;
+                note.style.display = 'block';
+                setTimeout(() => note.style.display = 'none', 3000);
+                AudioEngine.playCollect();
+            }
+        });
+    }
+
+    function spawnGate() {
+        currentProblem = generateProblem(score);
+        document.getElementById('questionBox').innerHTML = currentProblem.qText.replace('x', '&times;');
+        const zDist = 3000;
+        gates.push({ z: distance + zDist, answers: currentProblem.answers, passed: false, problem: currentProblem });
+    }
+
+    function spawnStarPattern(zStart) {
+        if (Math.random() < 0.15) { 
+            const types = ['MAGNET', 'SHIELD', 'FREEZE'];
+            const type = types[randInt(0, 2)];
+            powerups.push({ xLane: randInt(-1, 1), z: zStart + 100, type: type, collected: false });
+            return;
+        }
+        const lane = randInt(-1, 1);
+        for(let i=0; i<3; i++) {
+            stars.push({ xLane: lane, z: zStart + (i * 60), collected: false });
+        }
+    }
+
+    function gameLoop() {
+        if (state === 'PLAY') {
+            update();
+            draw();
+            animId = requestAnimationFrame(gameLoop);
+        }
+    }
+
+    function update() {
+        // Biome Transition
+        if(!savedData.settings.highContrast) {
+            for(let b of BIOMES) {
+                if(score >= b.score) currentBiome = b;
+            }
+        } else {
+            currentBiome = HC_BIOME;
+        }
+
+        let speedMod = 1.0;
+        if (activePowerup.type === 'FREEZE') speedMod = 0.5;
+
+        const effectiveSpeed = speed * timeScale * speedMod;
+        distance += effectiveSpeed;
+        
+        if (activePowerup.timer > 0) {
+            activePowerup.timer--;
+            if (activePowerup.type !== 'SHIELD' && activePowerup.timer <= 0) activePowerup.type = null;
+            updateHUD();
+        }
+
+        if(timeScale > 0.5) score += Math.floor(effectiveSpeed / 5) * (inFeverMode ? 2 : 1);
+        document.getElementById('scoreHUD').innerText = score.toString().padStart(6, '0');
+
+        if(timeScale > 0.5 && speed < 30) speed += 0.003;
+
+        const targetX = player.lane;
+        player.visualLane += (targetX - player.visualLane) * 0.15; 
+        
+        // Disable tilt if Reduced Motion
+        if(!savedData.settings.reducedMotion) {
+            player.tilt = (targetX - player.visualLane) * -0.6; 
+        } else {
+            player.tilt = 0;
+        }
+
+        if(shakeAmt > 0) shakeAmt *= 0.9;
+        if(shakeAmt < 0.5) shakeAmt = 0;
+
+        inFeverMode = combo >= 5;
+        AudioEngine.updateEngine(speed * (activePowerup.type === 'FREEZE' ? 0.5 : 1));
+
+        // Logic: Stars
+        const playerZ = distance + PLAYER_OFFSET_Z;
+        stars.forEach(star => {
+            if(star.collected) return;
+            if (activePowerup.type === 'MAGNET' && star.z < playerZ + 800 && star.z > playerZ - 100) {
+                const diff = player.visualLane - star.xLane;
+                star.xLane += diff * 0.1;
+            }
+            const d = star.z - playerZ;
+            if (d < 50 && d > -50 && Math.abs(player.visualLane - star.xLane) < 0.4) {
+                star.collected = true;
+                score += 100 * (inFeverMode ? 2 : 1);
+                starsCollected++;
+                updateHUD();
+                checkMissions();
+                // Reduced Motion check for explosion
+                if(!savedData.settings.reducedMotion) createExplosion(cw/2, ch*0.8, '#FFD700', 5);
+                spawnFloatingText("+100", cw/2, ch*0.7, '#FFD700');
+                AudioEngine.playCollect();
+            }
+        });
+        if(stars.length > 0 && stars[0].z < distance - 200) stars.shift();
+        
+        // Logic: Powerups
+        powerups.forEach(pu => {
+            if(pu.collected) return;
+            const d = pu.z - playerZ;
+            if (d < 50 && d > -50 && Math.abs(player.visualLane - pu.xLane) < 0.4) {
+                pu.collected = true;
+                activatePowerup(pu.type);
+                if(!savedData.settings.reducedMotion) createExplosion(cw/2, ch*0.8, '#FFF', 10);
+                AudioEngine.playPowerup();
+            }
+        });
+        if(powerups.length > 0 && powerups[0].z < distance - 200) powerups.shift();
+
+        if(stars.length < 10 && powerups.length < 2) spawnStarPattern(distance + 2000 + randInt(0, 1000));
+
+        // Logic: Gates
+        // Safety check: if no gates exist (e.g. after a glitch or revive clear), spawn one immediately
+        if (gates.length === 0) {
+            spawnGate();
+        }
+
+        if (gates.length > 0) {
+            let gate = gates[0];
+            const distToPlayer = gate.z - playerZ;
+
+            if (Math.abs(distToPlayer) < 40 && !gate.passed) {
+                let lane = Math.round(player.visualLane);
+                if (lane < -1) lane = -1; 
+                if (lane > 1) lane = 1;
+                
+                checkAnswer(gate, gate.answers[lane + 1]);
+                gate.passed = true;
+            }
+
+            if (gate.z < distance - 100) {
+                gates.shift();
+                spawnGate();
+            }
+        }
+
+        // Logic: Speed Lines (Disabled in reduced motion)
+        if(!savedData.settings.reducedMotion && Math.random() < 0.3 && effectiveSpeed > 5) {
+            speedLines.push({ x: Math.random() < 0.5 ? 0 : cw, y: Math.random() * ch, z: distance + 2000, speed: 1.5 + Math.random() });
+        }
+        for(let i=speedLines.length-1; i>=0; i--) {
+            let sl = speedLines[i];
+            if(sl.z < distance) { speedLines.splice(i, 1); }
+        }
+        
+        for(let i=floatingTexts.length-1; i>=0; i--) {
+            let ft = floatingTexts[i]; ft.y -= 2; ft.life -= 0.02; if(ft.life <= 0) floatingTexts.splice(i, 1);
+        }
+    }
+
+    function activatePowerup(type) {
+        activePowerup.type = type;
+        if (type === 'SHIELD' || type === 'INVINCIBLE') {
+            activePowerup.timer = type === 'INVINCIBLE' ? 180 : 9999; 
+            spawnFloatingText(type === 'SHIELD' ? "SHIELD!" : "INVINCIBLE!", cw/2, ch/2, '#00E5FF');
+            AudioEngine.speak(type === 'SHIELD' ? "Shield Online" : "Invincible");
+        } else {
+            activePowerup.timer = 600; 
+            if (type === 'MAGNET') { spawnFloatingText("MAGNET!", cw/2, ch/2, '#D500F9'); AudioEngine.speak("Magnet Active"); }
+            if (type === 'FREEZE') { spawnFloatingText("FREEZE!", cw/2, ch/2, '#2979FF'); AudioEngine.speak("Time Freeze"); }
+        }
+        updateHUD();
+    }
+
+    function spawnFloatingText(text, x, y, color) { floatingTexts.push({text, x, y, color, life: 1.0}); }
+
+    function checkAnswer(gate, answer) {
+        if (activePowerup.type === 'INVINCIBLE') {
+            combo++; score += 500; correctCount++; return;
+        }
+
+        const correct = gate.problem.correctObj.toString();
+        const chosen = answer.toString();
+
+        if (chosen === correct) {
+            combo++;
+            let bonus = 500 * combo;
+            score += bonus;
+            correctCount++;
+            checkMissions();
+            
+            if(!savedData.settings.reducedMotion) createExplosion(cw/2, ch/2, '#00E676', 40); 
+            spawnFloatingText("PERFECT!", cw/2, ch/2 - 100, '#00E676');
+            spawnFloatingText("+" + bonus, cw/2, ch/2 - 50, '#FFD700');
+            
+            // Announcer Logic
+            if(combo === 3) AudioEngine.speak("Heating Up");
+            else if(combo === 5) AudioEngine.speak("Unstoppable");
+            else if(combo === 10) AudioEngine.speak("Math Legend");
+            else AudioEngine.playCollect();
+
+            if(!savedData.settings.reducedMotion) shakeAmt = 15;
+            speed += 1.0; 
+            updateHUD();
+        } else {
+            if (activePowerup.type === 'SHIELD') {
+                activePowerup.type = null;
+                activePowerup.timer = 0;
+                if(!savedData.settings.reducedMotion) shakeAmt = 20;
+                spawnFloatingText("SHIELD SAVED!", cw/2, ch/2, '#FFF');
+                if(!savedData.settings.reducedMotion) createExplosion(cw/2, ch/2, '#00E5FF', 20);
+                AudioEngine.playPowerup();
+                AudioEngine.speak("Shield Down");
+                updateHUD();
+            } else {
+                prepareGameOver(gate.problem, chosen);
+            }
+        }
+    }
+
+    function prepareGameOver(problem, chosen) {
+        state = 'REVIVE';
+        AudioEngine.stopEngine();
+        AudioEngine.playCrash();
+        AudioEngine.speak("Warning. System Failure.");
+        if(!savedData.settings.reducedMotion) shakeAmt = 30;
+        tempCrashData = { problem, chosen };
+        document.getElementById('reviveScreen').style.display = 'flex';
+        document.getElementById('gameHUD').style.display = 'none';
+        document.getElementById('scratchpadOverlay').style.display = 'none';
+    }
+
+    function attemptRevive() {
+        if (savedData.totalStars >= 50) {
+            savedData.totalStars -= 50;
+            saveGame();
+            
+            state = 'PLAY';
+            document.getElementById('reviveScreen').style.display = 'none';
+            document.getElementById('gameHUD').style.display = 'flex';
+            
+            player.lane = 0; player.visualLane = 0;
+            // Filter out gates that are too close (behind or just in front)
+            // distance + 1000 is the safe zone threshold.
+            gates = gates.filter(g => g.z > distance + 1000);
+            
+            // FIX: If all gates were removed, spawn a new one so the game doesn't break
+            if (gates.length === 0) {
+                spawnGate();
+            }
+
+            activatePowerup('INVINCIBLE');
+            
+            AudioEngine.startEngine();
+            AudioEngine.playPowerup();
+            AudioEngine.speak("System Restored");
+            gameLoop();
+        } else {
+            alert("Not enough stars! You need 50.");
+            // Removed declineRevive() call here to keep user on screen
+        }
+    }
+
+    function declineRevive() {
+        document.getElementById('reviveScreen').style.display = 'none';
+        doGameOver(tempCrashData.problem, tempCrashData.chosen);
+    }
+
+    function doGameOver(problem, chosen) {
+        state = 'GAMEOVER';
+        
+        let isNewHigh = false;
+        if(score > savedData.highScore) {
+            savedData.highScore = score;
+            isNewHigh = true;
+        }
+        savedData.totalStars += starsCollected;
+        saveGame();
+
+        document.getElementById('gameOverScreen').style.display = 'flex';
+        
+        document.getElementById('goScore').innerText = score;
+        document.getElementById('goStars').innerText = starsCollected;
+        document.getElementById('goCorrectCount').innerText = correctCount;
+        document.getElementById('newHighScoreLabel').style.display = isNewHigh ? 'block' : 'none';
+        
+        document.getElementById('goProblem').innerText = problem.qText;
+        document.getElementById('goWrong').innerText = chosen;
+        document.getElementById('goCorrect').innerText = problem.correctObj.toString();
+        document.getElementById('goExplanation').innerHTML = problem.explanation;
+    }
+
+    // --- Inputs ---
+    function handleLeft() { if(state === 'PLAY' && player.lane > -1) { player.lane--; if(!savedData.settings.reducedMotion) shakeAmt = 5; } }
+    function handleRight() { if(state === 'PLAY' && player.lane < 1) { player.lane++; if(!savedData.settings.reducedMotion) shakeAmt = 5; } }
+
+    window.addEventListener('keydown', (e) => {
+        if(e.code === 'ArrowLeft') handleLeft();
+        if(e.code === 'ArrowRight') handleRight();
+        if(e.code === 'Space' && state === 'PLAY') toggleScratchpad();
+    });
+
+    canvas.addEventListener('pointerdown', (e) => {
+        if (state !== 'PLAY') return;
+        if(e.target.id === 'scratchpadBtn') return;
+        if (e.clientX < cw / 2) handleLeft(); else handleRight();
+    });
+
+    // --- Drawing ---
+    function draw() {
+        let sx = 0, sy = 0;
+        if(!savedData.settings.reducedMotion) {
+            const camPan = player.visualLane * -30; 
+            sx = (Math.random() - 0.5) * shakeAmt + camPan;
+            sy = (Math.random() - 0.5) * shakeAmt;
+        }
+
+        ctx.save();
+        ctx.translate(sx, sy);
+
+        // 1. Sky & Background (Dynamic Biome)
+        const b = currentBiome;
+        const gradient = ctx.createLinearGradient(0, 0, 0, ch);
+        gradient.addColorStop(0, b.skyTop); 
+        gradient.addColorStop(0.5, b.skyBot); 
+        gradient.addColorStop(1, b.floor);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(-100, -100, cw+200, ch+200); 
+
+        // Sun / Moon
+        ctx.shadowBlur = 50;
+        ctx.shadowColor = b.line;
+        ctx.fillStyle = b.skyBot;
+        ctx.beginPath();
+        ctx.arc(cw * 0.8, ch * 0.15, 60, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // 2. Road
+        const horizonY = ch * 0.45; 
+        const centerX = cw / 2;
+        
+        for(let y = horizonY; y < ch; y += 10) {
+            const colorAlt = Math.floor((y / 10) + (distance * 0.05)) % 2 === 0;
+            ctx.fillStyle = colorAlt ? b.floor : (savedData.settings.highContrast ? "#000" : "#111"); 
+            const progress = (y - horizonY) / (ch - horizonY);
+            const roadWidth = 20 + (progress * 500); 
+            ctx.fillRect(centerX - roadWidth, y, roadWidth*2, 10);
+        }
+
+        // Lines
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = inFeverMode ? "#FFF" : b.line; 
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = ctx.strokeStyle;
+        ctx.beginPath();
+        const topW = 20; const botW = 520; 
+        ctx.moveTo(centerX - topW, horizonY); ctx.lineTo(centerX - botW, ch);
+        ctx.moveTo(centerX + topW, horizonY); ctx.lineTo(centerX + botW, ch);
+        const topLane = topW * 0.33; const botLane = botW * 0.33;
+        ctx.moveTo(centerX - topLane, horizonY); ctx.lineTo(centerX - botLane, ch);
+        ctx.moveTo(centerX + topLane, horizonY); ctx.lineTo(centerX + botLane, ch);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Project
+        function project(lane, z) {
+            const relZ = z - distance;
+            if (relZ <= 10) return null; 
+            const scale = 200 / relZ; 
+            const x = centerX + (lane * 200) * scale;
+            const groundY = horizonY + (50000 / relZ) * (ch / 900); 
+            return { x, y: groundY, scale, relZ };
+        }
+
+        // 3. Stars & Powerups
+        const drawItem = (item, isPowerup) => {
+            const p = project(item.xLane, item.z);
+            if(!p) return;
+            const size = 40 * p.scale;
+            const rot = savedData.settings.reducedMotion ? 0 : distance * 0.1;
+            ctx.save();
+            ctx.translate(p.x, p.y - size);
+            if (isPowerup) {
+                if(!savedData.settings.reducedMotion) ctx.scale(Math.sin(rot)+1.5, 1);
+                ctx.fillStyle = item.type === 'MAGNET' ? '#D500F9' : (item.type === 'SHIELD' ? '#00E5FF' : '#2979FF');
+                ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 20;
+                ctx.fillRect(-size/2, -size/2, size, size);
+                ctx.fillStyle = "white"; 
+                // Font fix
+                ctx.font = "bold " + (size*0.8) + "px " + (savedData.settings.readableFont ? "Verdana" : "sans-serif");
+                ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                let char = item.type === 'MAGNET' ? '🧲' : (item.type === 'SHIELD' ? '🛡️' : '❄️');
+                ctx.fillText(char, 0, 0);
+            } else {
+                ctx.rotate(rot);
+                ctx.fillStyle = inFeverMode ? "#FFF" : "#FFD700";
+                ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 20;
+                ctx.beginPath();
+                for(let i=0; i<5; i++) {
+                    ctx.lineTo(Math.cos((18+i*72)/180*Math.PI)*size, -Math.sin((18+i*72)/180*Math.PI)*size);
+                    ctx.lineTo(Math.cos((54+i*72)/180*Math.PI)*size/2, -Math.sin((54+i*72)/180*Math.PI)*size/2);
+                }
+                ctx.fill();
+            }
+            ctx.restore();
+        };
+        stars.forEach(s => !s.collected && drawItem(s, false));
+        powerups.forEach(p => !p.collected && drawItem(p, true));
+
+        // 4. Gates
+        gates.forEach(gate => {
+            if(gate.passed || gate.z < distance + PLAYER_OFFSET_Z - 50) return;
+            const p = project(0, gate.z);
+            if(!p || p.y > ch + 500) return; 
+            [-1, 0, 1].forEach((lane, idx) => {
+                const doorP = project(lane, gate.z);
+                const w = 180 * doorP.scale;
+                const h = 200 * doorP.scale;
+                const color = idx % 2 === 0 ? b.skyTop : b.skyBot; 
+                
+                ctx.save();
+                ctx.fillStyle = "rgba(20, 20, 30, 0.7)";
+                ctx.fillRect(doorP.x - w/2, doorP.y - h, w, h);
+                ctx.strokeStyle = color; ctx.lineWidth = 5 * doorP.scale; ctx.shadowColor = color; ctx.shadowBlur = 20;
+                ctx.strokeRect(doorP.x - w/2, doorP.y - h, w, h);
+                ctx.shadowBlur = 0;
+                
+                ctx.fillStyle = "white";
+                // Robust Font Size
+                let fontSize = Math.floor(Math.max(14, Math.min(120, 80 * doorP.scale)));
+                let fontName = (savedData && savedData.settings && savedData.settings.readableFont) ? "Verdana, sans-serif" : "'Black Ops One', cursive";
+                ctx.font = "900 " + fontSize + "px " + fontName;
+                
+                ctx.textAlign = "center"; 
+                ctx.textBaseline = "middle"; 
+                
+                // Bulletproof text access
+                let text = "";
+                if(gate.answers && gate.answers[idx]) {
+                    text = gate.answers[idx].toString();
+                } else {
+                    text = "?";
+                }
+
+                ctx.lineWidth = Math.max(2, 8 * doorP.scale); 
+                ctx.strokeStyle = "black";
+                ctx.strokeText(text, doorP.x, doorP.y - h/2);
+                ctx.fillText(text, doorP.x, doorP.y - h/2);
+                ctx.restore();
+            });
+        });
+
+        // 5. Player
+        const pCamZ = distance + PLAYER_OFFSET_Z;
+        const pP = project(player.visualLane, pCamZ);
+        if(pP) {
+            const charData = CHARACTERS[selectedCharIndex];
+
+            // --- TRAIL SPAWNER (New) ---
+            if(state === 'PLAY' && !savedData.settings.reducedMotion) {
+                // Spawn rate
+                const trailDensity = 2; // Particles per frame
+                for(let i=0; i<trailDensity; i++) {
+                    spawnTrailParticle(
+                        pP.x + (Math.random() - 0.5) * 40 * pP.scale, // Jitter X
+                        pP.y, 
+                        pP.scale,
+                        TRAILS[selectedTrailIndex].id
+                    );
+                }
+            }
+
+            ctx.save();
+            ctx.translate(pP.x, pP.y);
+            ctx.scale(pP.scale, pP.scale);
+            ctx.rotate(player.tilt);
+            
+            if(activePowerup.type === 'INVINCIBLE' && Math.floor(Date.now() / 100) % 2 === 0) ctx.globalAlpha = 0.5;
+
+            if (activePowerup.type === 'SHIELD') {
+                ctx.shadowColor = '#00E5FF'; ctx.shadowBlur = 30; ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
+                ctx.beginPath(); ctx.arc(0, -40, 80, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+            }
+            ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.beginPath(); ctx.ellipse(0, 0, 70, 20, 0, 0, Math.PI*2); ctx.fill();
+
+            // Vehicle Logic
+            if(charData.bodyType === 'car') {
+                ctx.fillStyle = "#111"; ctx.fillRect(-45, -90, 90, 20);
+                ctx.fillStyle = charData.color; ctx.beginPath(); ctx.moveTo(-25, -90); ctx.lineTo(25, -90); ctx.lineTo(35, -20); ctx.lineTo(0, -5); ctx.lineTo(-35, -20); ctx.fill();
+                ctx.fillStyle = "#222"; ctx.beginPath(); ctx.ellipse(0, -50, 15, 25, 0, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#FFEB3B"; ctx.beginPath(); ctx.arc(0, -50, 12, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#1a1a1a"; ctx.fillRect(-55, -80, 20, 40); ctx.fillRect(35, -80, 20, 40); ctx.fillRect(-50, -30, 15, 30); ctx.fillRect(35, -30, 15, 30);
+            } else if (charData.bodyType === 'hover') {
+                ctx.shadowColor = charData.color; ctx.shadowBlur = 30;
+                ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.ellipse(0, -10, 60, 15, 0, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+                ctx.fillStyle = "#333"; ctx.fillRect(-20, -15, 40, 10);
+                ctx.fillStyle = "#222"; ctx.beginPath(); ctx.moveTo(-10, -10); ctx.lineTo(-15, -50); ctx.lineTo(15, -50); ctx.lineTo(10, -10); ctx.fill();
+                ctx.fillStyle = charData.color; ctx.fillRect(-20, -90, 40, 40);
+                ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, -100, 15, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#00E5FF"; ctx.fillRect(-10, -105, 20, 5);
+            } else {
+                ctx.fillStyle = "#2e2e2e"; ctx.fillRect(-60, -80, 30, 90); ctx.fillRect(30, -80, 30, 90);
+                ctx.strokeStyle = "#555"; ctx.lineWidth = 2; for(let i=0; i<6; i++) { ctx.beginPath(); ctx.moveTo(-60, -80 + i*15); ctx.lineTo(-30, -80 + i*15); ctx.stroke(); ctx.beginPath(); ctx.moveTo(30, -80 + i*15); ctx.lineTo(60, -80 + i*15); ctx.stroke(); }
+                ctx.fillStyle = charData.color; ctx.fillRect(-35, -75, 70, 80);
+                ctx.fillStyle = "#1b5e20"; ctx.beginPath(); ctx.arc(0, -40, 25, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#000"; ctx.fillRect(-5, -90, 10, 50);
+            }
+            ctx.restore();
+        }
+
+        // 6. Speed Lines
+        if(!savedData.settings.reducedMotion) {
+            ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.lineWidth = 3;
+            speedLines.forEach(sl => {
+                const p = project(sl.x > cw/2 ? 3 : -3, sl.z); 
+                if(p) { const x = sl.x; const len = 100 * p.scale; ctx.beginPath(); ctx.moveTo(x, p.y); ctx.lineTo(x, p.y - len); ctx.stroke(); }
+            });
+        }
+
+        // 7. Floating Text
+        floatingTexts.forEach(ft => {
+            ctx.save(); ctx.fillStyle = ft.color; ctx.font = "900 " + (40 * ft.life) + "px " + (savedData.settings.readableFont ? "Verdana" : "'Black Ops One'"); ctx.strokeStyle = "black"; ctx.lineWidth = 4; ctx.textAlign = "center"; ctx.strokeText(ft.text, ft.x, ft.y); ctx.fillText(ft.text, ft.x, ft.y); ctx.restore();
+        });
+
+        updateDrawParticles();
+        ctx.restore();
+    }
+
+    // --- Juice Systems ---
+    function spawnTrailParticle(x, y, scale, type) {
+        let p = {
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 2, 
+            vy: -2 - (Math.random() * 2), // Move UP towards horizon
+            life: 1.0,
+            scale: scale,
+            type: 'trail', // Distinguish from explosion
+            trailType: type, // specific trail look
+            color: '#fff',
+            size: 10,
+            val: randInt(0,1) 
+        };
+
+        if(type === 'smoke') { p.color = '#aaa'; p.size = 10 + Math.random() * 10; }
+        else if (type === 'matrix') { p.color = '#0F0'; p.size = 12; p.vy = -5; }
+        else if (type === 'magma') { p.color = Math.random() > 0.5 ? '#FF5722' : '#FFC107'; p.size = 8 + Math.random() * 8; }
+        else if (type === 'rainbow') { p.color = `hsl(${Date.now() % 360}, 100%, 50%)`; p.size = 15; p.vy = -4; }
+        else if (type === 'void') { p.color = '#000'; p.size = 5 + Math.random() * 15; }
+
+        particles.push(p);
+    }
+
+    function createExplosion(x, y, color, count) {
+        if(savedData.settings.reducedMotion) return;
+        const trailId = TRAILS[selectedTrailIndex].id;
+        for(let i=0; i<count; i++) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 30,
+                vy: (Math.random() - 0.5) * 30,
+                life: 1.0,
+                color: color,
+                size: randInt(5, 15),
+                type: 'explosion', // Use different render logic
+                trail: trailId
+            });
+        }
+    }
+
+    function updateDrawParticles() {
+        for(let i=particles.length-1; i>=0; i--) {
+            let p = particles[i];
+            
+            if (p.type === 'explosion') {
+                // Existing Explosion Logic
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.04;
+                p.vy += 0.5; 
+                if(p.life <= 0) { particles.splice(i, 1); continue; }
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.rect(p.x, p.y, p.size, p.size); ctx.fill();
+            } else {
+                // Trail Logic
+                p.x += p.vx;
+                p.y += p.vy; // Move up towards horizon
+                p.scale *= 0.95; // Shrink to simulate distance
+                p.life -= 0.03;
+                
+                if(p.life <= 0) { particles.splice(i, 1); continue; }
+                
+                ctx.globalAlpha = p.life;
+                const size = p.size * p.scale; // Scale with perspective
+                
+                if(p.trailType === 'matrix') {
+                    ctx.fillStyle = '#0F0';
+                    ctx.shadowBlur = 5; ctx.shadowColor = '#0F0';
+                    ctx.font = "bold " + (size*2) + "px monospace";
+                    ctx.fillText(p.val, p.x, p.y);
+                    ctx.shadowBlur = 0;
+                } else if (p.trailType === 'magma') {
+                    ctx.fillStyle = p.life > 0.5 ? p.color : '#333'; // Turn to smoke
+                    ctx.beginPath(); ctx.arc(p.x, p.y, size, 0, Math.PI*2); ctx.fill();
+                } else if (p.trailType === 'rainbow') {
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x - size/2, p.y - size/2, size, size);
+                } else if (p.trailType === 'void') {
+                    ctx.fillStyle = '#000';
+                    ctx.strokeStyle = '#9C27B0';
+                    ctx.lineWidth = 2 * p.scale;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, size, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                } else {
+                    // Smoke
+                    ctx.fillStyle = `rgba(200,200,200,${p.life * 0.5})`;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, size, 0, Math.PI*2); ctx.fill();
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // --- Scratchpad ---
+    const spCanvas = document.getElementById('scratchpadCanvas'); const spCtx = spCanvas.getContext('2d'); let isDrawing = false; let lastX=0, lastY=0;
+    function initScratchpad() { if(spCanvas.width !== spCanvas.offsetWidth) { spCanvas.width = spCanvas.offsetWidth; spCanvas.height = spCanvas.offsetHeight; } spCtx.strokeStyle = "#333"; spCtx.lineWidth = 5; spCtx.lineCap = 'round'; }
+    function toggleScratchpad() { const el = document.getElementById('scratchpadOverlay'); const btn = document.getElementById('scratchpadBtn'); if (el.style.display === 'flex') { el.style.display = 'none'; btn.innerText = "✏️ SCRATCHPAD"; timeScale = 1.0; } else { el.style.display = 'flex'; if(currentProblem) document.getElementById('sp-q-text').innerHTML = currentProblem.qText.replace('x', '&times;'); initScratchpad(); btn.innerText = "▶ RESUME"; timeScale = 0.05; } }
+    function clearScratchpad() { spCtx.clearRect(0,0,spCanvas.width, spCanvas.height); }
+    function getPos(e) { const r = spCanvas.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; }
+    function startDraw(e) { isDrawing=true; const p=getPos(e); lastX=p.x; lastY=p.y; }
+    function moveDraw(e) { if(!isDrawing) return; if(e.cancelable) e.preventDefault(); const p=getPos(e); spCtx.beginPath(); spCtx.moveTo(lastX, lastY); spCtx.lineTo(p.x, p.y); spCtx.stroke(); lastX=p.x; lastY=p.y; }
+    function endDraw() { isDrawing=false; }
+    ['mousedown','touchstart'].forEach(e=>spCanvas.addEventListener(e, startDraw));
+    ['mousemove','touchmove'].forEach(e=>spCanvas.addEventListener(e, moveDraw));
+    ['mouseup','mouseout','touchend'].forEach(e=>spCanvas.addEventListener(e, endDraw));
+
+    initMenu();
+    requestAnimationFrame(gameLoop);
+    ctx.fillStyle="#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+</script>
+</body>
+</html>

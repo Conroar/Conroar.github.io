@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factor Rockets: Ultimate</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #020617; color: white; user-select: none; }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        /* Standard Glass Panel */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* High Contrast Panel */
+        .hc-panel {
+            background: #0f172a;
+            border: 2px solid #ffffff;
+            box-shadow: none;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); transform: scale(1); }
+            50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.7); transform: scale(1.02); }
+        }
+        .btn-glow { animation: pulse-glow 2s infinite; }
+        
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.5); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.8); }
+
+        @keyframes countdown-pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        .countdown-text { animation: countdown-pop 0.9s ease-out forwards; }
+        
+        @keyframes badge-pop {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .badge-anim { animation: badge-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- Sound Engine (Web Audio API) ---
+        const SoundGen = {
+            ctx: null,
+            isMuted: false,
+            init: function() {
+                if (!this.ctx) { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+                if (this.ctx.state === 'suspended') { this.ctx.resume(); }
+            },
+            playTone: function(freq, type, duration, vol = 0.1) {
+                if (this.isMuted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            },
+            playCorrect: function() {
+                if (this.isMuted || !this.ctx) return;
+                this.playTone(880, 'sine', 0.1, 0.1);
+                setTimeout(() => this.playTone(1760, 'sine', 0.3, 0.05), 50);
+            },
+            playWrong: function() {
+                if (this.isMuted || !this.ctx) return;
+                this.playTone(150, 'sawtooth', 0.3, 0.1);
+                setTimeout(() => this.playTone(100, 'sawtooth', 0.3, 0.1), 100);
+            },
+            playHyperdrive: function() {
+                if (this.isMuted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.5);
+            },
+            playShield: function() {
+                if (this.isMuted || !this.ctx) return;
+                this.playTone(1200, 'sine', 0.5, 0.1);
+                setTimeout(() => this.playTone(1500, 'sine', 0.5, 0.1), 100);
+            },
+            playLaunch: function() {
+                if (this.isMuted || !this.ctx) return;
+                const bufferSize = this.ctx.sampleRate * 2; 
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(100, this.ctx.currentTime);
+                filter.frequency.linearRampToValueAtTime(800, this.ctx.currentTime + 2);
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 2);
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start();
+            }
+        };
+
+        // --- Game Constants ---
+        const THRUST_POWER = 90; 
+        const GRAVITY_DRAG = 0.995; 
+        const PENALTY_FACTOR = 0.6; 
+        const MIN_CRUISE_VELOCITY = 15;
+        const COMBO_THRESHOLD = 3; 
+        const SHIELD_THRESHOLD = 10; 
+        const HYPERDRIVE_MULTIPLIER = 1.5; 
+
+        const BOT_NAMES = ["Prime", "Radical", "Vector", "Delta", "Vertex", "Tangent", "Matrix", "Axis", "Pi-Lot", "Undefined", "Möbius", "Mean", "Origin", "Limit", "Oddball", "Slope", "Arc", "Chord", "Prism", "Logic"];
+        
+        const COLORS = [
+            { name: 'Indigo', fill: '#6366f1', glow: '#818cf8' },
+            { name: 'Red', fill: '#ef4444', glow: '#f87171' },
+            { name: 'Green', fill: '#22c55e', glow: '#4ade80' },
+            { name: 'Yellow', fill: '#eab308', glow: '#facc15' },
+            { name: 'Fuchsia', fill: '#d946ef', glow: '#e879f9' },
+            { name: 'Cyan', fill: '#06b6d4', glow: '#67e8f9' },
+            { name: 'Orange', fill: '#f97316', glow: '#fdba74' },
+            { name: 'Violet', fill: '#8b5cf6', glow: '#c4b5fd' },
+            { name: 'Teal', fill: '#14b8a6', glow: '#5eead4' },
+            { name: 'Rose', fill: '#f43f5e', glow: '#fb7185' },
+            { name: 'Lime', fill: '#84cc16', glow: '#bef264' },
+            { name: 'Blue', fill: '#3b82f6', glow: '#93c5fd' }
+        ];
+
+        const formatNumber = (num) => Math.floor(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+        // --- Math Logic ---
+        const generateQuestion = (mode, focus, difficulty) => {
+            // Determine Factor Range based on Difficulty
+            let minFactor = 2;
+            let maxFactor = 12;
+
+            if (difficulty === 'super-easy') { maxFactor = 5; minFactor = 1; }
+            else if (difficulty === 'easy') { maxFactor = 9; minFactor = 2; }
+            else if (difficulty === 'hard') { maxFactor = 15; minFactor = 3; }
+            // Normal remains 2-12
+
+            let a, b;
+            if (focus && focus !== 'all') {
+                a = parseInt(focus);
+                b = Math.floor(Math.random() * (maxFactor - minFactor + 1)) + minFactor; 
+                if (Math.random() > 0.5) [a, b] = [b, a];
+            } else {
+                a = Math.floor(Math.random() * (maxFactor - minFactor + 1)) + minFactor; 
+                b = Math.floor(Math.random() * (maxFactor - minFactor + 1)) + minFactor; 
+            }
+
+            const product = a * b;
+            let types = [];
+            if (mode === 'mult' || mode === 'mixed') { types.push('mult_missing_p'); if (Math.random() > 0.7) types.push('mult_missing_a', 'mult_missing_b'); }
+            if (mode === 'div' || mode === 'mixed') { types.push('div_missing_p'); if (Math.random() > 0.7) types.push('div_missing_a', 'div_missing_b'); }
+            if (types.length === 0) types.push('mult_missing_p');
+            
+            const type = types[Math.floor(Math.random() * types.length)];
+            let question = '', answer = 0;
+            switch (type) {
+                case 'mult_missing_a': question = `? × ${b} = ${product}`; answer = a; break;
+                case 'mult_missing_b': question = `${a} × ? = ${product}`; answer = b; break;
+                case 'mult_missing_p': question = `${a} × ${b} = ?`; answer = product; break;
+                case 'div_missing_a': question = `${product} ÷ ${b} = ?`; answer = a; break;
+                case 'div_missing_b': question = `${product} ÷ ? = ${a}`; answer = b; break;
+                case 'div_missing_p': question = `? ÷ ${b} = ${a}`; answer = product; break;
+                default: question = `${a} × ${b} = ?`; answer = product;
+            }
+            
+            const generateDistractor = (target) => {
+                const offset = Math.floor(Math.random() * 5) + 1;
+                return Math.random() > 0.5 ? target + offset : Math.max(1, target - offset);
+            };
+            const dist1 = generateDistractor(answer);
+            let dist2 = generateDistractor(answer);
+            let safety = 0;
+            while ((dist2 === dist1 || dist2 === answer) && safety < 10) { dist2 = generateDistractor(answer); safety++; }
+            if (dist2 === dist1 || dist2 === answer) dist2 = answer + 10;
+            const options = [answer, dist1, dist2].sort(() => Math.random() - 0.5);
+            return { question, answer, options, a, b, product, type: mode };
+        };
+
+        function App() {
+            const [gameState, setGameState] = useState('menu');
+            const [settings, setSettings] = useState({ mode: 'mixed', difficulty: 'normal', target: 20, focus: 'all' });
+            const [playerName, setPlayerName] = useState('');
+            const [selectedShipIdx, setSelectedShipIdx] = useState(0);
+            const [launchCountdown, setLaunchCountdown] = useState(null); 
+            const [isMuted, setIsMuted] = useState(false);
+            const [a11y, setA11y] = useState({ reducedMotion: false, highContrast: false, largeText: false });
+            const [showA11yMenu, setShowA11yMenu] = useState(false);
+            
+            const [currentQ, setCurrentQ] = useState(null);
+            const [feedback, setFeedback] = useState(null);
+            const [combo, setCombo] = useState(0); 
+            const [maxCombo, setMaxCombo] = useState(0);
+            const [mistakes, setMistakes] = useState([]); 
+            
+            const playersRef = useRef([]);
+            const canvasRef = useRef(null);
+            const requestRef = useRef();
+            const particlesRef = useRef([]);
+            const starsRef = useRef([]);
+            const nebulasRef = useRef([]);
+            const landmarksRef = useRef([]); 
+            const speedLinesRef = useRef([]);
+            const camYRef = useRef(0);
+            const startTimeRef = useRef(0);
+            const menuScrollRef = useRef(0);
+
+            // Sync Mute state
+            useEffect(() => { SoundGen.isMuted = isMuted; }, [isMuted]);
+
+            // Save/Load System
+            useEffect(() => {
+                const savedData = localStorage.getItem('factorRocketsSave');
+                if (savedData) {
+                    try {
+                        const parsed = JSON.parse(savedData);
+                        if (parsed.playerName) setPlayerName(parsed.playerName);
+                        if (parsed.selectedShipIdx !== undefined) setSelectedShipIdx(parsed.selectedShipIdx);
+                        if (parsed.a11y) setA11y(parsed.a11y);
+                    } catch (e) { console.error("Save load failed", e); }
+                }
+            }, []);
+
+            useEffect(() => {
+                const dataToSave = { playerName, selectedShipIdx, a11y };
+                if (playerName || selectedShipIdx !== 0 || a11y.reducedMotion || a11y.highContrast || a11y.largeText) {
+                    localStorage.setItem('factorRocketsSave', JSON.stringify(dataToSave));
+                }
+            }, [playerName, selectedShipIdx, a11y]);
+
+            const initVisuals = () => {
+                starsRef.current = Array(200).fill().map(() => ({
+                    x: Math.random() * 100, y: Math.random() * 100, size: Math.random() * 2 + 0.5, speed: Math.random() * 0.8 + 0.2
+                }));
+                landmarksRef.current = [];
+                const landmarkColors = ['#ef4444', '#3b82f6', '#eab308', '#a855f7'];
+                for(let i=0; i<6; i++) {
+                    landmarksRef.current.push({
+                        y: 800 + (i * 1200), x: Math.random() * 80 + 10,
+                        type: Math.random() > 0.5 ? 'planet' : (Math.random() > 0.5 ? 'ringed' : 'station'),
+                        size: Math.random() * 100 + 50, color: landmarkColors[i % landmarkColors.length]
+                    });
+                }
+                nebulasRef.current = Array(6).fill().map(() => ({
+                    x: Math.random() * 100, y: Math.random() * 100, size: Math.random() * 300 + 200, color: `hsla(${Math.random() * 360}, 60%, 50%, 0.1)`, speed: 0.1
+                }));
+                speedLinesRef.current = Array(25).fill().map(() => ({
+                    x: Math.random() * 100, y: Math.random() * 100, length: Math.random() * 50 + 10, speed: Math.random() * 2 + 1
+                }));
+            };
+
+            const initGame = () => {
+                SoundGen.init(); 
+                SoundGen.playLaunch();
+                initVisuals(); 
+                setCombo(0);
+                setMaxCombo(0);
+                setMistakes([]);
+                setLaunchCountdown(3); 
+
+                const human = { 
+                    id: 'human', name: playerName || 'Pilot', y: 0, vel: 0, score: 0,
+                    color: COLORS[selectedShipIdx], isBot: false, finished: false, finishTime: 0
+                };
+                
+                const botCount = 11;
+                const shuffledNames = [...BOT_NAMES].sort(() => 0.5 - Math.random());
+                const availableColors = COLORS.filter((_, i) => i !== selectedShipIdx);
+                const shuffledColors = [...availableColors].sort(() => 0.5 - Math.random());
+
+                // ADAPTIVE DIFFICULTY: Base stats set to "Capable" for everyone to maintain race feel
+                const bots = Array(botCount).fill().map((_, i) => {
+                    let skill, delay;
+                    // Slower base delays
+                    if (settings.difficulty === 'super-easy') { skill = 0.005; delay = 320; } 
+                    else if (settings.difficulty === 'easy') { skill = 0.018; delay = 200; } 
+                    else if (settings.difficulty === 'hard') { skill = 0.12; delay = 60; } 
+                    else { skill = 0.045; delay = 120; } // Normal
+                    
+                    return {
+                        id: `bot-${i}`, name: shuffledNames[i % shuffledNames.length], y: 0, vel: 0, score: 0,
+                        color: shuffledColors[i % shuffledColors.length], isBot: true, finished: false, finishTime: 0,
+                        reactionTimer: 0, reactionDelay: delay + Math.random() * 40, skill: skill
+                    };
+                });
+
+                playersRef.current = [human, ...bots];
+                camYRef.current = 0;
+                particlesRef.current = [];
+                setCurrentQ(generateQuestion(settings.mode, settings.focus, settings.difficulty));
+                setGameState('playing');
+                setFeedback(null);
+            };
+
+            useEffect(() => {
+                if (launchCountdown !== null) {
+                    if (launchCountdown > -1) {
+                        const timer = setTimeout(() => { setLaunchCountdown(prev => prev - 1); }, 1000);
+                        return () => clearTimeout(timer);
+                    } else {
+                        setLaunchCountdown(null);
+                        startTimeRef.current = Date.now(); 
+                    }
+                }
+            }, [launchCountdown]);
+
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (gameState !== 'playing' || feedback || launchCountdown !== null || !currentQ) return;
+                    let selectedIndex = -1;
+                    if (e.key === '1' || e.key === 'ArrowLeft') selectedIndex = 0;
+                    if (e.key === '2' || e.key === 'ArrowDown' || e.key === 'ArrowUp') selectedIndex = 1;
+                    if (e.key === '3' || e.key === 'ArrowRight') selectedIndex = 2;
+                    if (selectedIndex !== -1 && currentQ.options[selectedIndex] !== undefined) {
+                        handleAnswer(currentQ.options[selectedIndex]);
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [gameState, feedback, launchCountdown, currentQ]);
+
+            const spawnParticles = (x, y, count, color, speedMultiplier = 1) => {
+                if (a11y.reducedMotion) return;
+                for (let i = 0; i < count; i++) {
+                    particlesRef.current.push({
+                        x, y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() * 8 + 4) * speedMultiplier, life: 1.0, color: color
+                    });
+                }
+            };
+
+            const updatePhysics = () => {
+                if (gameState === 'menu') {
+                    if (!a11y.reducedMotion) menuScrollRef.current += 1;
+                    return;
+                }
+                if (gameState !== 'playing') return;
+                if (launchCountdown !== null) return;
+
+                const players = playersRef.current;
+                const human = players.find(p => p.id === 'human');
+                
+                players.forEach(p => {
+                    p.y += p.vel * 0.1;
+                    p.vel *= GRAVITY_DRAG;
+                    if (p.score > 0 && p.vel < MIN_CRUISE_VELOCITY && p.vel > 0) p.vel += 0.5;
+                    if (p.vel < 0) p.vel = 0;
+                    if (p.score >= settings.target && !p.finished) {
+                        p.finished = true; p.finishTime = Date.now() - startTimeRef.current;
+                    }
+                    
+                    // --- ADAPTIVE BOT AI ---
+                    if (p.isBot) {
+                        p.reactionTimer++;
+                        
+                        let shouldThrust = (Math.random() < p.skill && p.reactionTimer > p.reactionDelay);
+
+                        if (human && !human.finished) {
+                            const diff = p.y - human.y; // Positive = Bot Ahead, Negative = Bot Behind
+                            
+                            // 1. INTENSITY RULE: Keep bots active and visible
+                            // If bot falls way behind, give them a free boost to catch up visually
+                            if (diff < -800 && Math.random() < 0.05) shouldThrust = true;
+
+                            // 2. DIFFICULTY PERSONALITIES
+                            if (settings.difficulty === 'super-easy') {
+                                // "Rookie": Wingman Mode. Loves staying slightly behind or even.
+                                // If getting ahead, slow down massively.
+                                if (diff > -50 && Math.random() < 0.9) shouldThrust = false;
+                            } 
+                            else if (settings.difficulty === 'easy') {
+                                // "Easy": Challenger. Races, but yields if too far ahead.
+                                if (diff > 200 && Math.random() < 0.7) shouldThrust = false;
+                            }
+                            else if (settings.difficulty === 'normal') {
+                                // "Normal": Racer. Standard logic, no rubber banding unless way ahead.
+                                if (diff > 600 && Math.random() < 0.5) shouldThrust = false;
+                            }
+                            else if (settings.difficulty === 'hard') {
+                                // "Hard": Ace. Aggressive. No mercy.
+                                // Slight boost if behind to make it scary
+                                if (diff < 0 && Math.random() < 0.02) shouldThrust = true;
+                            }
+                        }
+
+                        if (shouldThrust) {
+                            p.vel += THRUST_POWER * (0.8 + Math.random() * 0.4); 
+                            p.score += 1; p.reactionTimer = 0;
+                            spawnParticles(0, 0, 4, '#fbbf24'); 
+                        }
+                    }
+                });
+
+                const targetCamY = human ? human.y : 0;
+                camYRef.current += (targetCamY - camYRef.current) * 0.1;
+
+                if (human && human.score >= settings.target) {
+                    setGameState('summary');
+                }
+
+                particlesRef.current.forEach(part => {
+                    part.x += part.vx; part.y += part.vy; part.life -= 0.04;
+                });
+                particlesRef.current = particlesRef.current.filter(p => p.life > 0);
+            };
+
+            const drawLandmark = (ctx, l, screenY, w) => {
+                const x = l.x * (w/100);
+                if (l.type === 'planet' || l.type === 'ringed') {
+                    if (!a11y.highContrast) {
+                        const grad = ctx.createRadialGradient(x - l.size/3, screenY - l.size/3, 0, x, screenY, l.size);
+                        grad.addColorStop(0, l.color); grad.addColorStop(1, '#0f172a'); 
+                        ctx.fillStyle = grad;
+                    } else {
+                        ctx.fillStyle = 'white'; // Simple white circle in HC
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 2;
+                    }
+                    
+                    ctx.beginPath(); ctx.arc(x, screenY, l.size, 0, Math.PI * 2); 
+                    if(a11y.highContrast) ctx.stroke(); else ctx.fill();
+
+                    if (!a11y.highContrast) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                        ctx.beginPath(); ctx.arc(x - l.size/2, screenY - l.size/4, l.size/5, 0, Math.PI * 2); ctx.fill();
+                    }
+                    if (l.type === 'ringed') {
+                        ctx.strokeStyle = a11y.highContrast ? 'white' : 'rgba(255,255,255,0.4)'; 
+                        ctx.lineWidth = l.size / 5;
+                        ctx.beginPath(); ctx.ellipse(x, screenY, l.size * 1.8, l.size * 0.4, 0.2, 0, Math.PI * 2); ctx.stroke();
+                    }
+                } else if (l.type === 'station') {
+                    ctx.fillStyle = a11y.highContrast ? '#ffffff' : '#94a3b8'; 
+                    ctx.fillRect(x - l.size, screenY - 10, l.size * 2, 20); 
+                    ctx.fillStyle = a11y.highContrast ? '#ffffff' : '#38bdf8';
+                    ctx.fillRect(x - l.size, screenY - 30, 40, 60); ctx.fillRect(x + l.size - 40, screenY - 30, 40, 60);
+                }
+            };
+
+            const draw = () => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width;
+                const h = canvas.height;
+                
+                let camY = gameState === 'menu' ? menuScrollRef.current * 2 : camYRef.current;
+                let humanVel = 0;
+                if (gameState === 'playing') { humanVel = playersRef.current.find(p => p.id === 'human')?.vel || 0; }
+                let isHyperdrive = combo >= COMBO_THRESHOLD;
+
+                let shakeX = 0, shakeY = 0;
+                if (humanVel > 50 && !a11y.reducedMotion) {
+                    const shakeAmt = isHyperdrive ? 60 : 40;
+                    shakeX = (Math.random() - 0.5) * (humanVel / shakeAmt);
+                    shakeY = (Math.random() - 0.5) * (humanVel / shakeAmt);
+                }
+
+                ctx.save();
+                ctx.translate(shakeX, shakeY);
+
+                // BG
+                ctx.fillStyle = a11y.highContrast ? '#000000' : '#020617';
+                ctx.fillRect(-10, -10, w + 20, h + 20);
+
+                // Nebulas (Skip in HC)
+                if (!a11y.highContrast) {
+                    nebulasRef.current.forEach(neb => {
+                        let screenY = (neb.y * (h/100) + camY * 0.1) % (h + 400) - 200;
+                        ctx.fillStyle = neb.color;
+                        ctx.beginPath(); ctx.arc(neb.x * (w/100), screenY, neb.size, 0, Math.PI * 2); ctx.fill();
+                    });
+                }
+
+                // Stars
+                ctx.fillStyle = 'white';
+                starsRef.current.forEach(star => {
+                    let screenY = h - ((star.y * (h/100) + camY * 0.3) % h);
+                    if (isHyperdrive && humanVel > 80 && gameState === 'playing' && launchCountdown === null && !a11y.reducedMotion && !a11y.highContrast) {
+                        ctx.globalAlpha = 0.6; ctx.lineWidth = 2; ctx.strokeStyle = 'white';
+                        ctx.beginPath(); ctx.moveTo(star.x * (w/100), screenY); ctx.lineTo(star.x * (w/100), screenY - 30); ctx.stroke();
+                    } else {
+                        ctx.globalAlpha = a11y.highContrast ? 1 : (Math.random() * 0.5 + 0.3);
+                        ctx.beginPath(); ctx.arc(star.x * (w/100), screenY, star.size, 0, Math.PI * 2); ctx.fill();
+                    }
+                });
+                ctx.globalAlpha = 1;
+
+                if (gameState !== 'menu') {
+                    landmarksRef.current.forEach(l => {
+                        const centerY = h * 0.6;
+                        const screenY = centerY - (l.y - camY);
+                        if (screenY > -300 && screenY < h + 300) drawLandmark(ctx, l, screenY, w);
+                    });
+                }
+
+                // Warp Lines (Skip in HC/Reduced Motion)
+                if (humanVel > 40 && launchCountdown === null && !a11y.reducedMotion && !a11y.highContrast) {
+                    ctx.strokeStyle = isHyperdrive ? 'rgba(100, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+                    ctx.lineWidth = isHyperdrive ? 3 : 2;
+                    speedLinesRef.current.forEach(line => {
+                        let screenY = h - ((line.y * (h/100) + camY * 1.5) % h);
+                        ctx.beginPath(); ctx.moveTo(line.x * (w/100), screenY); ctx.lineTo(line.x * (w/100), screenY - (line.length * (humanVel/20))); ctx.stroke();
+                    });
+                }
+
+                if (gameState !== 'menu' && gameState !== 'summary') {
+                    const centerX = w / 2;
+                    const centerY = h * 0.6;
+                    
+                    playersRef.current.forEach(p => {
+                        const relY = centerY - (p.y - camY);
+
+                        if (relY > -200 && relY < h + 200) {
+                            const isHuman = p.id === 'human';
+                            let screenX = centerX;
+                            if (!isHuman) {
+                                const botIndex = parseInt(p.id.split('-')[1]);
+                                const lane = Math.floor(botIndex / 2) + 1;
+                                const side = botIndex % 2 === 0 ? 1 : -1;
+                                const spacing = w < 600 ? 30 : 60; 
+                                screenX = centerX + (lane * spacing * side);
+                            }
+
+                            // Engine Exhaust
+                            if (p.vel > 5 || (isHuman && launchCountdown !== null)) { 
+                                const power = launchCountdown !== null ? 20 : p.vel;
+                                const flameH = Math.random() * (power/3) + 20;
+                                let flameColor = (isHuman && isHyperdrive) ? '#22d3ee' : (isHuman ? '#fbbf24' : p.color.fill);
+                                if (a11y.highContrast) flameColor = '#ffffff';
+
+                                ctx.fillStyle = flameColor;
+                                ctx.globalAlpha = 0.8;
+                                ctx.beginPath(); ctx.moveTo(screenX - 4, relY + 25); ctx.lineTo(screenX, relY + 25 + flameH); ctx.lineTo(screenX + 4, relY + 25); ctx.fill();
+                                ctx.globalAlpha = 1;
+                            }
+                            
+                            // Shield Visual
+                            if (isHuman && combo >= SHIELD_THRESHOLD) {
+                                ctx.strokeStyle = a11y.highContrast ? '#ffffff' : '#60a5fa'; 
+                                ctx.lineWidth = 2;
+                                ctx.beginPath(); ctx.arc(screenX, relY, 45, 0, Math.PI * 2); ctx.stroke();
+                            }
+
+                            ctx.save();
+                            ctx.translate(screenX, relY);
+                            
+                            // Rocket Body
+                            ctx.fillStyle = p.color.fill;
+                            if (a11y.highContrast) {
+                                ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.fillStyle = 'black';
+                            } else {
+                                ctx.shadowColor = (isHuman && isHyperdrive) ? '#22d3ee' : p.color.glow;
+                                ctx.shadowBlur = (p.vel > 50 || isHuman) ? 20 : 0;
+                            }
+                            
+                            ctx.beginPath(); ctx.moveTo(0, -25); ctx.bezierCurveTo(12, -10, 12, 15, 12, 20); ctx.lineTo(-12, 20); ctx.bezierCurveTo(-12, 15, -12, -10, 0, -25); 
+                            ctx.fill(); 
+                            if(a11y.highContrast) ctx.stroke();
+                            
+                            // Fins
+                            ctx.fillStyle = a11y.highContrast ? 'black' : '#1e293b';
+                            ctx.beginPath(); ctx.moveTo(-12, 10); ctx.lineTo(-22, 28); ctx.lineTo(-8, 24); ctx.fill(); 
+                            if(a11y.highContrast) ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(12, 10); ctx.lineTo(22, 28); ctx.lineTo(8, 24); ctx.fill();
+                            if(a11y.highContrast) ctx.stroke();
+
+                            // Cockpit
+                            ctx.fillStyle = (isHuman && isHyperdrive && !a11y.highContrast) ? '#06b6d4' : '#bae6fd';
+                            if(a11y.highContrast) ctx.fillStyle = 'white';
+                            ctx.beginPath(); ctx.arc(0, -5, 5, 0, Math.PI * 2); ctx.fill();
+
+                            ctx.shadowBlur = 0;
+                            ctx.fillStyle = 'white';
+                            ctx.font = isHuman ? 'bold 13px sans-serif' : '10px sans-serif';
+                            ctx.textAlign = 'center';
+                            
+                            if ((humanVel < 150 || isHuman || a11y.highContrast) && launchCountdown === null) {
+                                ctx.fillText(p.name, 0, 42);
+                                if(isHuman) {
+                                    ctx.font = 'bold 11px monospace'; ctx.fillStyle = '#4ade80'; ctx.fillText(`${p.score}/${settings.target}`, 0, 56);
+                                }
+                            }
+
+                            ctx.restore();
+                        }
+                    });
+
+                    if (!a11y.reducedMotion) {
+                        particlesRef.current.forEach(part => {
+                            ctx.fillStyle = part.color; ctx.globalAlpha = part.life;
+                            ctx.beginPath(); ctx.arc(centerX + part.x, centerY + part.y, Math.random() * 3 + 1, 0, Math.PI * 2); ctx.fill();
+                        });
+                    }
+                }
+                
+                ctx.restore();
+            };
+
+            const animate = () => {
+                updatePhysics();
+                draw();
+                requestRef.current = requestAnimationFrame(animate);
+            };
+
+            useEffect(() => {
+                initVisuals(); 
+                requestRef.current = requestAnimationFrame(animate);
+                const handleResize = () => { if (canvasRef.current) { canvasRef.current.width = window.innerWidth; canvasRef.current.height = window.innerHeight; } };
+                window.addEventListener('resize', handleResize);
+                handleResize();
+                return () => { cancelAnimationFrame(requestRef.current); window.removeEventListener('resize', handleResize); };
+            }, [gameState, combo, selectedShipIdx, launchCountdown, a11y]);
+
+            const handleAnswer = (val) => {
+                if (gameState !== 'playing' || feedback || launchCountdown !== null) return;
+                const human = playersRef.current.find(p => p.id === 'human');
+                SoundGen.init();
+                if (val === currentQ.answer) {
+                    SoundGen.playCorrect(); setFeedback('correct');
+                    if (human) {
+                        const newCombo = combo + 1; setCombo(newCombo);
+                        if (newCombo > maxCombo) setMaxCombo(newCombo);
+                        if (newCombo === COMBO_THRESHOLD) SoundGen.playHyperdrive();
+                        if (newCombo === SHIELD_THRESHOLD) SoundGen.playShield();
+                        const boost = newCombo >= COMBO_THRESHOLD ? THRUST_POWER * HYPERDRIVE_MULTIPLIER : THRUST_POWER;
+                        human.vel += boost; human.score += 1;
+                        const pColor = newCombo >= COMBO_THRESHOLD ? '#22d3ee' : human.color.fill;
+                        spawnParticles(0, 0, 10, pColor, 2); 
+                    }
+                    setTimeout(() => { setFeedback(null); setCurrentQ(generateQuestion(settings.mode, settings.focus, settings.difficulty)); }, 350); 
+                } else {
+                    SoundGen.playWrong(); setFeedback('wrong'); setCombo(0); 
+                    setMistakes(prev => {
+                        if(prev.length > 0 && prev[prev.length-1].question === currentQ.question) return prev;
+                        return [...prev, { question: currentQ.question, answer: currentQ.answer }];
+                    });
+                    if (human) { human.vel *= PENALTY_FACTOR; human.y = Math.max(0, human.y - 150); }
+                    setTimeout(() => setFeedback(null), 800);
+                }
+            };
+
+            const getBadges = () => {
+                const badges = [];
+                if (mistakes.length === 0) badges.push({ name: "Perfect Aim", icon: "🎯", desc: "100% Accuracy" });
+                const finishTime = playersRef.current.find(p => p.id === 'human')?.finishTime || 0;
+                if (finishTime > 0 && (finishTime / settings.target) < 4000) badges.push({ name: "Supersonic", icon: "⚡", desc: "Super Fast Speed" });
+                if (maxCombo >= 10) badges.push({ name: "Streak Star", icon: "🌟", desc: "10 Correct in a Row" });
+                return badges;
+            };
+
+            // Dynamic Panel Styles
+            const getPanelClass = () => a11y.highContrast ? "hc-panel p-6 rounded-2xl" : "glass-panel p-6 rounded-2xl";
+            const getMenuPanelClass = () => a11y.highContrast ? "hc-panel p-6 rounded-2xl max-w-lg w-full shadow-none" : "glass-panel p-6 rounded-2xl max-w-lg w-full shadow-2xl backdrop-blur-xl";
+
+            return (
+                <div className="relative w-full h-screen overflow-hidden font-sans" style={{ backgroundColor: a11y.highContrast ? '#000000' : '#020617' }}>
+                    <canvas ref={canvasRef} className="absolute top-0 left-0 z-0" />
+
+                    {/* TOP LEFT CONTROLS - Accessibility */}
+                    <div className="absolute top-4 left-4 z-50">
+                        <div className="relative">
+                            <button 
+                                onClick={() => setShowA11yMenu(!showA11yMenu)}
+                                className={`p-2 rounded-full border transition-colors w-10 h-10 flex items-center justify-center ${a11y.highContrast ? 'bg-black border-white text-white' : 'bg-slate-800/80 border-slate-600 text-slate-300 hover:text-white'}`}
+                                title="Accessibility Settings"
+                            >
+                                <span className="text-xl leading-none">♿</span>
+                            </button>
+                            
+                            {/* A11y Menu Dropdown - Aligned Left */}
+                            {showA11yMenu && (
+                                <div className={`absolute left-0 mt-2 w-56 rounded-xl border p-4 shadow-xl z-50 ${a11y.highContrast ? 'bg-black border-white text-white' : 'bg-slate-800 border-slate-600 text-white'}`}>
+                                    <h3 className="font-bold mb-3 uppercase text-xs tracking-wider opacity-70">Accessibility</h3>
+                                    
+                                    <div className="space-y-3">
+                                        <label className="flex items-center justify-between cursor-pointer">
+                                            <span className="text-sm">Reduced Motion</span>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={a11y.reducedMotion} 
+                                                onChange={(e) => setA11y({...a11y, reducedMotion: e.target.checked})}
+                                                className="w-4 h-4"
+                                            />
+                                        </label>
+                                        <label className="flex items-center justify-between cursor-pointer">
+                                            <span className="text-sm">High Contrast</span>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={a11y.highContrast} 
+                                                onChange={(e) => setA11y({...a11y, highContrast: e.target.checked})}
+                                                className="w-4 h-4"
+                                            />
+                                        </label>
+                                        <label className="flex items-center justify-between cursor-pointer">
+                                            <span className="text-sm">Large Text</span>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={a11y.largeText} 
+                                                onChange={(e) => setA11y({...a11y, largeText: e.target.checked})}
+                                                className="w-4 h-4"
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* TOP RIGHT CONTROLS - Mute */}
+                    <div className="absolute top-4 right-4 z-50">
+                        <button 
+                            onClick={() => setIsMuted(!isMuted)}
+                            className={`p-2 rounded-full border transition-colors ${a11y.highContrast ? 'bg-black border-white text-white' : 'bg-slate-800/80 border-slate-600 text-slate-300 hover:text-white'}`}
+                            title={isMuted ? "Unmute" : "Mute"}
+                        >
+                            {isMuted ? (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                            ) : (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                            )}
+                        </button>
+                    </div>
+
+                    {launchCountdown !== null && launchCountdown > -1 && (
+                        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
+                            <div key={launchCountdown} className={`countdown-text font-black ${a11y.highContrast ? 'text-white text-9xl' : 'text-9xl text-white drop-shadow-[0_0_50px_rgba(99,102,241,0.8)]'}`}>
+                                {launchCountdown === 0 ? "BLAST OFF!" : launchCountdown}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="absolute top-0 left-0 w-full h-full z-10 pointer-events-none flex flex-col justify-between p-4 md:p-6">
+                        {gameState === 'playing' && (
+                            <div className="flex justify-between items-start animate-in fade-in slide-in-from-top-4 duration-500 mt-14">
+                                <div className={a11y.highContrast ? "hc-panel p-3 rounded-xl" : "glass-panel p-3 rounded-xl text-indigo-300"}>
+                                    <div className="text-xs uppercase tracking-widest opacity-70">Checkpoints</div>
+                                    <div className="text-3xl font-mono font-black text-white">
+                                        {playersRef.current.find(p => p.id === 'human')?.score || 0}<span className="text-lg opacity-60">/{settings.target}</span>
+                                    </div>
+                                    <div className="mt-2 flex gap-1">
+                                        {[...Array(3)].map((_, i) => (
+                                            <div key={i} className={`h-1.5 w-6 rounded-full transition-all ${i < Math.min(combo, 3) ? (a11y.highContrast ? 'bg-white' : 'bg-cyan-400 shadow-[0_0_10px_cyan]') : 'bg-slate-700'}`} />
+                                        ))}
+                                    </div>
+                                    {!a11y.highContrast && combo >= SHIELD_THRESHOLD && (
+                                         <div className="text-xs mt-1 font-bold text-blue-400 animate-pulse">SHIELD ONLINE</div>
+                                    )}
+                                </div>
+                                
+                                <div className={`${a11y.highContrast ? "hc-panel" : "glass-panel"} p-3 rounded-xl w-40 mr-16 md:mr-0`}> 
+                                    <div className={`text-xs uppercase tracking-widest opacity-70 flex justify-between ${a11y.highContrast ? 'text-white' : 'text-cyan-300'}`}>
+                                        <span>Velocity</span>
+                                        <span className="text-white font-mono">{Math.floor(playersRef.current.find(p => p.id === 'human')?.vel || 0)}</span>
+                                    </div>
+                                    <div className={`h-2 mt-2 rounded-full overflow-hidden border ${a11y.highContrast ? 'bg-black border-white' : 'bg-slate-800 border-slate-700'}`}>
+                                        <div 
+                                            className={`h-full transition-all duration-100 ${a11y.highContrast ? 'bg-white' : (combo >= 3 ? 'bg-white shadow-[0_0_10px_white]' : 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600')}`}
+                                            style={{ width: `${Math.min(100, (playersRef.current.find(p => p.id === 'human')?.vel || 0) / 2.5)}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 w-full z-20 flex justify-center pb-6 px-4">
+                        {gameState === 'menu' && (
+                            <div className={`${getMenuPanelClass()} max-h-[90vh] overflow-y-auto custom-scrollbar`}>
+                                <div className="text-center mb-6">
+                                    <h1 className={`text-4xl md:text-5xl font-black mb-2 italic tracking-tighter ${a11y.highContrast ? 'text-white' : 'bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent drop-shadow-sm'}`}>FACTOR ROCKETS</h1>
+                                    <div className={`inline-block px-3 py-1 rounded-full border ${a11y.highContrast ? 'border-white text-white' : 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300'}`}>
+                                        <p className="text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase">Hyper-Velocity Edition</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Pilot Callsign</label>
+                                        <input 
+                                            value={playerName}
+                                            onChange={e => setPlayerName(e.target.value)}
+                                            className={`w-full border rounded-xl p-3 text-lg outline-none transition-all ${a11y.highContrast ? 'bg-black border-white text-white focus:ring-2 focus:ring-white' : 'bg-slate-900/60 border-slate-700 text-white focus:ring-2 focus:ring-cyan-500 shadow-inner'}`}
+                                            placeholder="Enter Name..."
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Select Ship</label>
+                                        <div className={`border rounded-xl p-2 flex items-center justify-between ${a11y.highContrast ? 'bg-black border-white' : 'bg-slate-900/60 border-slate-700'}`}>
+                                            <button onClick={() => setSelectedShipIdx(i => (i - 1 + COLORS.length) % COLORS.length)} className="p-3 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition">&lt;</button>
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-16 h-16 relative">
+                                                    <svg viewBox="0 0 50 50" className="w-full h-full drop-shadow-lg">
+                                                        <path d="M25 5 C 32 15, 32 30, 32 35 L 18 35 C 18 30, 18 15, 25 5 Z" fill={COLORS[selectedShipIdx].fill} stroke={a11y.highContrast ? 'white' : 'none'} strokeWidth={a11y.highContrast ? 2 : 0} />
+                                                        <path d="M18 25 L 10 40 L 20 38 Z" fill={a11y.highContrast ? 'black' : '#1e293b'} stroke={a11y.highContrast ? 'white' : 'none'} strokeWidth={a11y.highContrast ? 2 : 0}/>
+                                                        <path d="M32 25 L 40 40 L 30 38 Z" fill={a11y.highContrast ? 'black' : '#1e293b'} stroke={a11y.highContrast ? 'white' : 'none'} strokeWidth={a11y.highContrast ? 2 : 0}/>
+                                                        <circle cx="25" cy="20" r="4" fill={a11y.highContrast ? 'white' : '#bae6fd'} />
+                                                    </svg>
+                                                </div>
+                                                <span className="text-xs font-bold uppercase tracking-widest text-white mt-1">{COLORS[selectedShipIdx].name}</span>
+                                            </div>
+                                            <button onClick={() => setSelectedShipIdx(i => (i + 1) % COLORS.length)} className="p-3 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition">&gt;</button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Mission</label>
+                                            <select 
+                                                value={settings.mode}
+                                                onChange={e => setSettings({...settings, mode: e.target.value})}
+                                                className={`w-full border rounded-xl p-2 text-sm text-white outline-none ${a11y.highContrast ? 'bg-black border-white' : 'bg-slate-900/60 border-slate-700'}`}
+                                            >
+                                                <option value="mixed">Mixed (× & ÷)</option>
+                                                <option value="mult">Multiply Only</option>
+                                                <option value="div">Division Only</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Focus Number</label>
+                                            <select 
+                                                value={settings.focus}
+                                                onChange={e => setSettings({...settings, focus: e.target.value})}
+                                                className={`w-full border rounded-xl p-2 text-sm text-white outline-none ${a11y.highContrast ? 'bg-black border-white' : 'bg-slate-900/60 border-slate-700'}`}
+                                            >
+                                                <option value="all">All Numbers</option>
+                                                {[...Array(11)].map((_, i) => ( <option key={i+2} value={i+2}>Focus on {i+2}s</option> ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Target</label>
+                                        <select 
+                                            value={settings.target}
+                                            onChange={e => setSettings({...settings, target: parseInt(e.target.value)})}
+                                            className={`w-full border rounded-xl p-2 text-sm text-white outline-none ${a11y.highContrast ? 'bg-black border-white' : 'bg-slate-900/60 border-slate-700'}`}
+                                        >
+                                            <option value="5">Rookie (5)</option>
+                                            <option value="15">Short (15)</option>
+                                            <option value="20">Standard (20)</option>
+                                            <option value="40">Marathon (40)</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Difficulty</label>
+                                        <div className={`flex rounded-xl p-1 border ${a11y.highContrast ? 'bg-black border-white' : 'bg-slate-900/60 border-slate-700'}`}>
+                                            {['super-easy', 'easy', 'normal', 'hard'].map(d => (
+                                                <button
+                                                    key={d}
+                                                    onClick={() => setSettings({...settings, difficulty: d})}
+                                                    className={`flex-1 py-2 text-[10px] md:text-xs font-black uppercase rounded-lg transition-all ${settings.difficulty === d ? (a11y.highContrast ? 'bg-white text-black' : 'bg-indigo-600 text-white shadow-lg') : 'text-slate-500 hover:text-white'}`}
+                                                >
+                                                    {d === 'super-easy' ? 'Rookie' : d}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <button 
+                                        onClick={initGame}
+                                        disabled={!playerName.trim()}
+                                        className={`w-full py-4 rounded-xl font-black text-xl text-white transition-all active:scale-95 disabled:opacity-50 tracking-wide border ${a11y.highContrast ? 'bg-black border-white hover:bg-white hover:text-black' : 'bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 border-white/10 shadow-lg btn-glow'}`}
+                                    >
+                                        INITIATE LAUNCH
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {gameState === 'playing' && currentQ && (
+                            <div className={`${getPanelClass()} max-w-3xl w-full transform transition-all duration-300 ${feedback === 'wrong' && !a11y.reducedMotion ? 'shake border-red-500/50 bg-red-900/20' : ''}`}>
+                                <div className="text-center mb-8">
+                                    <div className={`${a11y.largeText ? 'text-7xl md:text-8xl' : 'text-6xl'} font-mono font-black text-white tracking-widest drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]`}>
+                                        {currentQ.question}
+                                    </div>
+                                    <div className="hidden md:block text-[10px] uppercase tracking-[0.3em] text-slate-500 mt-2">
+                                        Press 1, 2, or 3 to answer
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-6">
+                                    {currentQ.options.map((opt, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => handleAnswer(opt)}
+                                            className={`
+                                                py-8 rounded-2xl ${a11y.largeText ? 'text-5xl' : 'text-4xl'} font-bold transition-all transform active:scale-95 border-b-4 relative overflow-hidden group
+                                                ${feedback === 'correct' && opt === currentQ.answer 
+                                                    ? (a11y.highContrast ? 'bg-white text-black border-black' : 'bg-gradient-to-br from-green-500 to-emerald-600 border-emerald-800 text-white shadow-[0_0_30px_rgba(34,197,94,0.4)] z-10 scale-105') 
+                                                    : (a11y.highContrast ? 'bg-black text-white border-white hover:bg-white hover:text-black' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-950 hover:border-slate-900')
+                                                }
+                                            `}
+                                        >
+                                            <div className="absolute top-2 left-2 text-xs font-sans font-bold opacity-50 hidden md:block">{i+1}</div>
+                                            <span className="relative z-10">{opt}</span>
+                                            {!a11y.highContrast && !a11y.reducedMotion && <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {gameState === 'summary' && (
+                            <div className={`${getPanelClass()} max-w-2xl w-full text-center animate-in zoom-in duration-500 flex flex-col md:flex-row gap-8`}>
+                                
+                                <div className="flex-1">
+                                    <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${a11y.highContrast ? 'border-2 border-white' : 'bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg shadow-orange-500/30 animate-bounce'}`}>
+                                        <span className="text-4xl">🏆</span>
+                                    </div>
+                                    <h2 className="text-3xl font-black text-white mb-2 tracking-tight">MISSION COMPLETE</h2>
+                                    
+                                    <div className="flex justify-center gap-3 mb-6">
+                                        {getBadges().length > 0 ? getBadges().map((badge, i) => (
+                                            <div key={i} className={`flex flex-col items-center p-2 rounded-xl w-20 ${a11y.highContrast ? 'border border-white' : 'badge-anim bg-slate-900/80 border border-yellow-500/30 shadow-lg'}`}>
+                                                <div className="text-2xl mb-1">{badge.icon}</div>
+                                                <div className={`text-[9px] font-bold uppercase text-center leading-tight ${a11y.highContrast ? 'text-white' : 'text-yellow-400'}`}>{badge.name}</div>
+                                            </div>
+                                        )) : (
+                                            <div className="text-sm text-slate-500 italic">No badges earned.</div>
+                                        )}
+                                    </div>
+
+                                    <div className={`rounded-2xl p-4 mb-4 text-left ${a11y.highContrast ? 'border border-white' : 'bg-slate-900/80 border border-slate-700/50 shadow-inner'}`}>
+                                        <h3 className="text-xs font-bold text-slate-500 uppercase mb-4 text-center tracking-[0.2em]">Flight Report</h3>
+                                        
+                                        {playersRef.current.filter(p => p.id === 'human').map((p, i) => (
+                                            <div key={i} className="space-y-3">
+                                                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                                                    <span className="text-slate-400 text-sm font-semibold uppercase">Pilot Name</span>
+                                                    <span className="text-xl font-black text-white">{p.name}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                                                    <span className="text-slate-400 text-sm font-semibold uppercase">Time Elapsed</span>
+                                                    <span className={`text-xl font-mono font-bold ${a11y.highContrast ? 'text-white' : 'text-cyan-400'}`}>{(p.finishTime / 1000).toFixed(1)}s</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-slate-400 text-sm font-semibold uppercase">Altitude Reached</span>
+                                                    <span className={`text-xl font-mono font-bold ${a11y.highContrast ? 'text-white' : 'text-emerald-400'}`}>{formatNumber(p.y)}m</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button 
+                                        onClick={() => setGameState('menu')}
+                                        className={`w-full py-4 rounded-xl font-black transition-all ${a11y.highContrast ? 'bg-black border border-white text-white hover:bg-white hover:text-black' : 'bg-white text-slate-900 hover:bg-indigo-50 shadow-lg'}`}
+                                    >
+                                        RETURN TO BASE
+                                    </button>
+                                </div>
+
+                                <div className={`w-full md:w-64 rounded-2xl border p-4 flex flex-col ${a11y.highContrast ? 'border-white' : 'bg-red-900/10 border-red-500/20'}`}>
+                                    <div className="flex items-center gap-2 mb-4 justify-center text-red-400">
+                                        <h3 className="text-xs font-bold uppercase tracking-widest">Turbulence Detected</h3>
+                                    </div>
+                                    
+                                    <div className={`flex-1 overflow-y-auto custom-scrollbar rounded-lg p-2 ${a11y.highContrast ? 'border border-slate-700' : 'bg-slate-900/50'}`}>
+                                        {mistakes.length === 0 ? (
+                                            <div className="h-full flex flex-col items-center justify-center text-slate-500 text-center text-sm p-4">
+                                                <span className="text-2xl mb-2">✨</span>No Errors.
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {mistakes.map((m, i) => (
+                                                    <div key={i} className={`p-2 rounded text-center border ${a11y.highContrast ? 'border-white bg-black' : 'bg-slate-800 border-slate-700'}`}>
+                                                        <div className="text-slate-400 text-xs">Problem</div>
+                                                        <div className="text-white font-mono font-bold">{m.question}</div>
+                                                        <div className="text-red-400 text-xs mt-1">Answer: {m.answer}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
