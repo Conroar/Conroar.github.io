@@ -3,21 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pizza Chef: Slice Master</title>
+    <title>Pizza Chef: Slice Master - Accessible Version</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Open+Sans:wght@400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Open+Sans:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-color: #fce7cf;
+            --text-color: #0f172a; /* Darker for better contrast */
+            --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+        }
 
         body {
             font-family: 'Open Sans', sans-serif;
-            background-color: #fce7cf;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             user-select: none;
-            overflow: hidden;
+            /* Allows zooming/scrolling (WCAG 1.4.4) */
+            min-height: 100vh;
+            overflow-x: hidden;
             touch-action: manipulation;
+            transition: background-color 0.3s, color 0.3s;
         }
 
-        h1, h2, .font-display {
+        h1, h2, h3, .font-display {
             font-family: 'Fredoka One', cursive;
+        }
+
+        /* Focus Styles for ADA Compliance (WCAG 2.4.7) */
+        *:focus-visible {
+            outline: 4px solid #1d4ed8 !important; /* High contrast blue */
+            outline-offset: 4px !important;
+            border-radius: 4px;
+        }
+
+        /* Skip Link Style */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: #1d4ed8;
+            color: white;
+            padding: 8px 16px;
+            z-index: 100;
+            transition: top 0.2s;
+            font-weight: bold;
+        }
+        .skip-link:focus {
+            top: 0;
+        }
+
+        /* SVG Specific Focus */
+        .pizza-slice:focus-visible path {
+            stroke: #1d4ed8;
+            stroke-width: 4;
         }
 
         .pizza-slice {
@@ -32,14 +72,17 @@
         }
 
         .ingredient-btn {
-            transition: all 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
+            background-color: var(--panel-bg);
         }
         .ingredient-btn:active:not(:disabled) {
             transform: scale(0.9);
         }
-        .ingredient-btn.selected {
+        .ingredient-btn[aria-pressed="true"] {
             transform: scale(1.1);
-            box-shadow: 0 0 0 4px #fbbf24;
+            box-shadow: 0 0 0 4px #b45309; /* Darkened for contrast */
+            border-color: #b45309;
+            background-color: #fef3c7;
             z-index: 10;
         }
         .ingredient-btn:disabled {
@@ -49,19 +92,10 @@
         }
 
         /* Animations */
-        @keyframes popIn {
-            0% { transform: scale(0) translateY(20px); opacity: 0; }
-            100% { transform: scale(1) translateY(0); opacity: 1; }
-        }
-        .customer-pop {
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
-
         @keyframes slideUp {
             0% { transform: translateY(20px); opacity: 0; }
             100% { transform: translateY(0); opacity: 1; }
         }
-        
         @keyframes slideDown {
             0% { transform: translateY(-100%); opacity: 0; }
             100% { transform: translateY(0); opacity: 1; }
@@ -70,11 +104,9 @@
         .ticket-entry {
             animation: slideDown 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
-
         .shake {
             animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
         }
-
         @keyframes shake {
             10%, 90% { transform: translate3d(-1px, 0, 0); }
             20%, 80% { transform: translate3d(2px, 0, 0); }
@@ -84,209 +116,410 @@
 
         /* Modal Styles */
         .modal-overlay {
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0,0,0,0.85);
             backdrop-filter: blur(4px);
+        }
+
+        /* --- Accessibility Modifier Classes --- */
+        body.a11y-high-contrast {
+            --bg-color: #121212;
+            --text-color: #ffffff;
+            --panel-bg: #2d2d2d;
+            --border-color: #ffffff;
+        }
+        body.a11y-high-contrast .bg-white { background-color: var(--panel-bg) !important; color: var(--text-color) !important; border-color: var(--border-color); }
+        body.a11y-high-contrast .bg-yellow-50, body.a11y-high-contrast .bg-blue-50 { background-color: #1a1a1a !important; color: #fff !important; border: 2px solid #fff;}
+        body.a11y-high-contrast .text-slate-800, body.a11y-high-contrast .text-slate-700, body.a11y-high-contrast .text-slate-600, body.a11y-high-contrast .text-slate-500, body.a11y-high-contrast .text-slate-400 { color: #ffffff !important; }
+        body.a11y-high-contrast .border-slate-200, body.a11y-high-contrast .border-slate-300, body.a11y-high-contrast .border-slate-400 { border-color: #888 !important; }
+        body.a11y-high-contrast .bg-slate-100 { background-color: #333 !important; }
+
+        body.a11y-reduce-motion *, body.a11y-reduce-motion .ticket-entry, body.a11y-reduce-motion .shake {
+            animation: none !important;
+            transition: none !important;
+            transform: none !important;
+        }
+
+        /* Respect OS level reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, .ticket-entry, .shake {
+                animation: none !important;
+                transition: none !important;
+                transform: none !important;
+            }
+        }
+
+        body.a11y-dyslexia {
+            font-family: 'Comic Sans MS', 'OpenDyslexic', 'Lexend', sans-serif !important;
+        }
+        body.a11y-dyslexia .font-display, body.a11y-dyslexia h1, body.a11y-dyslexia h2, body.a11y-dyslexia h3 {
+            font-family: 'Comic Sans MS', 'OpenDyslexic', 'Lexend', sans-serif !important;
+            letter-spacing: 0.05em;
+        }
+
+        /* Screen Reader Only Utility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
         }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col items-center text-slate-800">
+<body class="flex flex-col items-center">
+
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- ARIA Live Regions for Screen Readers -->
+    <div aria-live="polite" aria-atomic="true" class="sr-only" id="a11y-announcer"></div>
+    <div aria-live="assertive" aria-atomic="true" class="sr-only" id="a11y-alert"></div>
 
     <!-- Start Screen Overlay -->
-    <div id="start-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-orange-100 modal-overlay">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-md mx-4 border-4 border-orange-400">
-            <div class="text-6xl mb-4">🍕</div>
-            <h1 class="text-4xl text-orange-600 mb-2">Pizza Chef</h1>
-            <p class="text-slate-600 mb-6 font-semibold">Ready to slice and serve?</p>
-            <button onclick="startGame()" class="bg-green-500 hover:bg-green-600 text-white font-display text-2xl px-8 py-3 rounded-full shadow-lg transform transition hover:scale-105">
-                START COOKING
-            </button>
+    <div id="start-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-orange-100 modal-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-md mx-4 border-4 border-orange-600">
+            <div class="text-6xl mb-4" aria-hidden="true">🍕</div>
+            <h1 id="start-title" class="text-4xl text-orange-800 mb-2">Pizza Chef</h1>
+            <p class="text-slate-800 mb-6 font-semibold">Ready to slice and serve?</p>
+            <div class="flex flex-col gap-4 items-center">
+                <button id="start-btn" onclick="startGame()" class="bg-green-700 hover:bg-green-800 text-white font-display text-2xl px-8 py-3 rounded-full shadow-lg transform transition hover:scale-105 w-full focus:outline-none focus:ring-4 focus:ring-green-500">
+                    START COOKING
+                </button>
+                <button onclick="a11y.toggleMenu(event)" class="text-indigo-700 hover:text-indigo-900 font-bold flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-600 p-3 rounded-lg w-full border border-indigo-200 bg-indigo-50 hover:bg-indigo-100" aria-label="Open Accessibility Options">
+                    <span aria-hidden="true" class="text-xl">♿</span> Accessibility Options
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accessibility Options Modal -->
+    <div id="a11y-modal" class="fixed inset-0 flex items-center justify-center bg-black/70 hidden modal-overlay" style="z-index: 60;" onclick="a11y.toggleMenu()" role="dialog" aria-modal="true" aria-labelledby="a11y-title">
+        <div class="bg-white p-6 rounded-3xl shadow-2xl max-w-md w-full mx-4 border-4 border-indigo-600" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-6 border-b pb-2 border-slate-300">
+                <h2 id="a11y-title" class="text-3xl text-indigo-800 flex items-center gap-2">
+                    <span aria-hidden="true">♿</span> Accessibility
+                </h2>
+                <button onclick="a11y.toggleMenu()" class="text-slate-700 hover:text-slate-900 font-bold text-2xl px-2 focus:outline-none focus:ring-2 focus:ring-indigo-600 rounded" aria-label="Close Accessibility Menu">✕</button>
+            </div>
+            
+            <div class="space-y-4">
+                <label class="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-200 border border-slate-300">
+                    <span class="font-bold text-slate-900">High Contrast UI</span>
+                    <input type="checkbox" id="toggle-contrast" onchange="a11y.updateSettings()" class="w-6 h-6 rounded text-indigo-700 focus:ring-indigo-600 border-slate-400">
+                </label>
+
+                <label class="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-200 border border-slate-300">
+                    <span class="font-bold text-slate-900">Reduce Motion & Animation</span>
+                    <input type="checkbox" id="toggle-motion" onchange="a11y.updateSettings()" class="w-6 h-6 rounded text-indigo-700 focus:ring-indigo-600 border-slate-400">
+                </label>
+
+                <label class="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-200 border border-slate-300">
+                    <span class="font-bold text-slate-900">Dyslexia-Friendly Font</span>
+                    <input type="checkbox" id="toggle-dyslexia" onchange="a11y.updateSettings()" class="w-6 h-6 rounded text-indigo-700 focus:ring-indigo-600 border-slate-400">
+                </label>
+
+                <label class="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-200 border border-slate-300">
+                    <div>
+                        <span class="font-bold text-slate-900 block">Auto Text-to-Speech</span>
+                        <span class="text-sm text-slate-700">Reads new orders aloud automatically</span>
+                    </div>
+                    <input type="checkbox" id="toggle-tts" onchange="a11y.updateSettings()" class="w-6 h-6 rounded text-indigo-700 focus:ring-indigo-600 border-slate-400">
+                </label>
+
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-300">
+                    <label for="volume-slider" class="font-bold text-slate-900 block mb-2">Master Volume</label>
+                    <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.2" onchange="audio.setVolume(this.value)" class="w-full h-2 bg-slate-400 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-600">
+                </div>
+            </div>
+            <p class="text-center text-sm text-slate-600 mt-4">Press ESC to close.</p>
         </div>
     </div>
 
     <!-- Chef's Log Modal -->
-    <div id="menu-modal" class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 hidden modal-overlay" onclick="toggleMenu()">
-        <div class="bg-white p-6 rounded-3xl shadow-2xl max-w-md w-full mx-4 border-4 border-blue-400" onclick="event.stopPropagation()">
+    <div id="menu-modal" class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 hidden modal-overlay" onclick="toggleLog()" role="dialog" aria-modal="true" aria-labelledby="log-title">
+        <div class="bg-white p-6 rounded-3xl shadow-2xl max-w-md w-full mx-4 border-4 border-blue-600" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-3xl text-blue-600">Chef's Log</h2>
-                <button onclick="toggleMenu()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">✕</button>
+                <h2 id="log-title" class="text-3xl text-blue-800">Chef's Log</h2>
+                <button onclick="toggleLog()" class="text-slate-700 hover:text-slate-900 font-bold text-2xl px-2 focus:outline-none focus:ring-2 focus:ring-blue-600 rounded" aria-label="Close Chef's Log">✕</button>
             </div>
-            
-            <div class="bg-blue-50 rounded-xl p-4 mb-4">
-                <h3 class="font-display text-slate-700 mb-2">Ingredients Unlocked</h3>
+            <div class="bg-blue-50 rounded-xl p-4 mb-4 border border-blue-200">
+                <h3 class="font-display text-slate-900 mb-2">Ingredients Unlocked</h3>
                 <div id="unlock-list" class="space-y-2">
                     <!-- Populated by JS -->
                 </div>
             </div>
-            
-            <p class="text-center text-sm text-slate-500">Keep earning tips to unlock more toppings!</p>
+            <p class="text-center text-sm font-bold text-slate-700">Keep earning tips to unlock more toppings! (Press ESC to close)</p>
         </div>
     </div>
 
-    <!-- Header / Score -->
-    <div class="w-full max-w-4xl flex justify-between items-center p-4 z-20 shrink-0">
-        <!-- Score/Streak -->
-        <div class="flex gap-3">
-            <div class="bg-white rounded-full px-4 py-2 shadow-lg border-2 border-orange-400 flex items-center gap-2">
-                <span class="text-2xl">💰</span>
-                <span id="score" class="font-display text-xl text-orange-600">$0.00</span>
-            </div>
-            <div class="bg-white rounded-full px-4 py-2 shadow-lg border-2 border-blue-400 flex items-center gap-2 hidden sm:flex">
-                <span class="text-2xl">⭐</span>
-                <span id="streak" class="font-display text-xl text-blue-600">Streak: 0</span>
-            </div>
-        </div>
-
-        <!-- System Controls -->
-        <div class="flex gap-2">
-            <button onclick="toggleMenu()" class="bg-white p-2 rounded-full shadow-md border-2 border-slate-200 hover:bg-slate-50" title="Chef's Log">
-                📜
-            </button>
-            <button onclick="audio.toggleMute()" id="mute-btn" class="bg-white p-2 rounded-full shadow-md border-2 border-slate-200 hover:bg-slate-50" title="Mute Music">
-                🔊
-            </button>
-        </div>
-    </div>
-
-    <!-- Main Game Area -->
-    <div class="flex-1 w-full max-w-4xl flex flex-col md:flex-row items-center justify-center gap-4 relative overflow-hidden">
-        
-        <!-- Order Ticket Section -->
-        <div class="relative w-full md:w-1/3 h-64 md:h-full flex items-start justify-center pt-8">
-            <!-- Ticket Rail (Background visual) -->
-            <div class="absolute top-0 left-0 w-full h-4 bg-slate-300 border-b-4 border-slate-400 z-10 shadow-sm"></div>
+    <!-- Main Application Wrapper (Used for 'inert' when modals open) -->
+    <div id="main-app" class="w-full flex flex-col items-center min-h-screen">
+        <!-- Header Navigation & Controls -->
+        <header class="w-full max-w-4xl flex flex-wrap gap-4 justify-between items-center p-4 z-20 shrink-0">
             
-            <!-- The Ticket Container -->
-            <div id="ticket-container" class="relative z-0 mt-2 transform transition-transform duration-300 origin-top">
-                <!-- Injected via JS -->
-            </div>
-        </div>
+            <!-- Left Controls (A11y & Menu) -->
+            <nav class="flex gap-2" aria-label="Main Menu">
+                <button onclick="a11y.toggleMenu(event)" id="btn-a11y" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-900 p-2 px-3 rounded-full shadow-md border-2 border-indigo-400 font-bold text-lg focus:ring-2 focus:ring-indigo-700 focus:outline-none" aria-label="Accessibility Options">
+                    ♿ <span class="sr-only">Accessibility</span>
+                </button>
+                <button onclick="toggleLog()" class="bg-white p-2 px-3 rounded-full shadow-md border-2 border-slate-400 hover:bg-slate-100 focus:ring-2 focus:ring-slate-600 focus:outline-none text-slate-900" aria-label="Open Chef's Log">
+                    📜 <span class="sr-only">Chef's Log</span>
+                </button>
+                <button onclick="audio.toggleMute()" id="mute-btn" class="bg-white p-2 px-3 rounded-full shadow-md border-2 border-slate-400 hover:bg-slate-100 focus:ring-2 focus:ring-slate-600 focus:outline-none text-slate-900" aria-label="Mute Audio" aria-pressed="false">
+                    🔊 <span class="sr-only">Toggle Audio</span>
+                </button>
+            </nav>
 
-        <!-- Pizza Board Section -->
-        <div class="relative w-full md:w-2/3 flex items-center justify-center p-4">
-            <div class="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 drop-shadow-2xl transition-transform" id="pizza-container">
-                <svg id="pizza-svg" viewBox="-105 -105 210 210" class="w-full h-full">
-                    <circle cx="0" cy="0" r="104" fill="#cbd5e1" />
-                    <circle cx="0" cy="0" r="100" fill="#fff" />
-                    <circle cx="0" cy="0" r="96" fill="#d97706" />
-                    <g id="pizza-slices"></g>
-                </svg>
-            </div>
-
-            <!-- Feedback Overlay -->
-            <div id="feedback" class="absolute inset-0 flex items-center justify-center pointer-events-none z-50 opacity-0 transition-opacity duration-300">
-                <div class="bg-white/95 backdrop-blur-sm px-8 py-4 rounded-3xl shadow-2xl border-4 border-green-500 transform scale-110">
-                    <span id="feedback-text" class="font-display text-3xl md:text-4xl text-green-600 text-center block">Perfect!</span>
+            <!-- Right Controls (Score) -->
+            <div class="flex gap-3" aria-label="Scoreboard">
+                <div class="bg-white rounded-full px-4 py-2 shadow-sm border-2 border-orange-600 flex items-center gap-2" aria-label="Current Money">
+                    <span class="text-xl" aria-hidden="true">💰</span>
+                    <span id="score" class="font-display text-xl text-orange-800">$0.00</span>
+                </div>
+                <div class="bg-white rounded-full px-4 py-2 shadow-sm border-2 border-blue-600 flex items-center gap-2" aria-label="Current Streak">
+                    <span class="text-xl" aria-hidden="true">⭐</span>
+                    <span id="streak" class="font-display text-xl text-blue-800">Streak: 0</span>
                 </div>
             </div>
-        </div>
-    </div>
+        </header>
 
-    <!-- Ingredient Station -->
-    <div class="w-full bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)] rounded-t-3xl z-30 shrink-0">
-        <div class="max-w-3xl mx-auto p-4">
+        <!-- Main Game Area -->
+        <main id="main-content" tabindex="-1" class="flex-1 w-full max-w-4xl flex flex-col md:flex-row items-center justify-center gap-4 relative focus:outline-none">
             
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="font-display text-slate-400 text-sm uppercase tracking-wide">Toppings</h2>
-                <div class="flex gap-2">
-                    <button onclick="game.trashPizza()" class="bg-red-100 hover:bg-red-200 text-red-600 p-2 rounded-full transition-colors" title="Trash Pizza">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </button>
-                    <button onclick="game.serveOrder()" class="bg-green-500 hover:bg-green-600 text-white font-display px-6 py-2 rounded-full shadow-lg transform active:scale-95 transition-all text-lg tracking-wider">
-                        SERVE!
-                    </button>
+            <!-- Order Ticket Section -->
+            <section class="relative w-full md:w-1/3 h-64 md:h-full flex items-start justify-center pt-8" aria-labelledby="ticket-heading">
+                <h2 id="ticket-heading" class="sr-only">Current Customer Order</h2>
+                
+                <div class="absolute top-0 left-0 w-full h-4 bg-slate-300 border-b-4 border-slate-400 z-10 shadow-sm" aria-hidden="true"></div>
+                
+                <div id="ticket-container" class="relative z-0 mt-2 transform transition-transform duration-300 origin-top" aria-live="polite">
+                    <!-- Injected via JS -->
+                </div>
+            </section>
+
+            <!-- Pizza Board Section -->
+            <section class="relative w-full md:w-2/3 flex flex-col items-center justify-center p-4" aria-labelledby="pizza-heading">
+                <h2 id="pizza-heading" class="sr-only">Pizza Preparation Area</h2>
+                
+                <!-- Explicit visually hidden label for screen readers showing current active tool -->
+                <div class="sr-only" aria-live="polite" id="current-tool-announcer">Current tool: Plain Cheese</div>
+
+                <div class="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 drop-shadow-2xl transition-transform" id="pizza-container">
+                    <!-- SVG Pizza Canvas. Group elements handled via JS for keyboard access -->
+                    <svg id="pizza-svg" viewBox="-105 -105 210 210" class="w-full h-full" role="group" aria-label="Pizza Board">
+                        <circle cx="0" cy="0" r="104" fill="#94a3b8" aria-hidden="true" /> <!-- Darkened plate rim for contrast -->
+                        <circle cx="0" cy="0" r="100" fill="#f8fafc" aria-hidden="true" />
+                        <circle cx="0" cy="0" r="96" fill="#b45309" aria-hidden="true" /> <!-- Darker crust -->
+                        <g id="pizza-slices"></g>
+                    </svg>
+                </div>
+
+                <!-- Feedback Overlay -->
+                <div id="feedback" class="absolute inset-0 flex items-center justify-center pointer-events-none z-50 opacity-0 transition-opacity duration-300" aria-hidden="true">
+                    <div class="bg-white/95 backdrop-blur-sm px-8 py-4 rounded-3xl shadow-2xl border-4 border-green-700 transform scale-110">
+                        <span id="feedback-text" class="font-display text-3xl md:text-4xl text-green-800 text-center block">Perfect!</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Ingredient Station -->
+        <footer class="w-full bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)] rounded-t-3xl z-30 shrink-0 border-t border-slate-300 mt-4 md:mt-0">
+            <div class="max-w-3xl mx-auto p-4">
+                
+                <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                    <h2 class="font-display text-slate-800 text-sm uppercase tracking-wide" id="topping-heading">Select a Topping (Keys 1-6)</h2>
+                    <div class="flex gap-2">
+                        <button onclick="game.trashPizza()" class="bg-red-100 hover:bg-red-200 text-red-900 p-2 px-4 rounded-full transition-colors flex items-center gap-2 border border-red-400 focus:outline-none focus:ring-4 focus:ring-red-600" aria-label="Trash Pizza and Start Over">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            <span class="font-bold hidden sm:inline">TRASH</span>
+                        </button>
+                        <button onclick="game.serveOrder()" class="bg-green-700 hover:bg-green-800 text-white font-display px-8 py-2 rounded-full shadow-lg transform active:scale-95 transition-all text-lg tracking-wider focus:outline-none focus:ring-4 focus:ring-green-500" aria-label="Serve Pizza to Customer">
+                            SERVE!
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Topping Buttons Container -->
+                <div id="ingredients-rack" class="flex gap-2 overflow-x-auto pb-4 scrollbar-hide snap-x px-2" role="group" aria-labelledby="topping-heading">
+                    <!-- Generated via JS -->
                 </div>
             </div>
-
-            <div id="ingredients-rack" class="flex gap-2 overflow-x-auto pb-4 scrollbar-hide snap-x px-2">
-                <!-- Generated via JS -->
-            </div>
-        </div>
+        </footer>
     </div>
 
     <script>
+        // Global Keyboard Event Listener for ADA compliance (Escape Key Trapping)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const a11yModal = document.getElementById('a11y-modal');
+                const menuModal = document.getElementById('menu-modal');
+                
+                if (!a11yModal.classList.contains('hidden')) {
+                    a11y.toggleMenu();
+                } else if (!menuModal.classList.contains('hidden')) {
+                    toggleLog();
+                }
+            }
+        });
+
+        // --- Accessibility & TTS Controller ---
+        const a11y = {
+            ttsEnabled: false,
+            motionReduced: false,
+            triggerElement: null,
+            
+            init() {
+                this.updateSettings();
+            },
+            
+            toggleMenu(event) {
+                const modal = document.getElementById('a11y-modal');
+                const mainApp = document.getElementById('main-app');
+
+                if (modal.classList.contains('hidden')) {
+                    if (event && event.currentTarget) {
+                        this.triggerElement = event.currentTarget;
+                    }
+                    modal.classList.remove('hidden');
+                    // WCAG AAA: Trap focus securely using inert on background elements
+                    mainApp.inert = true; 
+                    document.getElementById('toggle-contrast').focus();
+                } else {
+                    modal.classList.add('hidden');
+                    mainApp.inert = false;
+                    if (this.triggerElement) {
+                        this.triggerElement.focus();
+                    }
+                }
+            },
+            
+            updateSettings() {
+                const hc = document.getElementById('toggle-contrast').checked;
+                const rm = document.getElementById('toggle-motion').checked;
+                const dy = document.getElementById('toggle-dyslexia').checked;
+                this.ttsEnabled = document.getElementById('toggle-tts').checked;
+                this.motionReduced = rm;
+
+                if (hc) document.body.classList.add('a11y-high-contrast');
+                else document.body.classList.remove('a11y-high-contrast');
+
+                if (rm) document.body.classList.add('a11y-reduce-motion');
+                else document.body.classList.remove('a11y-reduce-motion');
+
+                if (dy) document.body.classList.add('a11y-dyslexia');
+                else document.body.classList.remove('a11y-dyslexia');
+            },
+
+            announce(message, priority = 'polite') {
+                const el = priority === 'assertive' ? document.getElementById('a11y-alert') : document.getElementById('a11y-announcer');
+                el.textContent = ''; 
+                setTimeout(() => el.textContent = message, 50); 
+            },
+
+            speak(text) {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel(); 
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.9; 
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
+        };
+
         // --- Audio Controller (Synthesizer) ---
         class AudioController {
             constructor() {
                 this.ctx = null;
                 this.muted = false;
                 this.bgmTimer = null;
+                this.masterVolume = 0.2;
             }
-
             init() {
                 if (!this.ctx) {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     this.ctx = new AudioContext();
+                    
+                    // Create master gain node
+                    this.masterGain = this.ctx.createGain();
+                    this.masterGain.gain.value = this.masterVolume;
+                    this.masterGain.connect(this.ctx.destination);
+
                     this.startBGM();
                 }
             }
-
-            toggleMute() {
-                this.muted = !this.muted;
+            setVolume(val) {
+                this.masterVolume = parseFloat(val);
+                if (this.masterGain) {
+                    this.masterGain.gain.value = this.masterVolume;
+                }
+                if (this.masterVolume === 0 && !this.muted) {
+                    this.toggleMute(true);
+                } else if (this.masterVolume > 0 && this.muted) {
+                    this.toggleMute(false);
+                }
+            }
+            toggleMute(forceState = null) {
+                this.muted = forceState !== null ? forceState : !this.muted;
                 const btn = document.getElementById('mute-btn');
-                btn.innerText = this.muted ? '🔇' : '🔊';
+                btn.innerHTML = (this.muted ? '🔇' : '🔊') + '<span class="sr-only">Toggle Audio</span>';
+                btn.setAttribute('aria-pressed', this.muted);
                 if(this.ctx && this.ctx.state === 'suspended' && !this.muted) this.ctx.resume();
             }
-
-            playTone(freq, type, duration, vol=0.1) {
+            playTone(freq, type, duration, vol=1.0) {
                 if (this.muted || !this.ctx) return;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.type = type;
                 osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                // Volume scaled relative to master
                 gain.gain.setValueAtTime(vol, this.ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
                 osc.connect(gain);
-                gain.connect(this.ctx.destination);
+                gain.connect(this.masterGain);
                 osc.start();
                 osc.stop(this.ctx.currentTime + duration);
             }
-
             playSplat() {
                 if (this.muted || !this.ctx) return;
-                // White noise burst
-                const bufferSize = this.ctx.sampleRate * 0.1; // 0.1 sec
+                const bufferSize = this.ctx.sampleRate * 0.1; 
                 const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
                 const data = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                
                 const noise = this.ctx.createBufferSource();
                 noise.buffer = buffer;
                 const gain = this.ctx.createGain();
-                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.setValueAtTime(1.0, this.ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
                 noise.connect(gain);
-                gain.connect(this.ctx.destination);
+                gain.connect(this.masterGain);
                 noise.start();
             }
-
             playWin() {
-                this.playTone(523.25, 'sine', 0.1, 0.2); // C5
-                setTimeout(() => this.playTone(659.25, 'sine', 0.1, 0.2), 100); // E5
-                setTimeout(() => this.playTone(783.99, 'sine', 0.3, 0.2), 200); // G5
+                this.playTone(523.25, 'sine', 0.1, 1.0); 
+                setTimeout(() => this.playTone(659.25, 'sine', 0.1, 1.0), 100); 
+                setTimeout(() => this.playTone(783.99, 'sine', 0.3, 1.0), 200); 
             }
-
             playFail() {
-                this.playTone(150, 'sawtooth', 0.4, 0.2); // Low
-                setTimeout(() => this.playTone(130, 'sawtooth', 0.6, 0.2), 300); // Lower
+                this.playTone(150, 'sawtooth', 0.4, 1.0); 
+                setTimeout(() => this.playTone(130, 'sawtooth', 0.6, 1.0), 300); 
             }
-
             startBGM() {
                 if (this.bgmTimer) return;
-                const sequence = [
-                    {f: 392, d: 0.2}, {f: 523, d: 0.2}, {f: 659, d: 0.2}, {f: 0, d: 0.2},
-                    {f: 587, d: 0.2}, {f: 523, d: 0.2}, {f: 392, d: 0.4}, {f: 0, d: 0.4}
-                ];
+                const sequence = [{f: 392, d: 0.2}, {f: 523, d: 0.2}, {f: 659, d: 0.2}, {f: 0, d: 0.2}, {f: 587, d: 0.2}, {f: 523, d: 0.2}, {f: 392, d: 0.4}, {f: 0, d: 0.4}];
                 let step = 0;
-                
                 const playStep = () => {
                     if (!this.muted && this.ctx) {
                         const note = sequence[step % sequence.length];
-                        if (note.f > 0) this.playTone(note.f, 'triangle', 0.1, 0.03);
+                        if (note.f > 0) this.playTone(note.f, 'triangle', 0.1, 0.3); // BGM naturally quieter
                     }
                     step++;
-                    this.bgmTimer = setTimeout(playStep, 300); // tempo
+                    this.bgmTimer = setTimeout(playStep, 300); 
                 };
                 playStep();
             }
@@ -295,47 +528,36 @@
         const audio = new AudioController();
 
         // --- Game Config & Data ---
-        // unlockAt = Score required to unlock
         const ingredients = [
-            { id: 'cheese', name: 'Plain', color: '#fbbf24', icon: '🧀', unlockAt: 0, draw: null },
-            { 
-                id: 'pepperoni', name: 'Pepperoni', color: '#ef4444', icon: '🍕', unlockAt: 0,
+            { id: 'cheese', name: 'Plain Cheese', color: '#fbbf24', icon: '🧀', unlockAt: 0, draw: null },
+            { id: 'pepperoni', name: 'Pepperoni', color: '#ef4444', icon: '🍕', unlockAt: 0,
                 draw: (g) => {
                     const circles = [{x:0, y:-70, r:8}, {x:-15, y:-45, r:9}, {x:15, y:-45, r:8}, {x:0, y:-25, r:9}];
-                    circles.forEach(c => g.appendChild(createSVGEl("circle", {cx:c.x, cy:c.y, r:c.r, fill:"#b91c1c", opacity:"0.9"})));
+                    circles.forEach(c => g.appendChild(createSVGEl("circle", {cx:c.x, cy:c.y, r:c.r, fill:"#b91c1c", opacity:"0.9", "aria-hidden":"true"})));
                 }
             },
-            { 
-                id: 'mushroom', name: 'Mushroom', color: '#a8a29e', icon: '🍄', unlockAt: 15,
+            { id: 'mushroom', name: 'Mushroom', color: '#a8a29e', icon: '🍄', unlockAt: 15,
                 draw: (g) => {
                     const pos = [{x:-10, y:-60}, {x:10, y:-40}, {x:-5, y:-25}];
-                    pos.forEach(p => {
-                        g.appendChild(createSVGEl("path", {
-                            d: `M${p.x} ${p.y} q-6 0 -6 6 v5 h12 v-5 q0 -6 -6 -6 M${p.x} ${p.y+11} v4`,
-                            fill: "#e7e5e4", stroke: "#78716c", "stroke-width": "2"
-                        }));
-                    });
+                    pos.forEach(p => g.appendChild(createSVGEl("path", {d: `M${p.x} ${p.y} q-6 0 -6 6 v5 h12 v-5 q0 -6 -6 -6 M${p.x} ${p.y+11} v4`, fill: "#e7e5e4", stroke: "#78716c", "stroke-width": "2", "aria-hidden":"true"})));
                 }
             },
-            { 
-                id: 'peppers', name: 'Peppers', color: '#22c55e', icon: '🫑', unlockAt: 30,
+            { id: 'peppers', name: 'Peppers', color: '#22c55e', icon: '🫑', unlockAt: 30,
                 draw: (g) => {
                     const curves = [`M-10 -70 Q0 -80 10 -70`, `M-15 -40 Q0 -50 15 -40`, `M-10 -20 Q0 -25 10 -20`];
-                    curves.forEach(d => g.appendChild(createSVGEl("path", {d: d, fill:"none", stroke:"#15803d", "stroke-width":"5", "stroke-linecap":"round"})));
+                    curves.forEach(d => g.appendChild(createSVGEl("path", {d: d, fill:"none", stroke:"#15803d", "stroke-width":"5", "stroke-linecap":"round", "aria-hidden":"true"})));
                 }
             },
-            { 
-                id: 'beef', name: 'Beef', color: '#78350f', icon: '🍖', unlockAt: 50,
+            { id: 'beef', name: 'Beef', color: '#78350f', icon: '🍖', unlockAt: 50,
                 draw: (g) => {
                     const chunks = [{x:-5, y:-75}, {x:15, y:-55}, {x:-15, y:-45}, {x:5, y:-30}];
-                    chunks.forEach(p => g.appendChild(createSVGEl("rect", {x:p.x, y:p.y, width:10, height:10, fill:"#451a03", rx:3})));
+                    chunks.forEach(p => g.appendChild(createSVGEl("rect", {x:p.x, y:p.y, width:10, height:10, fill:"#451a03", rx:3, "aria-hidden":"true"})));
                 }
             },
-            { 
-                id: 'olive', name: 'Olive', color: '#171717', icon: '🫒', unlockAt: 75,
+            { id: 'olive', name: 'Olive', color: '#171717', icon: '🫒', unlockAt: 75,
                 draw: (g) => {
                     const rings = [{x:10, y:-65}, {x:-10, y:-50}, {x:0, y:-35}];
-                    rings.forEach(p => g.appendChild(createSVGEl("circle", {cx:p.x, cy:p.y, r:6, fill:"none", stroke:"#171717", "stroke-width":"3"})));
+                    rings.forEach(p => g.appendChild(createSVGEl("circle", {cx:p.x, cy:p.y, r:6, fill:"none", stroke:"#171717", "stroke-width":"3", "aria-hidden":"true"})));
                 }
             }
         ];
@@ -359,6 +581,26 @@
             init() {
                 this.initUI();
                 this.startLevel();
+                this.setupKeyboardShortcuts();
+            }
+
+            setupKeyboardShortcuts() {
+                // Allows pressing 1-6 to select ingredients quickly (Gaming Accessibility Standard)
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.tagName === 'INPUT') return;
+                    
+                    const num = parseInt(e.key);
+                    if (num >= 1 && num <= ingredients.length) {
+                        const ing = ingredients[num - 1];
+                        if (this.score >= ing.unlockAt) {
+                            const btnId = `ing-btn-${ing.id}`;
+                            const btn = document.getElementById(btnId);
+                            if (btn) btn.click();
+                        } else {
+                            a11y.announce(`${ing.name} is locked.`, 'polite');
+                        }
+                    }
+                });
             }
 
             initUI() {
@@ -374,28 +616,33 @@
                 const rack = document.getElementById('ingredients-rack');
                 rack.innerHTML = '';
                 
-                ingredients.forEach(ing => {
+                ingredients.forEach((ing, index) => {
                     const isLocked = this.score < ing.unlockAt;
                     const btn = document.createElement('button');
                     const isSelected = ing.id === this.selectedIngredient;
+                    const shortcutKey = index + 1;
                     
-                    btn.className = `ingredient-btn flex-shrink-0 flex flex-col items-center justify-center w-20 h-24 bg-white border-2 rounded-xl snap-start mx-1 
-                        ${isSelected ? 'selected border-yellow-400 bg-yellow-50' : 'border-slate-100'}`;
+                    btn.id = `ing-btn-${ing.id}`;
+                    btn.className = `ingredient-btn flex-shrink-0 flex flex-col items-center justify-center w-24 h-24 border-2 rounded-xl snap-start mx-1 focus:outline-none focus:ring-4 focus:ring-indigo-600 relative`;
                     
                     if (isLocked) {
                         btn.disabled = true;
+                        btn.setAttribute('aria-label', `Locked. Need ${ing.unlockAt} dollars to unlock ${ing.name}`);
                         btn.innerHTML = `
-                            <div class="text-2xl mb-2 opacity-50">🔒</div>
-                            <span class="text-xs font-bold text-slate-400">$${ing.unlockAt}</span>
+                            <div class="text-2xl mb-2 opacity-50" aria-hidden="true">🔒</div>
+                            <span class="text-xs font-bold text-slate-700">$${ing.unlockAt}</span>
                         `;
                     } else {
+                        btn.setAttribute('aria-pressed', isSelected.toString());
+                        btn.setAttribute('aria-label', `Equip ${ing.name}, Shortcut key ${shortcutKey}`);
                         btn.onclick = () => {
                             if (ing.id !== 'cheese') audio.playTone(400, 'sine', 0.05);
                             this.selectIngredient(ing.id, btn);
                         };
                         btn.innerHTML = `
-                            <div class="text-4xl mb-2 transform transition-transform group-hover:scale-110">${ing.icon}</div>
-                            <span class="text-xs font-bold text-slate-500 uppercase tracking-tight">${ing.name}</span>
+                            <span class="absolute top-1 left-2 text-xs font-bold text-slate-500" aria-hidden="true">${shortcutKey}</span>
+                            <div class="text-4xl mb-2 transform transition-transform group-hover:scale-110" aria-hidden="true">${ing.icon}</div>
+                            <span class="text-xs font-bold text-slate-900 uppercase tracking-tight">${ing.name}</span>
                         `;
                     }
                     rack.appendChild(btn);
@@ -408,21 +655,29 @@
                 
                 for(let i=0; i<8; i++) {
                     const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                    group.setAttribute("class", "pizza-slice");
+                    group.setAttribute("class", "pizza-slice focus:outline-none");
                     group.setAttribute("transform", `rotate(${i * 45})`); 
+                    // ARIA/Keyboard support for SVG groups
+                    group.setAttribute("role", "button");
+                    group.setAttribute("tabindex", "0");
+                    group.setAttribute("aria-label", `Slice ${i + 1}, Currently Plain Cheese. Press enter to add ${this.getSelectedName()}`);
+                    
                     group.onclick = () => this.clickSlice(i);
+                    group.onkeydown = (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            this.clickSlice(i);
+                        }
+                    };
 
-                    // Slice Shape
                     const r = 95;
                     const angle = 45 * (Math.PI / 180);
                     const x1 = 0, y1 = -r;
                     const x2 = r * Math.sin(angle), y2 = -r * Math.cos(angle);
                     const pathD = `M 0 0 L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`;
                     
-                    // Base
-                    const path = createSVGEl("path", {d:pathD, fill:"#fbbf24", stroke:"#b45309", "stroke-width":"2", id:`slice-bg-${i}`});
+                    const path = createSVGEl("path", {d:pathD, fill:"#fbbf24", stroke:"#92400e", "stroke-width":"2", id:`slice-bg-${i}`});
                     
-                    // Toppings container
                     const toppingsGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
                     toppingsGroup.setAttribute("transform", "rotate(22.5)");
                     toppingsGroup.id = `slice-toppings-${i}`;
@@ -434,88 +689,91 @@
                 this.renderPizza();
             }
 
+            getSelectedName() {
+                const ing = ingredients.find(i => i.id === this.selectedIngredient);
+                return ing ? ing.name : 'Plain Cheese';
+            }
+
+            updateSliceLabels() {
+                const pizzaGroup = document.getElementById('pizza-slices');
+                if(!pizzaGroup) return;
+                const slices = pizzaGroup.children;
+                for(let i=0; i<8; i++) {
+                    const currentIng = ingredients.find(x => x.id === this.slices[i]);
+                    const currentName = currentIng ? currentIng.name : 'Plain Cheese';
+                    slices[i].setAttribute("aria-label", `Slice ${i + 1}, currently has ${currentName}. Press enter to add ${this.getSelectedName()}`);
+                }
+            }
+
             selectIngredient(id, btnElement) {
                 this.selectedIngredient = id;
-                this.renderIngredientRack(); // Re-render to update selected state visually
+                this.renderIngredientRack();
+                this.updateSliceLabels();
+                
+                // Update persistent visual cue
+                document.getElementById('current-tool-announcer').textContent = `Current tool: ${this.getSelectedName()}`;
+                
+                // Announce for SR only if they aren't physically looking at the screen
+                a11y.announce(`Equipped ${this.getSelectedName()}`, "polite");
             }
 
             clickSlice(index) {
                 this.slices[index] = this.selectedIngredient;
                 if(this.selectedIngredient !== 'cheese') audio.playSplat();
                 this.renderPizza();
+                this.updateSliceLabels();
             }
 
             renderPizza() {
                 this.slices.forEach((ingId, i) => {
                     const toppingsGroup = document.getElementById(`slice-toppings-${i}`);
                     const ingData = ingredients.find(x => x.id === ingId);
-                    toppingsGroup.innerHTML = ''; 
-                    if(ingData && ingData.draw) ingData.draw(toppingsGroup);
+                    if(toppingsGroup) {
+                        toppingsGroup.innerHTML = ''; 
+                        if(ingData && ingData.draw) ingData.draw(toppingsGroup);
+                    }
                 });
             }
 
             trashPizza() {
                 this.slices.fill('cheese'); 
                 this.renderPizza();
+                this.updateSliceLabels();
+                a11y.announce("Pizza trashed. Starting over.", "polite");
             }
 
             generateOrder() {
-                // 1. Allow Cheese! (Removed the .filter check)
                 const availableToppings = this.getUnlockedIngredients();
                 
-                // Helper to pick a topping, excluding specific IDs to avoid duplicates
                 const pickTopping = (excludeIds = []) => {
                     const pool = availableToppings.filter(t => !excludeIds.includes(t.id));
                     if(pool.length === 0) return availableToppings[0];
                     return pool[Math.floor(Math.random() * pool.length)];
                 };
 
-                // --- Difficulty Progression ---
-                // Orders 1-2 (Streak 0-1): Whole only
-                // Orders 3-4 (Streak 2-3): Introduce 1/2
-                // Orders 5-7 (Streak 4-6): Introduce 1/4
-                // Orders 8-10 (Streak 7-9): Introduce 3-Way & Complex Fractions
-                // Orders 11+ (Streak 10+): All + increased complexity preference
-
                 let patterns = ['whole'];
                 let useComplexFractions = false;
 
-                // Unlock patterns based on Streak
-                if (this.streak >= 2 && availableToppings.length >= 2) {
-                    patterns.push('half');
-                }
-                
-                if (this.streak >= 4 && availableToppings.length >= 2) {
-                    patterns.push('quarter');
-                }
-
+                if (this.streak >= 2 && availableToppings.length >= 2) patterns.push('half');
+                if (this.streak >= 4 && availableToppings.length >= 2) patterns.push('quarter');
                 if (this.streak >= 7) {
                     useComplexFractions = true;
-                    if (availableToppings.length >= 3) {
-                        patterns.push('three_way');
-                    }
+                    if (availableToppings.length >= 3) patterns.push('three_way');
                 }
-
-                // --- Weighting & Filtering for Higher Levels ---
                 
-                // From Streak 4 (Order 5) onwards, remove "whole" to force fraction practice
-                if (this.streak >= 4) {
-                    patterns = patterns.filter(p => p !== 'whole');
-                }
-
-                // From Streak 10 (Order 11) onwards, allow everything but prefer chaos
-                // Actually, let's keep 'whole' removed to keep it "insanely complex"
-                // If we run out of patterns (e.g. not enough ingredients unlocked), fallback to 'whole'
+                if (this.streak >= 4) patterns = patterns.filter(p => p !== 'whole');
                 if (patterns.length === 0) patterns = ['whole'];
 
                 const pattern = patterns[Math.floor(Math.random() * patterns.length)];
 
                 let desc = [];
                 let reqs = {};
+                let spokenDescList = [];
 
                 if (pattern === 'whole') {
                     const t = pickTopping();
-                    desc.push(`Whole ${t.name} ${t.icon}`);
+                    desc.push(`Whole ${t.name} <span aria-hidden="true">${t.icon}</span>`);
+                    spokenDescList.push(`A whole ${t.name} pizza`);
                     reqs[t.name] = 8;
                 } 
                 else if (pattern === 'half') {
@@ -525,8 +783,13 @@
                     const f1 = useComplexFractions && Math.random() > 0.5 ? "4/8" : "1/2";
                     const f2 = useComplexFractions && Math.random() > 0.5 ? "4/8" : "1/2";
                     
-                    desc.push(`${f1} ${t1.name} ${t1.icon}`);
-                    desc.push(`${f2} ${t2.name} ${t2.icon}`);
+                    const s1 = f1 === "4/8" ? "four eighths" : "one half";
+                    const s2 = f2 === "4/8" ? "four eighths" : "one half";
+
+                    desc.push(`<span aria-hidden="true">${f1}</span> ${t1.name} <span aria-hidden="true">${t1.icon}</span>`);
+                    desc.push(`<span aria-hidden="true">${f2}</span> ${t2.name} <span aria-hidden="true">${t2.icon}</span>`);
+                    spokenDescList.push(`${s1} ${t1.name}`);
+                    spokenDescList.push(`${s2} ${t2.name}`);
                     reqs[t1.name] = 4;
                     reqs[t2.name] = 4;
                 } 
@@ -537,8 +800,13 @@
                     const f1 = useComplexFractions && Math.random() > 0.5 ? "2/8" : "1/4";
                     const f2 = useComplexFractions && Math.random() > 0.5 ? "6/8" : "3/4";
 
-                    desc.push(`${f1} ${t1.name} ${t1.icon}`);
-                    desc.push(`${f2} ${t2.name} ${t2.icon}`);
+                    const s1 = f1 === "2/8" ? "two eighths" : "one quarter";
+                    const s2 = f2 === "6/8" ? "six eighths" : "three quarters";
+
+                    desc.push(`<span aria-hidden="true">${f1}</span> ${t1.name} <span aria-hidden="true">${t1.icon}</span>`);
+                    desc.push(`<span aria-hidden="true">${f2}</span> ${t2.name} <span aria-hidden="true">${t2.icon}</span>`);
+                    spokenDescList.push(`${s1} ${t1.name}`);
+                    spokenDescList.push(`${s2} ${t2.name}`);
                     reqs[t1.name] = 2;
                     reqs[t2.name] = 6;
                 }
@@ -547,14 +815,20 @@
                     const t2 = pickTopping([t1.id]);
                     const t3 = pickTopping([t1.id, t2.id]);
                     
-                    // 1/2 of T1, 1/4 of T2, 1/4 of T3
                     const f1 = useComplexFractions && Math.random() > 0.5 ? "4/8" : "1/2";
                     const f2 = useComplexFractions && Math.random() > 0.5 ? "2/8" : "1/4";
                     const f3 = useComplexFractions && Math.random() > 0.5 ? "2/8" : "1/4";
 
-                    desc.push(`${f1} ${t1.name} ${t1.icon}`);
-                    desc.push(`${f2} ${t2.name} ${t2.icon}`);
-                    desc.push(`${f3} ${t3.name} ${t3.icon}`);
+                    const s1 = f1 === "4/8" ? "four eighths" : "one half";
+                    const s2 = f2 === "2/8" ? "two eighths" : "one quarter";
+                    const s3 = f3 === "2/8" ? "two eighths" : "one quarter";
+
+                    desc.push(`<span aria-hidden="true">${f1}</span> ${t1.name} <span aria-hidden="true">${t1.icon}</span>`);
+                    desc.push(`<span aria-hidden="true">${f2}</span> ${t2.name} <span aria-hidden="true">${t2.icon}</span>`);
+                    desc.push(`<span aria-hidden="true">${f3}</span> ${t3.name} <span aria-hidden="true">${t3.icon}</span>`);
+                    spokenDescList.push(`${s1} ${t1.name}`);
+                    spokenDescList.push(`${s2} ${t2.name}`);
+                    spokenDescList.push(`and ${s3} ${t3.name}`);
                     
                     reqs[t1.name] = 4;
                     reqs[t2.name] = 2;
@@ -563,62 +837,69 @@
 
                 return {
                     descriptors: desc,
+                    spokenDescriptors: spokenDescList,
+                    spokenText: "Order up! I would like " + spokenDescList.join(", ") + ". Please.",
                     requirements: reqs
                 };
             }
 
             startLevel() {
                 this.currentOrder = this.generateOrder();
-                
-                const container = document.getElementById('ticket-container');
-                
-                // Animate ticket out if existing (optional polish, just overwriting for responsiveness)
                 this.renderTicket();
-                
                 this.trashPizza();
+                
+                // Screen Reader & TTS
+                if(a11y.ttsEnabled) {
+                    a11y.speak(this.currentOrder.spokenText);
+                }
+                a11y.announce("New order received. Check the order ticket.", "polite");
             }
 
             renderTicket() {
                 const container = document.getElementById('ticket-container');
                 const order = this.currentOrder;
                 
-                // Build list items
-                const listItems = order.descriptors.map(item => `
-                    <div class="flex items-center gap-2 border-b-2 border-dashed border-slate-200 py-3">
-                        <span class="text-xl font-bold text-slate-700 font-mono">${item}</span>
-                    </div>
+                // Render list items with proper ARIA labels that screen readers will read naturally
+                const listItems = order.descriptors.map((item, index) => `
+                    <li class="flex items-center gap-2 border-b-2 border-dashed border-slate-400 py-3" aria-label="${order.spokenDescriptors[index]}">
+                        <span class="text-xl font-bold text-slate-900 font-mono">${item}</span>
+                    </li>
                 `).join('');
 
                 container.innerHTML = `
-                    <div class="ticket-entry bg-white w-64 p-1 shadow-lg transform rotate-1 mx-auto relative">
-                        <!-- Ticket Header -->
-                        <div class="bg-yellow-50 border-2 border-slate-200 p-4 relative overflow-hidden">
-                            <!-- Paper rip top visual -->
-                            <div class="absolute top-0 left-0 right-0 h-2 bg-slate-300 opacity-20"></div>
-                            
-                            <div class="text-center border-b-4 border-slate-800 pb-2 mb-2">
-                                <h2 class="font-display text-2xl text-slate-800">ORDER #${this.streak + 1}</h2>
-                                <p class="text-xs text-slate-500 font-mono uppercase">Table ${Math.floor(Math.random() * 10) + 1}</p>
+                    <div class="ticket-entry bg-white w-64 p-1 shadow-lg transform rotate-1 mx-auto relative border border-slate-500">
+                        <div class="bg-yellow-50 border-2 border-slate-400 p-4 relative overflow-hidden">
+                            <div class="text-center border-b-4 border-slate-900 pb-2 mb-2">
+                                <h3 class="font-display text-2xl text-slate-900">ORDER #${this.streak + 1}</h3>
+                                <p class="text-xs text-slate-800 font-mono uppercase font-bold">Table ${Math.floor(Math.random() * 10) + 1}</p>
                             </div>
                             
-                            <div class="flex flex-col gap-1 mb-4">
+                            <ul class="flex flex-col gap-1 mb-4" aria-label="Order Items">
                                 ${listItems}
-                            </div>
+                            </ul>
                             
+                            <!-- TTS Manual Read Button -->
+                            <button onclick="game.readOrderAloud()" class="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold py-2 rounded border border-indigo-400 flex items-center justify-center gap-2 focus:ring-2 focus:ring-indigo-700 outline-none" aria-label="Read order aloud">
+                                <span aria-hidden="true">🗣️</span> Read Order
+                            </button>
+
                             <div class="text-center mt-4">
-                                <span class="text-xs font-bold text-slate-400 font-mono">--- PLEASE RUSH ---</span>
+                                <span class="text-xs font-bold text-slate-800 font-mono" aria-hidden="true">--- PLEASE RUSH ---</span>
                             </div>
                         </div>
                         
-                        <!-- Realistic Clip/Pin visual at top center -->
-                        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 w-6 h-6 bg-gray-200 rounded-full border-2 border-gray-400 shadow-sm z-20 flex items-center justify-center">
+                        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 w-6 h-6 bg-gray-200 rounded-full border-2 border-gray-600 shadow-sm z-20 flex items-center justify-center" aria-hidden="true">
                             <div class="w-2 h-2 bg-black rounded-full opacity-20"></div>
                         </div>
                     </div>
                 `;
             }
 
-            // Removed renderCustomer()
+            readOrderAloud() {
+                if (this.currentOrder) {
+                    a11y.speak(this.currentOrder.spokenText);
+                }
+            }
 
             serveOrder() {
                 const playerCounts = {};
@@ -651,9 +932,9 @@
                 this.streak++;
                 this.updateScoreboard();
                 
-                this.showFeedback("Perfect!", "text-green-600", "border-green-500");
+                a11y.announce(`Perfect! Earned ${earned} dollars. Total score ${this.score}. Streak ${this.streak}`, "assertive");
+                this.showFeedback("Perfect!", "text-green-900", "border-green-800");
                 
-                // Re-render racks in case something unlocked
                 this.renderIngredientRack();
                 
                 setTimeout(() => this.startLevel(), 2000);
@@ -664,16 +945,21 @@
                 this.streak = 0;
                 this.updateScoreboard();
                 
-                const p = document.getElementById('pizza-container');
-                p.classList.add('shake');
-                setTimeout(() => p.classList.remove('shake'), 500);
+                // Respect OS-level reduced motion in JS logic as well
+                const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                 
-                // Shake the ticket too
-                const t = document.getElementById('ticket-container');
-                t.classList.add('shake');
-                setTimeout(() => t.classList.remove('shake'), 500);
+                if (!a11y.motionReduced && !prefersReducedMotion) {
+                    const p = document.getElementById('pizza-container');
+                    p.classList.add('shake');
+                    setTimeout(() => p.classList.remove('shake'), 500);
+                    
+                    const t = document.getElementById('ticket-container');
+                    t.classList.add('shake');
+                    setTimeout(() => t.classList.remove('shake'), 500);
+                }
 
-                this.showFeedback("Wrong Order!", "text-red-600", "border-red-500");
+                a11y.announce("Wrong Order! Streak reset to zero.", "assertive");
+                this.showFeedback("Wrong Order!", "text-red-900", "border-red-800");
             }
 
             updateScoreboard() {
@@ -699,40 +985,59 @@
 
         function startGame() {
             document.getElementById('start-screen').classList.add('hidden');
+            // Remove inert from main app once start screen clears
+            document.getElementById('main-app').inert = false;
+            
             audio.init();
             game.init();
+            // Move focus to main app logically
+            document.getElementById('btn-a11y').focus();
         }
 
-        // --- Menu / Modal Logic ---
-        function toggleMenu() {
+        // --- Log Menu Modal Logic ---
+        function toggleLog() {
             const modal = document.getElementById('menu-modal');
             const list = document.getElementById('unlock-list');
+            const mainApp = document.getElementById('main-app');
             
             if(modal.classList.contains('hidden')) {
-                // Opening
                 modal.classList.remove('hidden');
+                mainApp.inert = true; 
                 
-                // Populate List
                 list.innerHTML = ingredients.map(ing => {
-                    if (ing.id === 'cheese') return ''; // Skip default
+                    if (ing.id === 'cheese') return ''; 
                     const isUnlocked = game.score >= ing.unlockAt;
+                    const statusText = isUnlocked ? 'Unlocked' : `Needs $${ing.unlockAt}`;
                     return `
-                        <div class="flex items-center justify-between p-2 rounded-lg ${isUnlocked ? 'bg-white' : 'bg-slate-100'}">
+                        <div class="flex items-center justify-between p-2 rounded-lg border ${isUnlocked ? 'bg-white border-green-400' : 'bg-slate-100 border-slate-400'}" aria-label="${ing.name}: ${statusText}">
                             <div class="flex items-center gap-3">
-                                <span class="text-2xl ${isUnlocked ? '' : 'grayscale opacity-50'}">${ing.icon}</span>
-                                <span class="font-bold ${isUnlocked ? 'text-slate-700' : 'text-slate-400'}">${ing.name}</span>
+                                <span class="text-2xl ${isUnlocked ? '' : 'grayscale opacity-50'}" aria-hidden="true">${ing.icon}</span>
+                                <span class="font-bold ${isUnlocked ? 'text-slate-900' : 'text-slate-700'}">${ing.name}</span>
                             </div>
-                            <span class="text-sm font-bold ${isUnlocked ? 'text-green-500' : 'text-slate-400'}">
+                            <span class="text-sm font-bold ${isUnlocked ? 'text-green-800' : 'text-slate-700'}">
                                 ${isUnlocked ? '✓ Unlocked' : 'Needs $'+ing.unlockAt}
                             </span>
                         </div>
                     `;
                 }).join('');
                 
+                // Focus first focusable inside modal (close btn)
+                modal.querySelector('button').focus();
             } else {
                 modal.classList.add('hidden');
+                mainApp.inert = false;
+                // Return focus
+                document.querySelector('button[aria-label="Open Chef\'s Log"]').focus();
             }
         }
+
+        // Trap focus to Start Screen on load
+        window.onload = () => {
+            a11y.init();
+            // Apply inert to main app initially so screen reader doesn't read it
+            document.getElementById('main-app').inert = true;
+            document.getElementById('start-btn').focus();
+        };
 
     </script>
 </body>
