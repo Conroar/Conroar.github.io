@@ -300,8 +300,8 @@ nav {
 /* New Compact Node for Grid Layout */
 .rpg-node.compact {
     max-width: 100%;
-    font-size: 0.9rem;
-    padding: 8px;
+    font-size: 0.8rem;
+    padding: 6px 8px;
     border-color: #444;
 }
 .rpg-node.compact:hover {
@@ -328,8 +328,8 @@ nav {
 /* Grid Layout for branches */
 .rpg-branch-group {
     display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* Auto-fits items */
-    gap: 10px; 
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); /* Auto-fits items */
+    gap: 8px; 
     width: 100%;
     position: relative;
 }
