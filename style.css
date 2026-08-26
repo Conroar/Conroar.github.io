@@ -279,63 +279,78 @@ nav {
 .video-clip { opacity: 0; transition: opacity 0.3s ease; }
 .video-card:hover .video-clip { opacity: 1; }
 
-/* === UPGRADED RPG SKILL TREE === */
-.rpg-skill-tree {
-    background: #111; border: 2px solid #444; border-radius: 10px;
-    padding: 30px; display: flex; flex-direction: column; align-items: center; gap: 15px;
-    box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
-}
-
-.rpg-node {
-    background: #1a1a24; border: 2px solid #555; 
-    padding: 10px 15px; border-radius: 8px; position: relative; transition: 0.3s;
-    width: 100%;
-}
-
-.rpg-node.root-node {
-    border-color: var(--neon-blue); box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
-    text-align: center; margin-bottom: 10px; max-width: 100%;
-}
-
-/* New Compact Node for Grid Layout */
-.rpg-node.compact {
-    max-width: 100%;
-    font-size: 0.8rem;
-    padding: 6px 8px;
-    border-color: #444;
-}
-.rpg-node.compact:hover {
-    border-color: var(--neon-blue);
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-}
-
-/* Categories */
-.skill-category-title {
-    color: #888; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 2px;
-    margin: 15px 0 5px 0; border-bottom: 1px solid #333; width: 100%; text-align: center; padding-bottom: 5px;
-}
-
-.node-title { font-weight: bold; margin-bottom: 5px; display: block; }
-
-.xp-bar {
-    width: 100%; height: 6px; background: #000; border-radius: 3px; overflow: hidden; border: 1px solid #333;
-}
-.xp-fill {
-    height: 100%; background: linear-gradient(90deg, var(--neon-blue), #bd00ff);
-}
-
-/* Grid Layout for branches */
-.rpg-branch-group {
-    display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); /* Auto-fits items */
-    gap: 8px; 
-    width: 100%;
+/* === RESUME: QUEST LOG (Experience Timeline) === */
+.quest-timeline {
     position: relative;
+    padding-left: 28px;
 }
+.quest-timeline::before {
+    content: '';
+    position: absolute; left: 9px; top: 6px; bottom: 6px; width: 2px;
+    background: linear-gradient(to bottom, var(--neon-blue), #333 90%);
+}
+.quest-node { position: relative; margin-bottom: 28px; }
+.quest-node:last-child { margin-bottom: 0; }
+.quest-marker {
+    position: absolute; left: -28px; top: 4px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--card-bg); border: 2px solid var(--neon-blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: var(--neon-blue);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.35);
+}
+.quest-content {
+    background: var(--card-bg); border: 1px solid #333; border-radius: 10px;
+    padding: 18px 20px; transition: 0.2s;
+}
+.quest-node:hover .quest-content { border-color: var(--neon-blue); }
+.quest-tag {
+    display: inline-block; font-family: monospace; font-size: 0.7rem;
+    text-transform: uppercase; letter-spacing: 1px; color: var(--neon-blue);
+    margin-bottom: 6px;
+}
+.quest-title { margin: 0 0 4px 0; font-size: 1.1rem; }
+.quest-meta { color: #888; font-size: 0.85rem; margin: 0 0 10px 0; font-family: monospace; }
+.quest-desc { margin: 0; font-size: 0.9rem; color: #ccc; line-height: 1.5; }
 
-/* Remove the old connecting line because we have categories now */
-.rpg-branch-group::before { display: none; }
+/* === RESUME: ABILITY LOG (Skills) === */
+.ability-log {
+    background: #111; border: 2px solid #444; border-radius: 10px;
+    padding: 30px; box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
+}
+.ability-class-banner {
+    display: flex; align-items: center; gap: 15px;
+    border: 2px solid var(--neon-blue); border-radius: 8px;
+    padding: 12px 18px; margin-bottom: 20px;
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+}
+.ability-class-banner .node-icon { font-size: 1.4rem; color: var(--neon-blue); }
+.ability-class-banner .node-title { font-weight: bold; font-size: 1rem; }
+.ability-category-title {
+    color: #888; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 2px;
+    margin: 20px 0 10px 0; border-bottom: 1px solid #333; padding-bottom: 5px;
+}
+.ability-category-title:first-of-type { margin-top: 0; }
+.ability-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;
+}
+.ability-item {
+    background: #1a1a24; border: 1px solid #444; border-radius: 8px;
+    padding: 8px 10px; transition: 0.2s;
+}
+.ability-item:hover { border-color: var(--neon-blue); transform: translateY(-2px); }
+.ability-item.lang { border-color: #bd00ff; }
+.ability-name { font-weight: bold; font-size: 0.85rem; margin-bottom: 6px; }
+.ability-sub { font-size: 0.75rem; color: #aaa; }
+.ability-rank { display: flex; gap: 3px; }
+.ability-rank span { width: 8px; height: 8px; border-radius: 50%; background: #333; }
+.ability-rank.r1 span:nth-child(-n+1),
+.ability-rank.r2 span:nth-child(-n+2),
+.ability-rank.r3 span:nth-child(-n+3),
+.ability-rank.r4 span:nth-child(-n+4),
+.ability-rank.r5 span:nth-child(-n+5) {
+    background: var(--neon-blue); box-shadow: 0 0 4px var(--neon-blue);
+}
 
 /* === MODAL STYLES (For Projects) === */
 .modal {
